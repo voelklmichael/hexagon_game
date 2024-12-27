@@ -382,17 +382,32 @@ impl eframe::App for Hexagon {
                                 self.game_configuration.show(ui, self.random_counter)
                             {
                                 self.game_is_ongoing = true;
+                                self.selected_code_io = None;
                                 self.game_state = Some(GameState::new(config).unwrap());
                                 self.play_sound();
                             }
                             ui.separator();
                         }
                         if self.game_state.is_some() {
-                            if ui.button("Restart").clicked() {
-                                self.play_sound();
-                                self.game_is_ongoing = false;
-                                return;
-                            }
+                            ui.horizontal(|ui| {
+                                if ui.button("New game").clicked() {
+                                    self.play_sound();
+                                    self.game_is_ongoing = false;
+                                    return;
+                                }
+                                if ui.button("Restart").clicked() {
+                                    self.play_sound();
+                                    self.game_is_ongoing = true;
+                                    self.game_state = Some(
+                                        GameState::new(
+                                            self.game_state.as_ref().unwrap().config.clone(),
+                                        )
+                                        .unwrap(),
+                                    );
+                                    self.selected_code_io = None;
+                                    return;
+                                }
+                            });
                             ui.separator();
                             self.show_statistics(ui);
                             ui.separator();

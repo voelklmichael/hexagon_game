@@ -24,6 +24,7 @@ impl PlayerStatistics {
 }
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct GameState {
+    pub config: GameConfiguration,
     pub board: Board,
     pub player_positions: HashMap<PlayerId, Option<ConnectorPosition>>,
     pub player_statistics: HashMap<PlayerId, PlayerStatistics>,
@@ -36,7 +37,7 @@ pub struct GameState {
     pub used_tiles: Vec<u16>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub struct GameConfiguration {
     pub player_count: usize,
     pub random_seed: u64,
@@ -124,6 +125,7 @@ impl GameState {
             player_statistics,
             player_tiles,
             used_tiles,
+            config,
         })
     }
 
