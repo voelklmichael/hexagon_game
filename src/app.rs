@@ -178,7 +178,7 @@ impl Hexagon {
                 &painter,
                 cell_center,
                 cell_edge * EDGE_SHRINK_FACTOR,
-                Some(&format!("{x}|{y}", x = position.x, y = position.y)),
+                None,
                 game_state.colors.get_cell_boundary_color(hexagon.is_some()),
                 cell_edge / 30.,
             );
