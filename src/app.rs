@@ -452,7 +452,6 @@ impl Hexagon {
         for pid in animations_done {
             let animations = self.animation.get_mut(&pid).unwrap();
             animations.remove(0);
-            dbg!(&animations);
             if let Some((_, start_time)) = animations.first_mut() {
                 *start_time = self.animation_counter;
             } else {
