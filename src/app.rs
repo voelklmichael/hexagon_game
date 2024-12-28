@@ -5,11 +5,8 @@ use std::ops::AddAssign;
 use egui_extras::{Size, StripBuilder};
 use itertools::Itertools;
 
-use crate::{
-    game_state::{
-        BoardCoordinate, BoardField, ConnectorCoordinate, ConnectorPosition, GameState, HexagonCode,
-    },
-    permutations,
+use crate::game_state::{
+    BoardCoordinate, BoardField, ConnectorCoordinate, ConnectorPosition, GameState, HexagonCode,
 };
 
 const EDGE_SHRINK_FACTOR: f32 = 0.95;
@@ -37,58 +34,58 @@ impl Hexagon {
             ui.label("Game is over");
             return;
         }
-        if let Some(code) = &self.selected_code_io {
-            if ui.button("Choose").clicked() {
-                if self.game_state.as_mut().unwrap().play_by_code(code) {
-                    self.game_is_ongoing = false;
-                    return;
-                }
-                self.play_sound();
-                self.selected_code_io = None;
-            }
-        } else {
-            ui.label("Please select edge");
-        }
+
+        let game = self.game_state.as_ref().unwrap();
+        let Some((_, player_color)) = game.get_player_position_color() else {
+            panic!("This should never happen");
+        };
+        let pid = game.current_player.0;
+
+        ui.horizontal(|ui| {
+            ui.colored_label(player_color, format!("Current Player: {pid}"));
+        });
+
+        let game = self.game_state.as_mut().unwrap();
+        let Some((player_position, player_color)) = game.get_player_position_color() else {
+            panic!("This should never happen");
+        };
+        let selectable_tiles = game.player_tiles.get_mut(&game.current_player).unwrap();
+
         let (response, painter) =
             ui.allocate_painter(ui.available_size(), egui::Sense::click_and_drag());
         // background
         painter.rect_filled(response.rect, egui::Rounding::ZERO, egui::Color32::BLACK);
 
-        let game = self.game_state.as_ref().unwrap();
-        let selectable_tiles = game.player_tiles.get(&game.current_player).unwrap();
-        let Some((player_position, player_color)) = game.get_player_position_color() else {
-            panic!("This should never happen");
-        };
-
         let total_size = response.rect.height().min(response.rect.width());
         let edge_size = total_size / (selectable_tiles.len() as f32 + 0.5);
+        let mut chosen_tile = None;
 
-        for (offset_index, &code) in selectable_tiles.iter().enumerate() {
+        for (offset_index, code) in selectable_tiles.iter_mut().enumerate() {
             let mut border_color = egui::Color32::GRAY;
-            let mut selected_io = None;
-
-            if let Some(HexagonCode { code: c, rotation }) = self.selected_code_io {
-                if code == c {
-                    selected_io = Some(rotation);
-                    border_color = player_color;
-                }
+            let mut is_selected = false;
+            if let Some(selected) = &self.selected_code_io
+                && selected.code == code.code
+            {
+                border_color = player_color;
+                is_selected = true;
             }
             let center = response.rect.center_top();
-            let center = center + egui::vec2(0., edge_size * (2 * offset_index + 1) as f32);
+            let center = center + egui::vec2(0., edge_size * (2 * offset_index + 1) as f32); //TODO: this is not consistent with definition of edge_size
             draw_hexagon(
                 &painter,
                 center,
-                edge_size,
+                edge_size * EDGE_SHRINK_FACTOR,
                 None,
                 border_color,
                 edge_size / 30.,
             );
-            let permutation = permutations::int_to_array(code);
+            let permutation = code.to_permutation();
             for i in 0..12u8 {
                 let j = permutation[i as usize];
                 if j < i {
                     continue;
                 }
+                assert_ne!(i, j);
                 let (pi, ni) = compute_connector_position(
                     center,
                     edge_size,
@@ -105,24 +102,6 @@ impl Hexagon {
                         connector: ConnectorCoordinate(j),
                     },
                 );
-                if let Some(mouse) = response.interact_pointer_pos()
-                    && response.clicked()
-                {
-                    for (k, p) in [(i, pi), (j, pj)] {
-                        if mouse.distance(p) / edge_size < 1. / 5. {
-                            let selected = HexagonCode {
-                                code,
-                                rotation: k / 2,
-                            };
-                            if self.selected_code_io.as_ref() == Some(&selected) {
-                                self.selected_code_io = None;
-                            } else {
-                                self.selected_code_io = Some(selected);
-                            }
-                            break;
-                        }
-                    }
-                }
                 let factor = edge_size / 3.;
                 let bezier = egui::epaint::CubicBezierShape::from_points_stroke(
                     [pi, pi - ni * factor, pj - nj * factor, pj],
@@ -133,18 +112,123 @@ impl Hexagon {
                 painter.add(bezier);
             }
 
-            if let Some(rotation) = selected_io {
-                let c = (player_position.connector.0 % 2 + 2 * rotation) % 12;
+            // draw player character (dummy for non-selected tiles)
+            {
                 let (p, _) = compute_connector_position(
                     center,
                     edge_size,
                     &ConnectorPosition {
                         coordinate: BoardCoordinate { x: 0, y: 0 },
-                        connector: ConnectorCoordinate(c),
+                        connector: player_position.connector.clone(),
                     },
                 );
-                painter.circle_filled(p, edge_size / 6., player_color);
+                if is_selected {
+                    painter.circle_filled(p, edge_size / 8., player_color);
+                } else {
+                    painter.circle_filled(p, edge_size / 12., player_color.gamma_multiply(0.7));
+                }
             }
+
+            // draw rotation buttons
+            {
+                for (k, is_left, angle) in [
+                    (1, true, 55f32),
+                    (2, false, 115f32),
+                    (4, true, 235f32),
+                    (5, false, -55f32),
+                ] {
+                    let (p, n) = {
+                        let (p1, _) = compute_connector_position(
+                            center,
+                            edge_size,
+                            &ConnectorPosition {
+                                coordinate: BoardCoordinate { x: 0, y: 0 },
+                                connector: ConnectorCoordinate(k * 2),
+                            },
+                        );
+                        let (p2, n) = compute_connector_position(
+                            center,
+                            edge_size,
+                            &ConnectorPosition {
+                                coordinate: BoardCoordinate { x: 0, y: 0 },
+                                connector: ConnectorCoordinate(k * 2 + 1),
+                            },
+                        );
+                        (p1 + (p2 - p1) / 2., n)
+                    };
+                    let p = p + edge_size / 3. * n;
+                    let (factor, is_above) = if let Some(pointer) = response.hover_pos()
+                        && pointer.distance(p) / edge_size < 0.3
+                    {
+                        (2., true)
+                    } else {
+                        (1., false)
+                    };
+                    let galley = painter.layout(
+                        if is_left { "↶".into() } else { "↷".into() },
+                        egui::FontId::monospace(edge_size / 2. * factor),
+                        egui::Color32::GOLD,
+                        0.,
+                    );
+                    let angle = angle.to_radians();
+                    let offset = galley.size() / 2.;
+                    let offset = egui::vec2(
+                        offset.x * angle.cos() - offset.y * angle.sin(),
+                        offset.x * angle.sin() + offset.y * angle.cos(),
+                    );
+                    let p = p - offset;
+                    painter.add(egui::Shape::Text(egui::epaint::TextShape {
+                        pos: p,
+                        galley,
+                        underline: egui::Stroke::NONE,
+                        override_text_color: None,
+                        angle,
+                        fallback_color: egui::Color32::GOLD,
+                        opacity_factor: 1.,
+                    }));
+                    if response.clicked() && is_above {
+                        let rotation = if is_left { 1 } else { 5 };
+                        code.rotation = (code.rotation + rotation) % 6;
+                        self.selected_code_io = Some(code.clone());
+                    }
+                }
+            }
+            // draw select/play button
+            {
+                let symbol = if is_selected { "⇒" } else { "✔" };
+                let p = center + edge_size * EDGE_SHRINK_FACTOR * egui::vec2(1., 0.) * 1.4;
+                let (factor, is_above) = if let Some(pointer) = response.hover_pos()
+                    && pointer.distance(p) / edge_size < 0.3
+                {
+                    (2., true)
+                } else {
+                    (1., false)
+                };
+                let galley = painter.layout(
+                    symbol.to_string(),
+                    egui::FontId::monospace(edge_size / 2. * factor),
+                    egui::Color32::GOLD,
+                    0.,
+                );
+                painter.galley(p - galley.size() / 2., galley, egui::Color32::GOLD);
+
+                if response.clicked() && is_above {
+                    if is_selected {
+                        chosen_tile = Some(code.clone());
+                    } else {
+                        self.selected_code_io = Some(code.clone());
+                    }
+                }
+            }
+        }
+
+        if let Some(tile) = chosen_tile {
+            if game.play_by_code(&tile) {
+                self.game_is_ongoing = false;
+                return;
+            }
+            self.play_sound();
+            self.selected_code_io = None;
         }
     }
 
@@ -306,8 +390,7 @@ impl Hexagon {
     }
 
     fn play_sound(&mut self) {
-        //#[cfg(not(debug_assertions))]
-        //#[cfg(not(target_arch = "wasm32"))]
+        #[cfg(not(debug_assertions))]
         if self.sound_manager.is_none() {
             log::debug!("Starting audio");
             use kira::{
@@ -367,7 +450,6 @@ impl eframe::App for Hexagon {
     }
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        #[cfg(not(target_arch = "wasm32"))]
         self.play_sound();
         self.random_counter.add_assign(1);
         ctx.set_visuals(egui::Visuals::dark());

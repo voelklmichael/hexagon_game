@@ -33,7 +33,7 @@ pub struct GameState {
     random_state: random_state::Rand,
     pub board_usage: BoardUsage,
     pub player_ids: Vec<PlayerId>,
-    pub player_tiles: HashMap<PlayerId, Vec<u16>>,
+    pub player_tiles: HashMap<PlayerId, Vec<HexagonCode>>,
     pub used_tiles: Vec<u16>,
 }
 
@@ -110,7 +110,7 @@ impl GameState {
             let mut tiles = Vec::new();
             for _ in 0..tiles_per_player {
                 let tile = random_state.get_tile(&mut used_tiles);
-                tiles.push(tile);
+                tiles.push(HexagonCode::unrotated(tile));
             }
             player_tiles.insert(id.clone(), tiles);
         }
@@ -159,13 +159,7 @@ impl GameState {
                 .find(|x| x.position == current_position.coordinate)
                 .unwrap()
                 .hexagon = Some(code.clone());
-            let HexagonCode { code, rotation } = *code;
-            let rotation = (6 + rotation - current_position.connector.0 / 2) % 6;
-            let permutation: [_; 12] = {
-                let permutation = crate::permutations::int_to_array(code);
-                let permutation = crate::permutations::rotate(permutation, rotation);
-                permutation
-            };
+            let permutation = code.to_permutation();
             for i in 0..12u8 {
                 let j = permutation[i as usize];
                 if j < i {
@@ -189,10 +183,10 @@ impl GameState {
         // update tile list
         {
             let tiles = self.player_tiles.get_mut(&self.current_player).unwrap();
-            let index = tiles.iter().position(|x| x == &code.code).unwrap();
+            let index = tiles.iter().position(|x| x.code == code.code).unwrap();
             tiles.remove(index);
             let tile = self.random_state.get_tile(&mut self.used_tiles);
-            tiles.push(tile);
+            tiles.push(HexagonCode::unrotated(tile));
         }
 
         // move all players
@@ -283,6 +277,17 @@ impl GameState {
 pub struct HexagonCode {
     pub code: u16,
     pub rotation: u8, //number inside 0..6
+}
+impl HexagonCode {
+    fn unrotated(code: u16) -> Self {
+        Self { code, rotation: 0 }
+    }
+
+    pub(crate) fn to_permutation(&self) -> [u8; 12] {
+        use crate::permutations::{int_to_array, rotate};
+        let unrotated = int_to_array(self.code);
+        rotate(unrotated, self.rotation)
+    }
 }
 
 #[derive(
