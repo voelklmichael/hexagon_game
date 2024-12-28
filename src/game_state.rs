@@ -74,6 +74,21 @@ impl Default for GameConfiguration {
     }
 }
 
+#[derive(Debug)]
+pub enum Step {
+    SameTile {
+        start: ConnectorPosition,
+        end: ConnectorPosition,
+    },
+    Remaining {
+        towards: ConnectorPosition,
+    },
+    Tile2Tile {
+        start: ConnectorPosition,
+        end: ConnectorPosition,
+    },
+}
+
 impl GameState {
     pub fn new(config: GameConfiguration) -> Result<Self, String> {
         let GameConfiguration {
@@ -148,7 +163,10 @@ impl GameState {
 
     /// returns true if game is done
     #[must_use]
-    pub(crate) fn play_by_code(&mut self, code: &HexagonCode) -> bool {
+    pub(crate) fn play_by_code(
+        &mut self,
+        code: &HexagonCode,
+    ) -> (bool, HashMap<PlayerId, Vec<Step>>) {
         // place tile
         let (permutation, new_tile) = {
             let pid = &self.current_player;
@@ -190,6 +208,7 @@ impl GameState {
         }
 
         // move all players
+        let mut steps = HashMap::new();
         for pid in &self.player_ids {
             let Some(current_position) = self.player_positions.get(pid).unwrap() else {
                 continue;
@@ -206,6 +225,10 @@ impl GameState {
             };
             let mut moved_out = false;
             let mut moved = 1;
+            let mut steps_taken = vec![Step::SameTile {
+                start: current_position.clone(),
+                end: next,
+            }];
             loop {
                 assert!(used.insert(next));
                 if self.board.connections.outer_connectors.contains(&next) {
@@ -218,14 +241,23 @@ impl GameState {
                 {
                     moved += 1;
                     next = *remaining;
+                    steps_taken.push(Step::Remaining { towards: next });
                 } else if let Some(field) = self.board.connections.field_connectors.get(&next)
                     && !used.contains(field)
                 {
+                    steps_taken.push(Step::Tile2Tile {
+                        start: next,
+                        end: *field,
+                    });
                     next = *field;
                 } else if let Some(inner) = self.board.connections.inner_connectors.get(&next)
                     && !used.contains(inner)
                 {
                     moved += 1;
+                    steps_taken.push(Step::SameTile {
+                        start: next,
+                        end: *inner,
+                    });
                     next = *inner;
                 } else {
                     break;
@@ -235,6 +267,7 @@ impl GameState {
             if !moved_out {
                 *self.player_positions.get_mut(pid).unwrap() = Some(next);
             }
+            steps.insert(pid.clone(), steps_taken);
         }
 
         // determine next player - if impossible, game is over
@@ -253,9 +286,9 @@ impl GameState {
             .next()
         {
             self.current_player = pid.clone();
-            false
+            (false, steps)
         } else {
-            true
+            (true, steps)
         }
     }
 

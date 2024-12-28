@@ -7,8 +7,11 @@ use itertools::Itertools;
 
 use crate::game_state::{
     BoardCoordinate, BoardField, ConnectorCoordinate, ConnectorPosition, GameState, HexagonCode,
+    Step,
 };
 
+const ANIMATION_SPEED: f32 = 0.01;
+const ANIMATION_CIRCLE_SIZE_FACTOR: f32 = 0.5;
 const EDGE_SHRINK_FACTOR: f32 = 0.95;
 #[derive(serde::Deserialize, serde::Serialize, Default)]
 pub struct Hexagon {
@@ -17,8 +20,13 @@ pub struct Hexagon {
     selected_code_io: Option<HexagonCode>,
     game_state: Option<crate::game_state::GameState>,
     game_is_ongoing: bool,
+    #[cfg(not(debug_assertions))]
     #[serde(skip)]
     sound_manager: Option<kira::manager::AudioManager<kira::manager::DefaultBackend>>,
+    #[serde(skip)]
+    animation:
+        std::collections::HashMap<crate::game_state::PlayerId, Vec<(crate::game_state::Step, u64)>>,
+    animation_counter: u64,
 }
 impl Hexagon {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
@@ -223,16 +231,28 @@ impl Hexagon {
         }
 
         if let Some(tile) = chosen_tile {
-            if game.play_by_code(&tile) {
+            let (game_is_over, animation) = game.play_by_code(&tile);
+            self.play_sound();
+            self.animation = Default::default();
+            for (pid, steps) in animation {
+                let steps = steps.into_iter().map(|step| (step, 0)).collect_vec();
+                self.animation.insert(pid, steps);
+            }
+            self.animation_counter = 0;
+            ui.ctx().request_repaint();
+            if game_is_over {
                 self.game_is_ongoing = false;
                 return;
             }
-            self.play_sound();
-            self.selected_code_io = None;
         }
     }
 
     fn draw_board(&mut self, ui: &mut egui::Ui) {
+        if !self.animation.is_empty() {
+            ui.ctx().request_repaint();
+            self.animation_counter += 1;
+            dbg!(self.animation_counter);
+        }
         let game_state = self.game_state.as_ref().unwrap();
         let total_size = ui.max_rect().size();
         let total_size = total_size.x.min(total_size.y);
@@ -281,26 +301,71 @@ impl Hexagon {
                 egui::Stroke::new(bounding_hexagon_edge / 100., color),
             );
         }
-        for (c1, c2) in game_state.board.connections.field_connectors.iter() {
+        let mut animations_done = Vec::new();
+        for (conn1, conn2) in game_state.board.connections.field_connectors.iter() {
             let color = {
-                let players = game_state.board_usage.get_players(c1);
+                let players = game_state.board_usage.get_players(conn1);
                 game_state.get_color(players)
             };
-            let (c1, n1) = compute_connector_position(board_center, cell_edge, c1);
-            let (c2, n2) = compute_connector_position(board_center, cell_edge, c2);
+            let (c1, n1) = compute_connector_position(board_center, cell_edge, conn1);
+            let (c2, n2) = compute_connector_position(board_center, cell_edge, conn2);
             let factor = cell_edge / 30.;
             painter.line_segment(
                 [c1 - n1 * factor, c2 - n2 * factor],
                 egui::Stroke::new(bounding_hexagon_edge / 100., color),
             );
+            for (pid, start_is_conn1, player_color, start_time) in
+                self.animation.iter().filter_map(|(pid, steps)| {
+                    let (step, start_time) = steps.first().unwrap();
+                    if let Step::Tile2Tile { start, end } = step {
+                        ((start == conn1 && end == conn2) || (start == conn2 && end == conn1)).then(
+                            || {
+                                (
+                                    pid.clone(),
+                                    start == conn1,
+                                    self.game_state
+                                        .as_ref()
+                                        .unwrap()
+                                        .get_color([pid.clone()].into()),
+                                    *start_time,
+                                )
+                            },
+                        )
+                    } else {
+                        None
+                    }
+                })
+            {
+                let points = [c1, c2];
+                let points = if start_is_conn1 {
+                    points
+                } else {
+                    [points[1], points[0]]
+                };
+                let distance = points[0].distance(points[1]);
+                let moved = cell_edge
+                    * EDGE_SHRINK_FACTOR
+                    * (self.animation_counter - start_time) as f32
+                    * ANIMATION_SPEED;
+                if distance < moved {
+                    animations_done.push(pid)
+                } else {
+                    let p = points[0] + (points[1] - points[0]).normalized() * moved;
+                    painter.circle_filled(
+                        p,
+                        cell_edge / 10. * ANIMATION_CIRCLE_SIZE_FACTOR,
+                        player_color,
+                    );
+                }
+            }
         }
-        for (c1, c2) in game_state.board.connections.remaining_connectors.iter() {
+        for (conn1, conn2) in game_state.board.connections.remaining_connectors.iter() {
             let color = {
-                let players = game_state.board_usage.get_players(c1);
+                let players = game_state.board_usage.get_players(conn1);
                 game_state.get_color(players)
             };
-            let (c1, n1) = compute_connector_position(board_center, cell_edge, c1);
-            let (c2, n2) = compute_connector_position(board_center, cell_edge, c2);
+            let (c1, n1) = compute_connector_position(board_center, cell_edge, conn1);
+            let (c2, n2) = compute_connector_position(board_center, cell_edge, conn2);
             let factor = c1.distance(c2) / 3.;
             let bezier = egui::epaint::CubicBezierShape::from_points_stroke(
                 [c1, c1 + n1 * factor, c2 + n2 * factor, c2],
@@ -308,15 +373,44 @@ impl Hexagon {
                 egui::Color32::TRANSPARENT,
                 egui::Stroke::new(cell_edge / 30., color),
             );
+            fn comparator(
+                step: &Step,
+                conn1: &ConnectorPosition,
+                conn2: &ConnectorPosition,
+            ) -> Option<bool> {
+                if let Step::Remaining { towards } = step {
+                    if towards == conn1 {
+                        Some(false)
+                    } else if towards == conn2 {
+                        Some(true)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            Self::animation_bezier(
+                &painter,
+                cell_edge,
+                &mut animations_done,
+                conn2,
+                conn1,
+                &bezier,
+                &self.game_state,
+                &self.animation,
+                self.animation_counter,
+                comparator,
+            );
             painter.add(bezier);
         }
-        for (c1, c2) in game_state.board.connections.inner_connectors.iter() {
+        for (conn1, conn2) in game_state.board.connections.inner_connectors.iter() {
             let color = {
-                let players = game_state.board_usage.get_players(c1);
+                let players = game_state.board_usage.get_players(conn1);
                 game_state.get_color(players)
             };
-            let (c1, n1) = compute_connector_position(board_center, cell_edge, c1);
-            let (c2, n2) = compute_connector_position(board_center, cell_edge, c2);
+            let (c1, n1) = compute_connector_position(board_center, cell_edge, conn1);
+            let (c2, n2) = compute_connector_position(board_center, cell_edge, conn2);
             let factor = cell_edge / 3.;
             let bezier = egui::epaint::CubicBezierShape::from_points_stroke(
                 [c1, c1 - n1 * factor, c2 - n2 * factor, c2],
@@ -324,8 +418,50 @@ impl Hexagon {
                 egui::Color32::TRANSPARENT,
                 egui::Stroke::new(cell_edge / 30., color),
             );
+            fn comparator(
+                step: &Step,
+                conn1: &ConnectorPosition,
+                conn2: &ConnectorPosition,
+            ) -> Option<bool> {
+                if let Step::SameTile { start, end } = step {
+                    if start == conn1 && end == conn2 {
+                        Some(false)
+                    } else if start == conn2 && end == conn1 {
+                        Some(true)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            }
+            Self::animation_bezier(
+                &painter,
+                cell_edge,
+                &mut animations_done,
+                conn1,
+                conn2,
+                &bezier,
+                &self.game_state,
+                &self.animation,
+                self.animation_counter,
+                comparator,
+            );
             painter.add(bezier);
         }
+        // update animations (remove done steps, update following start_time)
+        for pid in animations_done {
+            let animations = self.animation.get_mut(&pid).unwrap();
+            animations.remove(0);
+            dbg!(&animations);
+            if let Some((_, start_time)) = animations.first_mut() {
+                *start_time = self.animation_counter;
+            } else {
+                self.animation.remove(&pid);
+            }
+        }
+
+        // draw final player positions
         self.game_state
             .as_ref()
             .unwrap()
@@ -341,6 +477,63 @@ impl Hexagon {
                 let (position, _) = compute_connector_position(board_center, cell_edge, position);
                 painter.circle_filled(position, cell_edge / 10., color);
             });
+    }
+
+    fn animation_bezier(
+        painter: &egui::Painter,
+        cell_edge: f32,
+        animations_done: &mut Vec<crate::game_state::PlayerId>,
+        conn1: &ConnectorPosition,
+        conn2: &ConnectorPosition,
+        bezier: &egui::epaint::CubicBezierShape,
+        game_state: &Option<crate::game_state::GameState>,
+        animation: &std::collections::HashMap<crate::game_state::PlayerId, Vec<(Step, u64)>>,
+        animation_counter: u64,
+        comparator: fn(&Step, &ConnectorPosition, &ConnectorPosition) -> Option<bool>,
+    ) {
+        for (pid, start_is_conn1, player_color, start_time) in
+            animation.iter().filter_map(|(pid, steps)| {
+                let (step, start_time) = steps.first().unwrap();
+                if let Some(to_reverse) = comparator(step, conn1, conn2) {
+                    Some((
+                        pid.clone(),
+                        !to_reverse,
+                        game_state.as_ref().unwrap().get_color([pid.clone()].into()),
+                        *start_time,
+                    ))
+                } else {
+                    None
+                }
+            })
+        {
+            let mut points = bezier.flatten(Some(cell_edge / 100.));
+            if !start_is_conn1 {
+                points.reverse();
+            }
+            let mut moved = cell_edge
+                * EDGE_SHRINK_FACTOR
+                * (animation_counter - start_time) as f32
+                * ANIMATION_SPEED;
+            while points.len() >= 2 {
+                let d = points[1].distance(points[0]);
+                if d < moved {
+                    moved -= d;
+                    points.remove(0);
+                } else {
+                    break;
+                }
+            }
+            if points.len() < 2 {
+                animations_done.push(pid)
+            } else {
+                let p = points[0] + (points[1] - points[0]).normalized() * moved;
+                painter.circle_filled(
+                    p,
+                    cell_edge / 10. * ANIMATION_CIRCLE_SIZE_FACTOR,
+                    player_color,
+                );
+            }
+        }
     }
 
     fn show_statistics(&self, ui: &mut egui::Ui) {
@@ -459,7 +652,7 @@ impl eframe::App for Hexagon {
                 .size(Size::remainder())
                 .horizontal(|mut strip| {
                     strip.cell(|ui| {
-                        if !self.game_is_ongoing {
+                        ui.collapsing("New game", |ui| {
                             if let Some(config) =
                                 self.game_configuration.show(ui, self.random_counter)
                             {
@@ -469,27 +662,20 @@ impl eframe::App for Hexagon {
                                 self.play_sound();
                             }
                             ui.separator();
-                        }
+                        });
                         if self.game_state.is_some() {
-                            ui.horizontal(|ui| {
-                                if ui.button("New game").clicked() {
-                                    self.play_sound();
-                                    self.game_is_ongoing = false;
-                                    return;
-                                }
-                                if ui.button("Restart").clicked() {
-                                    self.play_sound();
-                                    self.game_is_ongoing = true;
-                                    self.game_state = Some(
-                                        GameState::new(
-                                            self.game_state.as_ref().unwrap().config.clone(),
-                                        )
-                                        .unwrap(),
-                                    );
-                                    self.selected_code_io = None;
-                                    return;
-                                }
-                            });
+                            if ui.button("Restart").clicked() {
+                                self.play_sound();
+                                self.game_is_ongoing = true;
+                                self.game_state = Some(
+                                    GameState::new(
+                                        self.game_state.as_ref().unwrap().config.clone(),
+                                    )
+                                    .unwrap(),
+                                );
+                                self.selected_code_io = None;
+                                return;
+                            }
                             ui.separator();
                             self.show_statistics(ui);
                             ui.separator();
@@ -522,6 +708,7 @@ fn draw_hexagon(
         start = end;
         points.push(start);
     }
+    points.push(points[1]); // ensures that boundary is nicely closed
     painter.line(points.clone(), egui::Stroke::new(thickness, border_color));
     if let Some(label) = label {
         painter.text(
