@@ -251,7 +251,6 @@ impl Hexagon {
         if !self.animation.is_empty() {
             ui.ctx().request_repaint();
             self.animation_counter += 1;
-            dbg!(self.animation_counter);
         }
         let game_state = self.game_state.as_ref().unwrap();
         let total_size = ui.max_rect().size();
@@ -652,17 +651,24 @@ impl eframe::App for Hexagon {
                 .size(Size::remainder())
                 .horizontal(|mut strip| {
                     strip.cell(|ui| {
-                        ui.collapsing("New game", |ui| {
+                        fn show_config(input: &mut Hexagon, ui: &mut egui::Ui) {
                             if let Some(config) =
-                                self.game_configuration.show(ui, self.random_counter)
+                                input.game_configuration.show(ui, input.random_counter)
                             {
-                                self.game_is_ongoing = true;
-                                self.selected_code_io = None;
-                                self.game_state = Some(GameState::new(config).unwrap());
-                                self.play_sound();
+                                input.game_is_ongoing = true;
+                                input.selected_code_io = None;
+                                input.game_state = Some(GameState::new(config).unwrap());
+                                input.play_sound();
                             }
-                            ui.separator();
-                        });
+                        }
+                        if self.game_state.is_none() {
+                            show_config(self, ui);
+                        } else {
+                            ui.collapsing("New game", |ui| {
+                                show_config(self, ui);
+                                ui.separator();
+                            });
+                        }
                         if self.game_state.is_some() {
                             if ui.button("Restart").clicked() {
                                 self.play_sound();
