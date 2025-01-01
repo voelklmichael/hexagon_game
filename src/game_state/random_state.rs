@@ -3,7 +3,7 @@
 
 use std::u16;
 
-#[derive(Default, serde::Deserialize, serde::Serialize)]
+#[derive(Default, serde::Deserialize, serde::Serialize, Clone)]
 pub struct Wyrand(u64);
 
 impl Wyrand {
@@ -22,7 +22,7 @@ impl Wyrand {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(serde::Deserialize, serde::Serialize, Clone)]
 pub(crate) struct Rand(Wyrand);
 
 impl Rand {

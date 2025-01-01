@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-#[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub struct BiMap<T: Eq + std::hash::Hash> {
     left2right: HashMap<T, T>,
     right2left: HashMap<T, T>,

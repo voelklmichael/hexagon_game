@@ -9,3 +9,7 @@ pub use app::Hexagon;
 pub fn testing() {
     game_state::Board::new(3);
 }
+
+pub fn testing2() {
+    game_state::GameState::testing()
+}

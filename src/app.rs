@@ -641,6 +641,10 @@ impl eframe::App for Hexagon {
     }
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        log::debug!(
+            "Secret: {secret}",
+            secret = std::env::var("AIVEN_MYSQL").unwrap()
+        );
         self.play_sound();
         self.random_counter.add_assign(1);
         ctx.set_visuals(egui::Visuals::dark());

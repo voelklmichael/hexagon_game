@@ -6,7 +6,7 @@ use itertools::Itertools;
 use crate::bimap::BiMap;
 type Color = egui::Color32;
 
-#[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Default, serde::Serialize, serde::Deserialize, Clone)]
 pub struct PlayerStatistics {
     moved: Vec<u32>,
 }
@@ -22,7 +22,7 @@ impl PlayerStatistics {
         self.moved.iter().cloned().max().unwrap_or(0)
     }
 }
-#[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub struct GameState {
     pub config: GameConfiguration,
     pub board: Board,
@@ -302,6 +302,66 @@ impl GameState {
             None
         }
     }
+
+    pub(crate) fn testing() {
+        fn take_turn(mut game: GameState) -> u32 {
+            let pid = game.player_ids.first().unwrap().clone();
+            let tiles = game.player_tiles.get(&pid).unwrap();
+            let mut possible_tiles = vec![0, 1, 2usize];
+            let tile = game.random_state.select_rand_element(&mut possible_tiles);
+            let mut possible_rotations = vec![0, 1, 2, 3, 4, 5u8];
+            let rotation = game
+                .random_state
+                .select_rand_element(&mut possible_rotations);
+            let code = tiles[tile].code;
+            if game.play_by_code(&HexagonCode { code, rotation }).0 {
+                let max = game.player_statistics.get(&pid).unwrap().max_move();
+                max
+            } else {
+                take_turn(game)
+            }
+        }
+        let mut file_to_write = String::new();
+        let n = 100_000;
+        for board_size in 3..22 {
+            let mut maxes = Vec::new();
+            for random_seed in 0..n {
+                let game = Self::new(GameConfiguration {
+                    player_count: 1,
+                    random_seed,
+                    board_size,
+                    tiles_per_player: 3,
+                })
+                .unwrap();
+                let max = take_turn(game);
+                maxes.push(max);
+            }
+            let max_max = maxes.iter().cloned().max().unwrap();
+            let mut max_maxes = Vec::new();
+            for max in 0..max_max {
+                let count = maxes.iter().filter(|m| m == &&max).count();
+                if count > 0 {
+                    max_maxes.push((max, count));
+                }
+            }
+
+            let mut header = String::new();
+            let mut data = String::new();
+            max_maxes.reverse();
+            for (max, count) in max_maxes {
+                header.push_str(&format!("{max: >5}|"));
+                data.push_str(&format!("{count: >5}|"));
+            }
+            println!("{}", board_size);
+            println!("{}", &header[..50]);
+            println!("{}", &data[..50]);
+            for s in [board_size.to_string(), header, data] {
+                file_to_write.push_str(&s);
+                file_to_write.push('\n');
+            }
+            std::fs::write("single_player.txt", &file_to_write).unwrap();
+        }
+    }
 }
 
 #[derive(
@@ -331,13 +391,13 @@ pub struct BoardCoordinate {
     pub y: i32,
 }
 
-#[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub struct BoardField {
     pub position: BoardCoordinate,
     pub hexagon: Option<HexagonCode>,
 }
 
-#[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub struct Board {
     pub fields: Vec<BoardField>,
     pub connections: BoardConnections,
@@ -603,7 +663,7 @@ impl ConnectorPosition {
     }
 }
 
-#[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub struct BoardConnections {
     pub outer_connectors: Vec<ConnectorPosition>,
     pub inner_connectors: crate::bimap::BiMap<ConnectorPosition>,
@@ -616,7 +676,7 @@ pub struct BoardConnections {
 )]
 pub struct PlayerId(pub usize);
 
-#[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Default, serde::Serialize, serde::Deserialize, Clone)]
 pub struct BoardUsage {
     pub used_connectors: HashMap<PlayerId, HashSet<ConnectorPosition>>,
 }
@@ -628,7 +688,7 @@ impl BoardUsage {
             .collect_vec()
     }
 }
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub struct ColorMap {
     player_colors: HashMap<PlayerId, Color>,
     unused_color: Color,
