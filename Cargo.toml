@@ -19,5 +19,5 @@ serde_json = "1.0.134"
 wasm-bindgen-futures = "0.4"
 web-sys = "0.3.70"           # to access the DOM (to hide the loading text)
 
-[workspace]
-members = ['hexagon_sql']
+#[workspace]
+#members = ['hexagon_sql']
