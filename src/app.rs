@@ -748,9 +748,16 @@ impl eframe::App for Hexagon {
         self.random_counter.add_assign(1);
         ctx.set_visuals(egui::Visuals::dark());
         egui::CentralPanel::default().show(ctx, |ui| {
-            StripBuilder::new(ui)
-                .size(Size::relative(0.1))
-                .size(Size::relative(0.2))
+            let stripbuilder = StripBuilder::new(ui);
+            let is_first_frame = self.game_state.is_none();
+            let stripbuilder = if is_first_frame {
+                stripbuilder
+            } else {
+                stripbuilder
+                    .size(Size::relative(0.1))
+                    .size(Size::relative(0.2))
+            };
+            stripbuilder
                 .size(Size::remainder())
                 .horizontal(|mut strip| {
                     strip.cell(|ui| {
@@ -763,9 +770,10 @@ impl eframe::App for Hexagon {
                                     input.selected_code_io = None;
                                     input.game_state = Some(GameState::new(config).unwrap());
                                     input.play_sound();
+                                    ui.ctx().request_repaint();
                                 }
                             }
-                            if self.game_state.is_none() {
+                            if is_first_frame {
                                 show_config(self, ui);
                             } else {
                                 ui.collapsing("New game", |ui| {
@@ -773,7 +781,7 @@ impl eframe::App for Hexagon {
                                     ui.separator();
                                 });
                             }
-                            if self.game_state.is_some() {
+                            if !is_first_frame {
                                 if ui.button("Restart").clicked() {
                                     self.play_sound();
                                     self.game_is_ongoing = true;
@@ -792,7 +800,7 @@ impl eframe::App for Hexagon {
                         });
                     });
 
-                    if self.game_state.is_some() {
+                    if !is_first_frame {
                         strip.cell(|ui| {
                             egui::ScrollArea::both().show(ui, |ui| self.draw_selection(ui));
                         });

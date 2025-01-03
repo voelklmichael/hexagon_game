@@ -104,9 +104,9 @@ impl Default for GameConfiguration {
         Self {
             player_count: 2,
             random_seed: 0,
-            board_size: 6,
+            board_size: 4,
             tiles_per_player: 3,
-            power_ups: true,
+            power_ups: false,
         }
     }
 }
