@@ -11,8 +11,9 @@ use crate::game_state::{
 };
 
 const ANIMATION_SPEED: f32 = 0.01;
-const ANIMATION_CIRCLE_SIZE_FACTOR: f32 = 0.5;
+const ANIMATION_CIRCLE_SIZE_FACTOR: f32 = 1.5;
 const EDGE_SHRINK_FACTOR: f32 = 0.95;
+const PLAYER_KILLED_ANIMATION_COUNT: f32 = 100.;
 #[derive(serde::Deserialize, serde::Serialize, Default)]
 pub struct Hexagon {
     random_counter: u64,
@@ -27,9 +28,16 @@ pub struct Hexagon {
     animation:
         std::collections::HashMap<crate::game_state::PlayerId, Vec<(crate::game_state::Step, u64)>>,
     animation_counter: u64,
+    #[serde(skip)]
+    player_killed: (Option<u64>, Vec<crate::game_state::PlayerKilled>),
 }
 impl Hexagon {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        cc.egui_ctx.style_mut(|style| {
+            style.text_styles.iter_mut().for_each(|x| {
+                x.1.size *= 1.5;
+            })
+        });
         if let Some(storage) = cc.storage {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         }
@@ -59,13 +67,14 @@ impl Hexagon {
         };
         let selectable_tiles = game.player_tiles.get_mut(&game.current_player).unwrap();
 
+        let width = ui.available_width();
+        let edge_size = width / 3.;
+        let height = edge_size * 2. * selectable_tiles.len() as f32;
         let (response, painter) =
-            ui.allocate_painter(ui.available_size(), egui::Sense::click_and_drag());
+            ui.allocate_painter(egui::vec2(width, height), egui::Sense::click_and_drag());
         // background
         painter.rect_filled(response.rect, egui::Rounding::ZERO, egui::Color32::BLACK);
 
-        let total_size = response.rect.height().min(response.rect.width());
-        let edge_size = total_size / (selectable_tiles.len() as f32 + 0.5);
         let mut chosen_tile = None;
 
         for (offset_index, code) in selectable_tiles.iter_mut().enumerate() {
@@ -77,7 +86,8 @@ impl Hexagon {
                 border_color = player_color;
                 is_selected = true;
             }
-            let center = response.rect.center_top();
+            let mut center = response.rect.center_top();
+            center.x -= edge_size * 0.2;
             let center = center + egui::vec2(0., edge_size * (2 * offset_index + 1) as f32); //TODO: this is not consistent with definition of edge_size
             draw_hexagon(
                 &painter,
@@ -172,28 +182,14 @@ impl Hexagon {
                     } else {
                         (1., false)
                     };
-                    let galley = painter.layout(
+                    draw_text(
+                        &painter,
                         if is_left { "↶".into() } else { "↷".into() },
-                        egui::FontId::monospace(edge_size / 2. * factor),
-                        egui::Color32::GOLD,
-                        0.,
-                    );
-                    let angle = angle.to_radians();
-                    let offset = galley.size() / 2.;
-                    let offset = egui::vec2(
-                        offset.x * angle.cos() - offset.y * angle.sin(),
-                        offset.x * angle.sin() + offset.y * angle.cos(),
-                    );
-                    let p = p - offset;
-                    painter.add(egui::Shape::Text(egui::epaint::TextShape {
-                        pos: p,
-                        galley,
-                        underline: egui::Stroke::NONE,
-                        override_text_color: None,
                         angle,
-                        fallback_color: egui::Color32::GOLD,
-                        opacity_factor: 1.,
-                    }));
+                        p,
+                        egui::Color32::GOLD,
+                        edge_size / 2. * factor,
+                    );
                     if response.clicked() && is_above {
                         let rotation = if is_left { 1 } else { 5 };
                         code.rotation = (code.rotation + rotation) % 6;
@@ -231,7 +227,7 @@ impl Hexagon {
         }
 
         if let Some(tile) = chosen_tile {
-            let (game_is_over, animation) = game.play_by_code(&tile);
+            let (game_is_over, animation, player_killed) = game.play_by_code(&tile);
             self.play_sound();
             self.animation = Default::default();
             for (pid, steps) in animation {
@@ -239,6 +235,7 @@ impl Hexagon {
                 self.animation.insert(pid, steps);
             }
             self.animation_counter = 0;
+            self.player_killed = (Default::default(), player_killed);
             ui.ctx().request_repaint();
             if game_is_over {
                 self.game_is_ongoing = false;
@@ -248,7 +245,7 @@ impl Hexagon {
     }
 
     fn draw_board(&mut self, ui: &mut egui::Ui) {
-        if !self.animation.is_empty() {
+        if !self.animation.is_empty() || !self.player_killed.1.is_empty() {
             ui.ctx().request_repaint();
             self.animation_counter += 1;
         }
@@ -458,6 +455,50 @@ impl Hexagon {
                 self.animation.remove(&pid);
             }
         }
+        // update killed animations
+        if self.animation.is_empty() && !self.player_killed.1.is_empty() {
+            if self.player_killed.0.is_none() {
+                self.player_killed.0 = Some(self.animation_counter);
+            }
+            let start_time = self.player_killed.0.unwrap();
+            let elapsed =
+                (self.animation_counter - start_time) as f32 / PLAYER_KILLED_ANIMATION_COUNT;
+            let elapsed = elapsed.max(0.);
+            if elapsed >= 1.0 {
+                self.player_killed = Default::default();
+            } else {
+                for crate::game_state::PlayerKilled {
+                    player_killed_id: _,
+                    player_killing_id,
+                    powerup,
+                    player_killed_pos,
+                    player_killing_pos,
+                } in &self.player_killed.1
+                {
+                    let player_killed_pos =
+                        compute_connector_position(board_center, cell_edge, player_killed_pos).0;
+                    let player_killing_pos =
+                        compute_connector_position(board_center, cell_edge, player_killing_pos).0;
+
+                    painter.circle_filled(
+                        player_killed_pos,
+                        cell_edge / 10.,
+                        game_state.get_color([player_killing_id.clone()].to_vec()),
+                    );
+
+                    let pos =
+                        player_killing_pos + elapsed * (player_killed_pos - player_killing_pos);
+                    draw_text(
+                        &painter,
+                        powerup.as_unicode_text(),
+                        0.,
+                        pos,
+                        game_state.get_color([player_killing_id.clone()].to_vec()),
+                        cell_edge / 4.,
+                    );
+                }
+            }
+        }
 
         // draw final player positions
         self.game_state
@@ -474,6 +515,27 @@ impl Hexagon {
                     .get_color([pid.clone()].into());
                 let (position, _) = compute_connector_position(board_center, cell_edge, position);
                 painter.circle_filled(position, cell_edge / 10., color);
+            });
+
+        // draw power ups
+        self.game_state
+            .as_ref()
+            .unwrap()
+            .available_power_ups
+            .iter()
+            .for_each(|(connector, pickup)| {
+                let (pos, _) = compute_connector_position(board_center, cell_edge, connector);
+                let center = pos;
+                painter.circle_filled(center, cell_edge / 5., egui::Color32::DARK_GRAY);
+                let text = pickup.as_unicode_text();
+                draw_text(
+                    &painter,
+                    text,
+                    0., //60f32 * (connector.connector.0 / 2) as f32,
+                    center,
+                    egui::Color32::ORANGE,
+                    cell_edge / 4.,
+                );
             });
     }
 
@@ -544,6 +606,19 @@ impl Hexagon {
             ui.colored_label(color, format!("Player #{pid} {is_alive}", pid = pid.0));
             ui.label(format!("Total move: {}", statistics.total_move()));
             ui.label(format!("Max move: {}", statistics.max_move()));
+            if game.config.power_ups {
+                let pickups = game.player_pickups.get(pid).unwrap();
+                let pickups = if pickups.is_empty() {
+                    "No Pickups".to_owned()
+                } else {
+                    pickups
+                        .iter()
+                        .map(crate::game_state::PowerUp::as_unicode_text)
+                        .collect_vec()
+                        .join("\t")
+                };
+                ui.label(format!("Pickups: {pickups}"));
+            }
         }
         let max = game
             .player_statistics
@@ -551,7 +626,7 @@ impl Hexagon {
             .map(|(_, x)| x.max_move())
             .max_by_key(|x| *x)
             .unwrap();
-        if max > 0 {
+        if max > 0 && game.player_ids.len() >= 2 {
             let mut leaders = game
                 .player_statistics
                 .iter()
@@ -602,6 +677,33 @@ impl Hexagon {
     }
 }
 
+fn draw_text(
+    painter: &egui::Painter,
+    text: String,
+    angle_in_degrees: f32,
+    pos: egui::Pos2,
+    color: egui::Color32,
+    font_size: f32,
+) {
+    let galley = painter.layout(text, egui::FontId::monospace(font_size), color, 0.);
+    let angle = angle_in_degrees.to_radians();
+    let offset = galley.size() / 2.;
+    let offset = egui::vec2(
+        offset.x * angle.cos() - offset.y * angle.sin(),
+        offset.x * angle.sin() + offset.y * angle.cos(),
+    );
+    let p = pos - offset;
+    painter.add(egui::Shape::Text(egui::epaint::TextShape {
+        pos: p,
+        galley,
+        underline: egui::Stroke::NONE,
+        override_text_color: None,
+        angle,
+        fallback_color: egui::Color32::GOLD,
+        opacity_factor: 1.,
+    }));
+}
+
 fn compute_connector_position(
     board_center: egui::Pos2,
     cell_edge: f32,
@@ -639,55 +741,61 @@ impl eframe::App for Hexagon {
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
-    /// Called each time the UI needs repainting, which may be many times per second.
+
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        #[cfg(not(target_arch = "wasm32"))]
         self.play_sound();
         self.random_counter.add_assign(1);
         ctx.set_visuals(egui::Visuals::dark());
         egui::CentralPanel::default().show(ctx, |ui| {
             StripBuilder::new(ui)
+                .size(Size::relative(0.1))
                 .size(Size::relative(0.2))
                 .size(Size::remainder())
                 .horizontal(|mut strip| {
                     strip.cell(|ui| {
-                        fn show_config(input: &mut Hexagon, ui: &mut egui::Ui) {
-                            if let Some(config) =
-                                input.game_configuration.show(ui, input.random_counter)
-                            {
-                                input.game_is_ongoing = true;
-                                input.selected_code_io = None;
-                                input.game_state = Some(GameState::new(config).unwrap());
-                                input.play_sound();
+                        egui::ScrollArea::both().show(ui, |ui| {
+                            fn show_config(input: &mut Hexagon, ui: &mut egui::Ui) {
+                                if let Some(config) =
+                                    input.game_configuration.show(ui, input.random_counter)
+                                {
+                                    input.game_is_ongoing = true;
+                                    input.selected_code_io = None;
+                                    input.game_state = Some(GameState::new(config).unwrap());
+                                    input.play_sound();
+                                }
                             }
-                        }
-                        if self.game_state.is_none() {
-                            show_config(self, ui);
-                        } else {
-                            ui.collapsing("New game", |ui| {
+                            if self.game_state.is_none() {
                                 show_config(self, ui);
-                                ui.separator();
-                            });
-                        }
-                        if self.game_state.is_some() {
-                            if ui.button("Restart").clicked() {
-                                self.play_sound();
-                                self.game_is_ongoing = true;
-                                self.game_state = Some(
-                                    GameState::new(
-                                        self.game_state.as_ref().unwrap().config.clone(),
-                                    )
-                                    .unwrap(),
-                                );
-                                self.selected_code_io = None;
-                                return;
+                            } else {
+                                ui.collapsing("New game", |ui| {
+                                    show_config(self, ui);
+                                    ui.separator();
+                                });
                             }
-                            ui.separator();
-                            self.show_statistics(ui);
-                            ui.separator();
-                            self.draw_selection(ui);
-                        }
+                            if self.game_state.is_some() {
+                                if ui.button("Restart").clicked() {
+                                    self.play_sound();
+                                    self.game_is_ongoing = true;
+                                    self.game_state = Some(
+                                        GameState::new(
+                                            self.game_state.as_ref().unwrap().config.clone(),
+                                        )
+                                        .unwrap(),
+                                    );
+                                    self.selected_code_io = None;
+                                    return;
+                                }
+                                ui.separator();
+                                self.show_statistics(ui);
+                            }
+                        });
                     });
+
                     if self.game_state.is_some() {
+                        strip.cell(|ui| {
+                            egui::ScrollArea::both().show(ui, |ui| self.draw_selection(ui));
+                        });
                         strip.cell(|ui| self.draw_board(ui));
                     }
                 })

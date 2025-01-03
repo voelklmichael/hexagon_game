@@ -35,6 +35,41 @@ pub struct GameState {
     pub player_ids: Vec<PlayerId>,
     pub player_tiles: HashMap<PlayerId, Vec<HexagonCode>>,
     pub used_tiles: Vec<u16>,
+    pub available_power_ups: Vec<(ConnectorPosition, PowerUp)>,
+    pub player_pickups: HashMap<PlayerId, Vec<PowerUp>>,
+}
+#[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
+pub enum PowerUp {
+    Swords,
+    Blitz,
+    Hammer,
+}
+impl PowerUp {
+    fn get_variants() -> Vec<Self> {
+        use PowerUp::*;
+        [Swords, Blitz, Hammer].into()
+    }
+
+    pub(crate) fn as_unicode_text(&self) -> String {
+        match self {
+            crate::game_state::PowerUp::Swords => "⚔",
+            crate::game_state::PowerUp::Blitz => "⚡",
+            crate::game_state::PowerUp::Hammer => "⚒",
+        }
+        .into()
+    }
+
+    fn get_killed_connectors(&self, connector: ConnectorCoordinate) -> Vec<ConnectorCoordinate> {
+        let k = connector.0 as i8;
+        match self {
+            PowerUp::Swords => [k - 1, k + 1].to_vec(),
+            PowerUp::Blitz => [k - 2, k + 2].to_vec(),
+            PowerUp::Hammer => [k - 3, k + 3].to_vec(),
+        }
+        .into_iter()
+        .map(|k| ConnectorCoordinate((k + 12) as u8 % 12))
+        .collect_vec()
+    }
 }
 
 #[derive(Debug, serde::Deserialize, serde::Serialize, Clone)]
@@ -43,6 +78,7 @@ pub struct GameConfiguration {
     pub random_seed: u64,
     pub board_size: usize,
     pub tiles_per_player: usize,
+    pub power_ups: bool,
 }
 impl GameConfiguration {
     pub(crate) fn validate(&self) -> Result<(), String> {
@@ -70,6 +106,7 @@ impl Default for GameConfiguration {
             random_seed: 0,
             board_size: 6,
             tiles_per_player: 3,
+            power_ups: true,
         }
     }
 }
@@ -96,7 +133,9 @@ impl GameState {
             random_seed,
             board_size,
             tiles_per_player,
+            power_ups,
         } = config;
+        let power_ups = if player_count >= 2 { power_ups } else { false };
         let player_ids = (0..player_count).map(|x| x + 1).map(PlayerId).collect_vec();
         let current_player = player_ids[0].clone();
         let colors = ColorMap::new(&player_ids);
@@ -109,6 +148,7 @@ impl GameState {
         let mut player_statistics = HashMap::new();
         let mut used_tiles = Vec::new();
         let mut player_tiles = HashMap::new();
+        let mut player_pickups = HashMap::new();
         for id in &player_ids {
             let start = random_state.select_rand_element(&mut possible_outer_connectors);
             while let Some(index) = possible_outer_connectors
@@ -128,6 +168,38 @@ impl GameState {
                 tiles.push(HexagonCode::unrotated(tile));
             }
             player_tiles.insert(id.clone(), tiles);
+            player_pickups.insert(id.clone(), Default::default());
+        }
+
+        // distribute power ups
+        // - one for each player
+        // - one per hex
+        // - not on same hex as player starts
+        //TODO: - not on neighbouring connectors
+        let mut power_ups_start_locations = Vec::new();
+        if power_ups {
+            let mut possible_fields = board.fields.iter().map(|x| x.position).collect_vec();
+            for (_, pos) in &player_positions {
+                let pos = &pos.as_ref().unwrap().coordinate;
+                if let Some(index) = possible_fields.iter().position(|x| x == pos) {
+                    possible_fields.remove(index);
+                };
+            }
+            for _ in 0..player_count {
+                if possible_fields.is_empty() {
+                    break;
+                }
+                let coordinate = random_state.select_rand_element(&mut possible_fields);
+                let connector = random_state.select_rand_element(&mut (0..12).collect_vec());
+                let pickup = random_state.select_rand_element(&mut PowerUp::get_variants());
+                power_ups_start_locations.push((
+                    ConnectorPosition {
+                        coordinate,
+                        connector: ConnectorCoordinate(connector),
+                    },
+                    pickup,
+                ))
+            }
         }
         Ok(Self {
             board,
@@ -141,6 +213,8 @@ impl GameState {
             player_tiles,
             used_tiles,
             config,
+            available_power_ups: power_ups_start_locations,
+            player_pickups,
         })
     }
 
@@ -166,7 +240,7 @@ impl GameState {
     pub(crate) fn play_by_code(
         &mut self,
         code: &HexagonCode,
-    ) -> (bool, HashMap<PlayerId, Vec<Step>>) {
+    ) -> (bool, HashMap<PlayerId, Vec<Step>>, Vec<PlayerKilled>) {
         // place tile
         let (permutation, new_tile) = {
             let pid = &self.current_player;
@@ -209,6 +283,7 @@ impl GameState {
 
         // move all players
         let mut steps = HashMap::new();
+        let mut picked_up_powerups = Vec::new();
         for pid in &self.player_ids {
             let Some(current_position) = self.player_positions.get(pid).unwrap() else {
                 continue;
@@ -230,6 +305,14 @@ impl GameState {
                 end: next,
             }];
             loop {
+                let iter = self
+                    .available_power_ups
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, (pos, _))| pos == &next)
+                    .map(|(index, _)| (pid.clone(), moved, index));
+                picked_up_powerups.extend(iter);
+                // pickup item
                 assert!(used.insert(next));
                 if self.board.connections.outer_connectors.contains(&next) {
                     *self.player_positions.get_mut(pid).unwrap() = None;
@@ -269,7 +352,153 @@ impl GameState {
             }
             steps.insert(pid.clone(), steps_taken);
         }
+        // find player who first picked up a power up
+        let mut pickups_to_remove = Vec::new();
+        while let Some((pid, mut moved, powerup)) = picked_up_powerups.pop() {
+            pickups_to_remove.push(powerup);
+            let mut pid = Some(pid);
+            let mut i = 0;
+            while i < picked_up_powerups.len() {
+                if picked_up_powerups[i].2 == powerup {
+                    let (pid2, moved2, _) = picked_up_powerups.remove(i);
+                    match moved.cmp(&moved2) {
+                        std::cmp::Ordering::Less => {}
+                        std::cmp::Ordering::Equal => {
+                            pid = None;
+                        }
+                        std::cmp::Ordering::Greater => {
+                            pid = Some(pid2);
+                            moved = moved2;
+                        }
+                    }
+                } else {
+                    i += 1;
+                }
+            }
+            if let Some(pid) = pid {
+                let pickup = self.available_power_ups[powerup].1.clone();
+                self.player_pickups.get_mut(&pid).unwrap().push(pickup);
+            }
+        }
+        // remove picked up power ups
+        {
+            pickups_to_remove.sort();
+            pickups_to_remove.dedup();
+            for index in pickups_to_remove.into_iter().rev() {
+                self.available_power_ups.remove(index);
+            }
+        }
 
+        // move a random power up
+        if !self.available_power_ups.is_empty() {
+            let (position, _) = self
+                .random_state
+                .select_rand_element(&mut self.available_power_ups.iter_mut().collect_vec());
+            // move to neighbouring tile with 50% chance
+            if self.random_state.next_with_limit(2) == 1 {
+                if let Some(new_position) = self.board.connections.field_connectors.get(&position) {
+                    if self
+                        .player_positions
+                        .iter()
+                        .filter_map(|(_, pos)| pos.as_ref())
+                        .all(|pos| {
+                            pos != new_position
+                                && self.board.connections.field_connectors.get(pos)
+                                    != Some(new_position)
+                                && self
+                                    .board_usage
+                                    .used_connectors
+                                    .iter()
+                                    .all(|(_, used)| !used.contains(new_position))
+                        })
+                    {
+                        *position = *new_position;
+                    }
+                }
+            };
+            // move to different connector on same tile
+            let new_connector = self.random_state.next_with_limit(5) as u8;
+            let new_connector = if new_connector < position.connector.0 {
+                new_connector
+            } else {
+                new_connector + 1
+            };
+            let new_position = ConnectorPosition {
+                coordinate: position.coordinate,
+                connector: ConnectorCoordinate(new_connector),
+            };
+            if self
+                .player_positions
+                .iter()
+                .filter_map(|(_, pos)| pos.as_ref())
+                .all(|pos| {
+                    pos != &new_position
+                        && self.board.connections.field_connectors.get(pos) != Some(&new_position)
+                        && self
+                            .board_usage
+                            .used_connectors
+                            .iter()
+                            .all(|(_, used)| !used.contains(&new_position))
+                })
+            {
+                *position = new_position;
+            }
+        }
+        // check if player stands on power up
+        {
+            self.available_power_ups
+                .iter()
+                .map(|(pos, _)| pos)
+                .for_each(|powerup_pos| {
+                    if self
+                        .player_positions
+                        .iter()
+                        .filter_map(|(_, pos)| pos.clone())
+                        .any(|player_pos| &player_pos == powerup_pos)
+                    {
+                        panic!("Player position is power up position - this should never happen");
+                    }
+                });
+        }
+        // apply power ups
+        let killed_players = {
+            let mut killed_players = Vec::new();
+            for (player_killing, player_killing_position) in self
+                .player_positions
+                .iter()
+                .filter_map(|(pid, pos)| pos.as_ref().map(|pos| (pid, pos)))
+            {
+                for powerup in self.player_pickups.get(player_killing).unwrap() {
+                    for killed in powerup.get_killed_connectors(player_killing_position.connector) {
+                        assert_ne!(killed, player_killing_position.connector);
+                        let killed = ConnectorPosition {
+                            coordinate: player_killing_position.coordinate,
+                            connector: killed,
+                        };
+                        let killed =
+                            self.player_positions
+                                .iter()
+                                .filter_map(|(player_killed, pos)| {
+                                    (pos.as_ref() == Some(&killed)).then_some(PlayerKilled {
+                                        player_killed_id: player_killed.clone(),
+                                        player_killing_id: player_killing.clone(),
+                                        powerup: powerup.clone(),
+                                        player_killed_pos: killed,
+                                        player_killing_pos: *player_killing_position,
+                                    })
+                                });
+                        killed_players.extend(killed);
+                    }
+                }
+            }
+            for killed in &killed_players {
+                *self
+                    .player_positions
+                    .get_mut(&killed.player_killed_id)
+                    .unwrap() = None;
+            }
+            killed_players
+        };
         // determine next player - if impossible, game is over
         let offset = self
             .player_ids
@@ -286,9 +515,9 @@ impl GameState {
             .next()
         {
             self.current_player = pid.clone();
-            (false, steps)
+            (false, steps, killed_players)
         } else {
-            (true, steps)
+            (true, steps, killed_players)
         }
     }
 
@@ -331,6 +560,7 @@ impl GameState {
                     random_seed,
                     board_size,
                     tiles_per_player: 3,
+                    power_ups: false,
                 })
                 .unwrap();
                 let max = take_turn(game);
@@ -362,6 +592,14 @@ impl GameState {
             std::fs::write("single_player.txt", &file_to_write).unwrap();
         }
     }
+}
+
+pub struct PlayerKilled {
+    pub player_killed_id: PlayerId,
+    pub player_killing_id: PlayerId,
+    pub powerup: PowerUp,
+    pub player_killed_pos: ConnectorPosition,
+    pub player_killing_pos: ConnectorPosition,
 }
 
 #[derive(

@@ -2,12 +2,13 @@ use crate::game_state::GameConfiguration;
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct GameConfigurationUI {
-    pub player_count: String,
-    pub board_size: String,
-    pub tiles_per_player: String,
-    pub random_seed: String,
-    pub auto_random: bool,
-    pub error: Option<String>,
+    player_count: u32,
+    board_size: u32,
+    tiles_per_player: u32,
+    random_seed: String,
+    auto_random: bool,
+    error: Option<String>,
+    power_ups: bool,
 }
 
 impl GameConfigurationUI {
@@ -17,29 +18,42 @@ impl GameConfigurationUI {
         ui: &mut egui::Ui,
         random_counter: u64,
     ) -> Option<GameConfiguration> {
-        egui::Grid::new("ConfigurationGrid")
-            .num_columns(2)
-            .show(ui, |ui| {
-                for (label, input) in [
-                    ("Players", &mut self.player_count),
-                    ("Board Size", &mut self.board_size),
-                    ("Tiles/Player", &mut self.tiles_per_player),
-                ] {
-                    ui.label(label);
-                    ui.text_edit_singleline(input);
-                    ui.end_row();
-                }
-                {
-                    ui.label("Random?");
-                    ui.checkbox(&mut self.auto_random, "");
-                    ui.end_row();
-                }
-                if !self.auto_random {
-                    ui.label("Seed");
-                    ui.text_edit_singleline(&mut self.random_seed);
-                    ui.end_row();
-                }
-            });
+        for (label, input, min, max) in [
+            ("Player Count", &mut self.player_count, 1, 6),
+            ("Board Size", &mut self.board_size, 3, 12),
+            ("Tiles/Player", &mut self.tiles_per_player, 1, 5),
+        ] {
+            ui.heading(label);
+            ui.with_layout(
+                egui::Layout::left_to_right(egui::Align::LEFT).with_main_wrap(true),
+                |ui| {
+                    for i in min..=max {
+                        let button = ui.button(i.to_string());
+                        let button = if i == *input {
+                            button.highlight()
+                        } else {
+                            button
+                        };
+                        if button.clicked() {
+                            *input = i;
+                        }
+                    }
+                },
+            );
+        }
+        if self.player_count >= 2 {
+            ui.heading("Power Ups?");
+            ui.checkbox(&mut self.power_ups, "");
+        }
+        {
+            ui.heading("Random?");
+            ui.checkbox(&mut self.auto_random, "");
+        }
+        if !self.auto_random {
+            ui.heading("Seed");
+            ui.text_edit_singleline(&mut self.random_seed);
+        }
+
         if let Some(error) = &self.error {
             ui.colored_label(egui::Color32::RED, error);
         }
@@ -63,18 +77,6 @@ impl GameConfigurationUI {
     }
 
     fn parse(&mut self, random_seed: u64) -> Result<GameConfiguration, String> {
-        let player_count: usize = match self.player_count.parse() {
-            Ok(x) => x,
-            Err(_) => return Err("Player count invalid".into()),
-        };
-        let board_size: usize = match self.board_size.parse() {
-            Ok(x) => x,
-            Err(_) => return Err("Board size invalid".into()),
-        };
-        let tiles_per_player: usize = match self.tiles_per_player.parse() {
-            Ok(x) => x,
-            Err(_) => return Err("Tiles/player invalid".into()),
-        };
         let random_seed = if self.auto_random {
             random_seed
         } else {
@@ -84,10 +86,11 @@ impl GameConfigurationUI {
             }
         };
         Ok(GameConfiguration {
-            player_count,
+            player_count: self.player_count as _,
             random_seed,
-            board_size,
-            tiles_per_player,
+            board_size: self.board_size as _,
+            tiles_per_player: self.tiles_per_player as _,
+            power_ups: self.power_ups,
         })
     }
 }
@@ -99,14 +102,16 @@ impl Default for GameConfigurationUI {
             random_seed,
             board_size,
             tiles_per_player,
+            power_ups,
         } = GameConfiguration::default();
         Self {
-            player_count: player_count.to_string(),
-            board_size: board_size.to_string(),
-            tiles_per_player: tiles_per_player.to_string(),
+            player_count: player_count as _,
+            board_size: board_size as _,
+            tiles_per_player: tiles_per_player as _,
             random_seed: random_seed.to_string(),
             auto_random: true,
             error: None,
+            power_ups,
         }
     }
 }

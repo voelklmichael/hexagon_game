@@ -30,6 +30,7 @@ impl Rand {
         Self(Wyrand::seed(seed))
     }
 
+    #[inline(always)]
     pub(crate) fn select_rand_element<T>(&mut self, possible_outer_connectors: &mut Vec<T>) -> T {
         let i = self.next_with_limit(possible_outer_connectors.len());
         possible_outer_connectors.remove(i)
@@ -48,16 +49,19 @@ impl Rand {
         next
     }
 
-    fn next_u16(&mut self) -> u16 {
-        (self.0.next_u64() % u16::MAX as u64) as u16
+    #[inline(always)]
+    fn next_u64(&mut self) -> u64 {
+        self.0.next_u64()
     }
 
-    fn next_with_limit(&mut self, limit: usize) -> usize {
+    #[inline(always)]
+    pub fn next_with_limit(&mut self, limit: usize) -> usize {
+        let limit = limit as u64;
         loop {
-            let i = self.next_u16() as usize;
-            let max = (u16::MAX as usize + 1) / limit * limit;
+            let i = self.next_u64();
+            let max = u64::MAX / limit * limit;
             if i < max {
-                return i % limit;
+                return (i % limit) as usize;
             }
         }
     }
