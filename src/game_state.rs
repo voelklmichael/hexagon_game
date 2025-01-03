@@ -63,8 +63,8 @@ impl PowerUp {
         let k = connector.0 as i8;
         match self {
             PowerUp::Swords => [k - 1, k + 1].to_vec(),
-            PowerUp::Blitz => [k - 2, k + 2].to_vec(),
-            PowerUp::Hammer => [k - 3, k + 3].to_vec(),
+            PowerUp::Hammer => [k - 2, k + 2].to_vec(),
+            PowerUp::Blitz => [k - 3, k + 3].to_vec(),
         }
         .into_iter()
         .map(|k| ConnectorCoordinate((k + 12) as u8 % 12))
