@@ -468,7 +468,7 @@ impl Hexagon {
                 self.player_killed = Default::default();
             } else {
                 for crate::game_state::PlayerKilled {
-                    player_killed_id: _,
+                    player_killed_id,
                     player_killing_id,
                     powerup,
                     player_killed_pos,
@@ -483,7 +483,7 @@ impl Hexagon {
                     painter.circle_filled(
                         player_killed_pos,
                         cell_edge / 10.,
-                        game_state.get_color([player_killing_id.clone()].to_vec()),
+                        game_state.get_color([player_killed_id.clone()].to_vec()),
                     );
 
                     let pos =
