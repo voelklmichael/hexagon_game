@@ -773,6 +773,7 @@ impl eframe::App for Hexagon {
                                     ui.ctx().request_repaint();
                                 }
                             }
+                            ui.hyperlink_to("Tutorial", "https://html-preview.github.io/?url=https://github.com/voelklmichael/hexagon_game/blob/master/Tutorial.html");
                             if is_first_frame {
                                 show_config(self, ui);
                             } else {
