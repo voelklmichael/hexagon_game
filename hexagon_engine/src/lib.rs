@@ -1,13 +1,8 @@
-pub mod derive_alias {
-
-    derive_aliases::define! {
-        SerdeClone = ::core::clone::Clone, ::serde::Serialize, ::serde::Deserialize;
-    }
-}
-
+mod board_construction;
+mod derive_alias;
 mod hexagon_types;
 mod random_number_generator;
+mod svg_rendering;
+pub use board_construction::*;
 pub use hexagon_types::*;
-pub use ranom_number_generator::RandomNumberGenerator as Rng;
-
-mod board_construction;
+pub use random_number_generator::RandomNumberGenerator as Rng;
