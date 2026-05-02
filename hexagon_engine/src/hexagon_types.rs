@@ -53,6 +53,14 @@ pub enum HexagonEdgeSub {
     Left,
     Right,
 }
+impl HexagonEdgeSub {
+    pub fn invert(&self) -> Self {
+        match self {
+            Self::Left => Self::Right,
+            Self::Right => Self::Left,
+        }
+    }
+}
 
 #[derive(..SerdeClone)]
 pub struct HexagonConnectorPosition {
