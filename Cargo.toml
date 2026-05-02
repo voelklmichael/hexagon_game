@@ -1,0 +1,3 @@
+[workspace]
+members = ["hexagon_engine"]
+resolver = "3"
