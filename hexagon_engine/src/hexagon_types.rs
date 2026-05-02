@@ -1,24 +1,24 @@
 use derive_aliases::derive;
 
 #[derive(..SerdeClone)]
-pub struct HexagonId(u32);
+pub struct HexagonId(pub u32);
 
 #[derive(..SerdeClone)]
-pub struct HexagonConnectorId(u32);
+pub struct HexagonConnectorId(pub u32);
 
 // coordinate position on a hexagon tile
 // x is left to right, y is 120° to it.
 #[derive(..SerdeClone)]
 pub struct HexagonPosition {
-    x: i32,
-    y: i32,
+    pub x: i32,
+    pub y: i32,
 }
 
 #[derive(..SerdeClone)]
 pub struct Hexagon {
-    id: HexagonId,
-    position: HexagonPosition,
-    was_removed: bool,
+    pub id: HexagonId,
+    pub position: HexagonPosition,
+    pub was_removed: bool,
 }
 impl Hexagon {
     pub(crate) fn new(id: u32, x: i32, y: i32) -> Self {
@@ -32,10 +32,10 @@ impl Hexagon {
 
 #[derive(..SerdeClone)]
 pub struct Hexagon2HexagonConnector {
-    id: HexagonConnectorId,
-    hexagon_a: HexagonId,
-    hexagon_b: HexagonId,
-    was_removed: bool,
+    pub id: HexagonConnectorId,
+    pub hexagon_a: HexagonId,
+    pub hexagon_b: HexagonId,
+    pub was_removed: bool,
 }
 
 #[derive(..SerdeClone)]
@@ -56,19 +56,19 @@ pub enum HexagonEdgeSub {
 
 #[derive(..SerdeClone)]
 pub struct HexagonConnectorPosition {
-    hexagon: HexagonId,
-    edge: HexagonEdge,
-    sub: HexagonEdgeSub,
+    pub hexagon: HexagonId,
+    pub edge: HexagonEdge,
+    pub sub: HexagonEdgeSub,
 }
 
 #[derive(..SerdeClone)]
 pub struct HexagonConnectorDirect {
-    id: HexagonConnectorId,
-    connector_a: HexagonConnectorPosition,
-    connector_b: HexagonConnectorPosition,
-    was_removed: bool,
-    weight: u32,
-    kind: HexagonConnectorDirectKind,
+    pub id: HexagonConnectorId,
+    pub connector_a: HexagonConnectorPosition,
+    pub connector_b: HexagonConnectorPosition,
+    pub was_removed: bool,
+    pub weight: u32,
+    pub kind: HexagonConnectorDirectKind,
 }
 
 #[derive(..SerdeClone)]
@@ -80,9 +80,9 @@ pub enum HexagonConnectorDirectKind {
 
 #[derive(..SerdeClone)]
 pub struct HexagonConnectorDeadEnd {
-    id: HexagonConnectorId,
-    hexagon_a: HexagonConnectorPosition,
-    was_removed: bool,
+    pub id: HexagonConnectorId,
+    pub hexagon_a: HexagonConnectorPosition,
+    pub was_removed: bool,
 }
 
 #[derive(..SerdeClone)]
@@ -93,8 +93,8 @@ pub enum HexagonConnector {
 
 #[derive(..SerdeClone)]
 pub struct HexagonBoard {
-    hexagons: Vec<Hexagon>,
-    connectors: Vec<HexagonConnector>,
+    pub hexagons: Vec<Hexagon>,
+    pub connectors: Vec<HexagonConnector>,
 }
 impl HexagonBoard {
     pub(crate) fn new(hexagons: Vec<Hexagon>, connectors: Vec<HexagonConnector>) -> Self {
