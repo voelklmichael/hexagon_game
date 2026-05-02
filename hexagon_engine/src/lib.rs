@@ -6,7 +6,7 @@ pub mod derive_alias {
 }
 
 mod hexagon_types;
-mod ranom_number_generator;
+mod random_number_generator;
 pub use hexagon_types::*;
 pub use ranom_number_generator::RandomNumberGenerator as Rng;
 
