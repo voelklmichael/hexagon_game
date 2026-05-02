@@ -13,8 +13,11 @@ impl super::HexagonBoard {
         let active: Vec<_> = hexagons.iter().filter(|h| !h.was_removed).collect();
 
         if active.is_empty() {
-            std::fs::write(output_file, r#"<svg xmlns="http://www.w3.org/2000/svg"></svg>"#)
-                .unwrap();
+            std::fs::write(
+                output_file,
+                r#"<svg xmlns="http://www.w3.org/2000/svg"></svg>"#,
+            )
+            .unwrap();
             return;
         }
 
@@ -23,10 +26,22 @@ impl super::HexagonBoard {
             .map(|h| axial_to_pixel(h.position.x, h.position.y))
             .collect();
 
-        let min_x = centers.iter().map(|(x, _)| *x).fold(f64::INFINITY, f64::min);
-        let max_x = centers.iter().map(|(x, _)| *x).fold(f64::NEG_INFINITY, f64::max);
-        let min_y = centers.iter().map(|(_, y)| *y).fold(f64::INFINITY, f64::min);
-        let max_y = centers.iter().map(|(_, y)| *y).fold(f64::NEG_INFINITY, f64::max);
+        let min_x = centers
+            .iter()
+            .map(|(x, _)| *x)
+            .fold(f64::INFINITY, f64::min);
+        let max_x = centers
+            .iter()
+            .map(|(x, _)| *x)
+            .fold(f64::NEG_INFINITY, f64::max);
+        let min_y = centers
+            .iter()
+            .map(|(_, y)| *y)
+            .fold(f64::INFINITY, f64::min);
+        let max_y = centers
+            .iter()
+            .map(|(_, y)| *y)
+            .fold(f64::NEG_INFINITY, f64::max);
 
         let offset_x = -min_x + PADDING + HEX_SIZE;
         let offset_y = -min_y + PADDING + HEX_SIZE;
@@ -80,7 +95,7 @@ mod tests {
 
     #[test]
     fn test_board_construction() {
-        for radius in 2..5 {
+        for radius in 2..8 {
             for add_outer_connectors in [true, false] {
                 let options = crate::BoardConstructionOptionsSimple {
                     radius,
@@ -91,6 +106,7 @@ mod tests {
                     "{}/target/simple_{radius}_{add_outer_connectors}.svg",
                     env!("CARGO_MANIFEST_DIR")
                 );
+
                 let path = Path::new(&ouputfile);
                 board.render(path);
             }
