@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use svg::node::element::path::Data;
-use svg::node::element::{Circle, Line, Path, Polygon};
+use svg::node::element::{Circle, Path, Polygon};
 
 use crate::*;
 pub struct RenderTask {
@@ -49,6 +49,19 @@ fn hex_center(hex: &HexagonPosition, r: f64, h: f64) -> (f64, f64) {
     let cx = r + hex.x as f64 * 1.5 * r;
     let cy = h + hex.y as f64 * 2.0 * h + if hex.x % 2 != 0 { h } else { 0.0 };
     (cx, cy)
+}
+
+// Unit vector pointing from the edge midpoint toward the hex center
+fn edge_inward_normal(edge: &Edge) -> (f64, f64) {
+    let s = 3.0_f64.sqrt() / 2.0;
+    match edge {
+        Edge::Top         => ( 0.0,  1.0),
+        Edge::TopLeft     => ( s,    0.5),
+        Edge::BottomLeft  => ( s,   -0.5),
+        Edge::Bottom      => ( 0.0, -1.0),
+        Edge::BottomRight => (-s,   -0.5),
+        Edge::TopRight    => (-s,    0.5),
+    }
 }
 
 fn edge_sub_point(hex: &HexagonPosition, edge_sub: &EdgeSub, r: f64, h: f64) -> (f64, f64) {
@@ -176,10 +189,16 @@ impl RenderTask {
                     }) => {
                         let (ax, ay) = edge_sub_point(hexagon, a, R, h);
                         let (bx, by) = edge_sub_point(hexagon, b, R, h);
-                        let (qx, qy) = hex_center(hexagon, R, h);
+                        let ctrl = R * 0.6;
+                        let (nax, nay) = edge_inward_normal(&a.edge);
+                        let (nbx, nby) = edge_inward_normal(&b.edge);
                         let data = Data::new()
                             .move_to((ax, ay))
-                            .quadratic_curve_to((qx, qy, bx, by));
+                            .cubic_curve_to((
+                                ax + ctrl * nax, ay + ctrl * nay,
+                                bx + ctrl * nbx, by + ctrl * nby,
+                                bx, by,
+                            ));
                         let path_elem = Path::new()
                             .set("d", data)
                             .set("fill", "none")
@@ -195,14 +214,23 @@ impl RenderTask {
                             edge_sub_point(&connector_a.hexagon, &connector_a.edge_sub, R, h);
                         let (bx, by) =
                             edge_sub_point(&connector_b.hexagon, &connector_b.edge_sub, R, h);
-                        let line = Line::new()
-                            .set("x1", ax)
-                            .set("y1", ay)
-                            .set("x2", bx)
-                            .set("y2", by)
+                        let ctrl = R * 0.6;
+                        let (nax, nay) = edge_inward_normal(&connector_a.edge_sub.edge);
+                        let (nbx, nby) = edge_inward_normal(&connector_b.edge_sub.edge);
+                        // control points go outward (away from each hex)
+                        let data = Data::new()
+                            .move_to((ax, ay))
+                            .cubic_curve_to((
+                                ax - ctrl * nax, ay - ctrl * nay,
+                                bx - ctrl * nbx, by - ctrl * nby,
+                                bx, by,
+                            ));
+                        let path_elem = Path::new()
+                            .set("d", data)
+                            .set("fill", "none")
                             .set("stroke", "#808080")
                             .set("stroke-width", 3);
-                        document = document.add(line);
+                        document = document.add(path_elem);
                     }
                 }
             }
