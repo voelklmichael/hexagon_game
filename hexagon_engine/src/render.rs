@@ -8,6 +8,7 @@ pub struct RenderTask {
     pub hexagons: Vec<HexagonPosition>,
     pub hexagon_to_highlight: Option<HexagonPosition>,
     pub connectors: Vec<UsedConnector>,
+    pub current_player_position: Vec<CurrentPlayerPosition>,
 }
 
 pub struct UsedConnector {
@@ -17,6 +18,13 @@ pub struct UsedConnector {
     pub is_connected_to_dead_end: bool,
     pub is_connected_to_player_start: Option<PlayerId>,
     pub is_connected_to_player_target: Option<PlayerId>,
+}
+
+pub struct CurrentPlayerPosition {
+    pub connector: ConnectorKind,
+    // this is a number between 0 and 1
+    // it is used for animations
+    pub step: f32,
 }
 
 #[derive(Clone, Copy)]
@@ -35,29 +43,29 @@ pub enum Color {
 impl Color {
     pub fn to_svg_string(self) -> &'static str {
         match self {
-            Color::Gray       => "#808080",
-            Color::Golden     => "#FFD700",
-            Color::Beige      => "#F5F5DC",
-            Color::DarkGray   => "#555555",
-            Color::Moccasin   => "#FFE4B5",
+            Color::Gray => "#808080",
+            Color::Golden => "#FFD700",
+            Color::Beige => "#F5F5DC",
+            Color::DarkGray => "#555555",
+            Color::Moccasin => "#FFE4B5",
             Color::DarkOrange => "#FF8C00",
-            Color::Green      => "#228B22",
-            Color::Blue       => "#1E90FF",
-            Color::Red        => "#DC143C",
+            Color::Green => "#228B22",
+            Color::Blue => "#1E90FF",
+            Color::Red => "#DC143C",
         }
     }
 
     fn to_rgb(self) -> (u8, u8, u8) {
         match self {
-            Color::Gray       => (0x80, 0x80, 0x80),
-            Color::Golden     => (0xFF, 0xD7, 0x00),
-            Color::Beige      => (0xF5, 0xF5, 0xDC),
-            Color::DarkGray   => (0x55, 0x55, 0x55),
-            Color::Moccasin   => (0xFF, 0xE4, 0xB5),
+            Color::Gray => (0x80, 0x80, 0x80),
+            Color::Golden => (0xFF, 0xD7, 0x00),
+            Color::Beige => (0xF5, 0xF5, 0xDC),
+            Color::DarkGray => (0x55, 0x55, 0x55),
+            Color::Moccasin => (0xFF, 0xE4, 0xB5),
             Color::DarkOrange => (0xFF, 0x8C, 0x00),
-            Color::Green      => (0x22, 0x8B, 0x22),
-            Color::Blue       => (0x1E, 0x90, 0xFF),
-            Color::Red        => (0xDC, 0x14, 0x3C),
+            Color::Green => (0x22, 0x8B, 0x22),
+            Color::Blue => (0x1E, 0x90, 0xFF),
+            Color::Red => (0xDC, 0x14, 0x3C),
         }
     }
 }
@@ -91,12 +99,12 @@ fn hex_center(hex: &HexagonPosition, r: f64, h: f64) -> (f64, f64) {
 fn edge_inward_normal(edge: &Edge) -> (f64, f64) {
     let s = 3.0_f64.sqrt() / 2.0;
     match edge {
-        Edge::Top         => ( 0.0,  1.0),
-        Edge::TopLeft     => ( s,    0.5),
-        Edge::BottomLeft  => ( s,   -0.5),
-        Edge::Bottom      => ( 0.0, -1.0),
-        Edge::BottomRight => (-s,   -0.5),
-        Edge::TopRight    => (-s,    0.5),
+        Edge::Top => (0.0, 1.0),
+        Edge::TopLeft => (s, 0.5),
+        Edge::BottomLeft => (s, -0.5),
+        Edge::Bottom => (0.0, -1.0),
+        Edge::BottomRight => (-s, -0.5),
+        Edge::TopRight => (-s, 0.5),
     }
 }
 
@@ -211,10 +219,15 @@ impl RenderTask {
                 } = connector;
 
                 let player_color = |pid: &PlayerId| -> Color {
-                    player_data.colors.get(pid).copied().unwrap_or(player_data.unused_color)
+                    player_data
+                        .colors
+                        .get(pid)
+                        .copied()
+                        .unwrap_or(player_data.unused_color)
                 };
                 let color: String = if !used_by.is_empty() {
-                    let colors: Vec<Color> = used_by.iter()
+                    let colors: Vec<Color> = used_by
+                        .iter()
                         .chain(previews_used_by.iter())
                         .map(player_color)
                         .collect();
@@ -228,7 +241,11 @@ impl RenderTask {
                 } else {
                     player_data.unused_color.to_svg_string().to_string()
                 };
-                let opacity: f64 = if !previews_used_by.is_empty() { 0.5 } else { 1.0 };
+                let opacity: f64 = if !previews_used_by.is_empty() {
+                    0.5
+                } else {
+                    1.0
+                };
                 let stroke_width: f64 = if !previews_used_by.is_empty() {
                     3.0
                 } else if is_connected_to_player_start.is_some() {
@@ -253,9 +270,15 @@ impl RenderTask {
                             Data::new()
                                 .move_to(tail)
                                 .line_to(tip)
-                                .move_to((tip.0 - dx * head + perp_x * head, tip.1 - dy * head + perp_y * head))
+                                .move_to((
+                                    tip.0 - dx * head + perp_x * head,
+                                    tip.1 - dy * head + perp_y * head,
+                                ))
                                 .line_to(tip)
-                                .line_to((tip.0 - dx * head - perp_x * head, tip.1 - dy * head - perp_y * head))
+                                .line_to((
+                                    tip.0 - dx * head - perp_x * head,
+                                    tip.1 - dy * head - perp_y * head,
+                                ))
                         };
 
                         let data = if is_connected_to_player_start.is_some() {
@@ -292,13 +315,14 @@ impl RenderTask {
                         let ctrl = R * 0.6;
                         let (nax, nay) = edge_inward_normal(&a.edge);
                         let (nbx, nby) = edge_inward_normal(&b.edge);
-                        let data = Data::new()
-                            .move_to((ax, ay))
-                            .cubic_curve_to((
-                                ax + ctrl * nax, ay + ctrl * nay,
-                                bx + ctrl * nbx, by + ctrl * nby,
-                                bx, by,
-                            ));
+                        let data = Data::new().move_to((ax, ay)).cubic_curve_to((
+                            ax + ctrl * nax,
+                            ay + ctrl * nay,
+                            bx + ctrl * nbx,
+                            by + ctrl * nby,
+                            bx,
+                            by,
+                        ));
                         let path_elem = Path::new()
                             .set("d", data)
                             .set("fill", "none")
@@ -318,13 +342,14 @@ impl RenderTask {
                         let ctrl = R * 0.6;
                         let (nax, nay) = edge_inward_normal(&connector_a.edge_sub.edge);
                         let (nbx, nby) = edge_inward_normal(&connector_b.edge_sub.edge);
-                        let data = Data::new()
-                            .move_to((ax, ay))
-                            .cubic_curve_to((
-                                ax - ctrl * nax, ay - ctrl * nay,
-                                bx - ctrl * nbx, by - ctrl * nby,
-                                bx, by,
-                            ));
+                        let data = Data::new().move_to((ax, ay)).cubic_curve_to((
+                            ax - ctrl * nax,
+                            ay - ctrl * nay,
+                            bx - ctrl * nbx,
+                            by - ctrl * nby,
+                            bx,
+                            by,
+                        ));
                         let path_elem = Path::new()
                             .set("d", data)
                             .set("fill", "none")
@@ -357,82 +382,243 @@ impl RenderTask {
 mod tests {
     use super::*;
 
+    fn pos(x: i32, y: i32) -> HexagonPosition {
+        HexagonPosition { x, y }
+    }
+    fn es(edge: Edge, sub: Sub) -> EdgeSub {
+        EdgeSub { edge, sub }
+    }
+    fn cp(x: i32, y: i32, edge: Edge, sub: Sub) -> ConnectorPosition {
+        ConnectorPosition {
+            hexagon: pos(x, y),
+            edge_sub: es(edge, sub),
+        }
+    }
+
+    const P1: PlayerId = PlayerId(1); // Red
+    const P2: PlayerId = PlayerId(2); // Blue
+
+    fn uc(
+        connector: ConnectorKind,
+        used_by: Vec<PlayerId>,
+        preview_used_by: Vec<PlayerId>,
+        is_connected_to_dead_end: bool,
+        is_connected_to_player_start: Option<PlayerId>,
+        is_connected_to_player_target: Option<PlayerId>,
+    ) -> UsedConnector {
+        UsedConnector {
+            connector,
+            used_by,
+            preview_used_by,
+            is_connected_to_dead_end,
+            is_connected_to_player_start,
+            is_connected_to_player_target,
+        }
+    }
+
     #[test]
-    pub fn test_render_simple() {
+    pub fn test_render_all_cases() {
+        use Edge::*;
+        use Sub::*;
+
         let rendertask = RenderTask {
-            hexagons: [
-                HexagonPosition { x: 0, y: 0 },
-                HexagonPosition { x: 1, y: 0 },
-                HexagonPosition { x: 0, y: 1 },
-                HexagonPosition { x: 1, y: 1 },
-            ]
-            .into(),
-            hexagon_to_highlight: Some(HexagonPosition { x: 0, y: 1 }),
-            connectors: [
-                UsedConnector {
-                    connector: ConnectorKind::DeadEnd(ConnectorDeadEnd {
-                        position: ConnectorPosition {
-                            hexagon: HexagonPosition { x: 0, y: 1 },
-                            edge_sub: EdgeSub {
-                                edge: Edge::Bottom,
-                                sub: Sub::Left,
-                            },
-                        },
+            hexagons: vec![
+                pos(0, 0),
+                pos(1, 0),
+                pos(2, 0),
+                pos(0, 1),
+                pos(1, 1),
+                pos(2, 1),
+            ],
+            hexagon_to_highlight: Some(pos(1, 0)),
+            connectors: vec![
+                // --- DeadEnd: inward arrow (player_start → Red, thick) ---
+                uc(
+                    ConnectorKind::DeadEnd(ConnectorDeadEnd {
+                        position: cp(0, 0, Top, Left),
                     }),
-                    used_by: Default::default(),
-                    preview_used_by: Default::default(),
-                    is_connected_to_dead_end: true,
-                    is_connected_to_player_start: None,
-                    is_connected_to_player_target: None,
-                },
-                UsedConnector {
-                    connector: ConnectorKind::OnHex(ConnectorOnHex {
-                        hexagon: HexagonPosition { x: 1, y: 1 },
+                    vec![],
+                    vec![],
+                    false,
+                    Some(P1),
+                    None,
+                ),
+                // --- DeadEnd: outward arrow (player_target → Blue, thin) ---
+                uc(
+                    ConnectorKind::DeadEnd(ConnectorDeadEnd {
+                        position: cp(2, 0, Top, Right),
+                    }),
+                    vec![],
+                    vec![],
+                    false,
+                    None,
+                    Some(P2),
+                ),
+                // --- DeadEnd: X in dead_end_color (Gray) ---
+                uc(
+                    ConnectorKind::DeadEnd(ConnectorDeadEnd {
+                        position: cp(0, 1, Bottom, Left),
+                    }),
+                    vec![],
+                    vec![],
+                    true,
+                    None,
+                    None,
+                ),
+                // --- DeadEnd: X in unused_color (Golden) ---
+                uc(
+                    ConnectorKind::DeadEnd(ConnectorDeadEnd {
+                        position: cp(2, 1, Bottom, Right),
+                    }),
+                    vec![],
+                    vec![],
+                    false,
+                    None,
+                    None,
+                ),
+                // --- OnHex: used_by single player (Red, normal) ---
+                uc(
+                    ConnectorKind::OnHex(ConnectorOnHex {
+                        hexagon: pos(1, 0),
                         edge_sub: ConnectorEdgeSub {
-                            a: EdgeSub {
-                                edge: Edge::Bottom,
-                                sub: Sub::Left,
-                            },
-                            b: EdgeSub {
-                                edge: Edge::BottomRight,
-                                sub: Sub::Right,
-                            },
+                            a: es(BottomLeft, Left),
+                            b: es(BottomRight, Right),
                         },
                     }),
-                    used_by: Default::default(),
-                    preview_used_by: Default::default(),
-                    is_connected_to_dead_end: true,
-                    is_connected_to_player_start: None,
-                    is_connected_to_player_target: None,
-                },
-                UsedConnector {
-                    connector: ConnectorKind::Outside(ConnectorOutside {
-                        connector_a: ConnectorPosition {
-                            hexagon: HexagonPosition { x: 1, y: 0 },
-                            edge_sub: EdgeSub {
-                                edge: Edge::Top,
-                                sub: Sub::Right,
-                            },
-                        },
-                        connector_b: ConnectorPosition {
-                            hexagon: HexagonPosition { x: 0, y: 0 },
-                            edge_sub: EdgeSub {
-                                edge: Edge::TopRight,
-                                sub: Sub::Left,
-                            },
+                    vec![P1],
+                    vec![],
+                    false,
+                    None,
+                    None,
+                ),
+                // --- OnHex: used_by two players + preview (mixed Red+Blue+Blue, translucent) ---
+                uc(
+                    ConnectorKind::OnHex(ConnectorOnHex {
+                        hexagon: pos(0, 0),
+                        edge_sub: ConnectorEdgeSub {
+                            a: es(TopLeft, Left),
+                            b: es(TopRight, Right),
                         },
                     }),
-                    used_by: Default::default(),
-                    preview_used_by: Default::default(),
-                    is_connected_to_dead_end: true,
-                    is_connected_to_player_start: None,
-                    is_connected_to_player_target: None,
-                },
-            ]
-            .into(),
+                    vec![P1, P2],
+                    vec![P2],
+                    false,
+                    None,
+                    None,
+                ),
+                // --- OnHex: player_start (Red, thick) ---
+                uc(
+                    ConnectorKind::OnHex(ConnectorOnHex {
+                        hexagon: pos(2, 0),
+                        edge_sub: ConnectorEdgeSub {
+                            a: es(BottomLeft, Left),
+                            b: es(BottomRight, Left),
+                        },
+                    }),
+                    vec![],
+                    vec![],
+                    false,
+                    Some(P1),
+                    None,
+                ),
+                // --- OnHex: player_target (Blue, thin) ---
+                uc(
+                    ConnectorKind::OnHex(ConnectorOnHex {
+                        hexagon: pos(0, 1),
+                        edge_sub: ConnectorEdgeSub {
+                            a: es(TopLeft, Left),
+                            b: es(TopRight, Right),
+                        },
+                    }),
+                    vec![],
+                    vec![],
+                    false,
+                    None,
+                    Some(P2),
+                ),
+                // --- OnHex: dead_end (Gray, normal) ---
+                uc(
+                    ConnectorKind::OnHex(ConnectorOnHex {
+                        hexagon: pos(1, 1),
+                        edge_sub: ConnectorEdgeSub {
+                            a: es(Top, Left),
+                            b: es(Bottom, Right),
+                        },
+                    }),
+                    vec![],
+                    vec![],
+                    true,
+                    None,
+                    None,
+                ),
+                // --- OnHex: unused (Golden, normal) ---
+                uc(
+                    ConnectorKind::OnHex(ConnectorOnHex {
+                        hexagon: pos(2, 1),
+                        edge_sub: ConnectorEdgeSub {
+                            a: es(TopLeft, Right),
+                            b: es(TopRight, Left),
+                        },
+                    }),
+                    vec![],
+                    vec![],
+                    false,
+                    None,
+                    None,
+                ),
+                // --- Outside: used_by single + preview (Red, translucent) ---
+                uc(
+                    ConnectorKind::Outside(ConnectorOutside {
+                        connector_a: cp(0, 0, BottomRight, Right),
+                        connector_b: cp(1, 0, TopLeft, Left),
+                    }),
+                    vec![P1],
+                    vec![P1],
+                    false,
+                    None,
+                    None,
+                ),
+                // --- Outside: player_start (Red, thick) ---
+                uc(
+                    ConnectorKind::Outside(ConnectorOutside {
+                        connector_a: cp(1, 1, TopRight, Left),
+                        connector_b: cp(2, 0, BottomLeft, Right),
+                    }),
+                    vec![],
+                    vec![],
+                    false,
+                    Some(P1),
+                    None,
+                ),
+                // --- Outside: player_target (Blue, thin) ---
+                uc(
+                    ConnectorKind::Outside(ConnectorOutside {
+                        connector_a: cp(2, 1, TopRight, Right),
+                        connector_b: cp(2, 0, BottomRight, Left),
+                    }),
+                    vec![],
+                    vec![],
+                    false,
+                    None,
+                    Some(P2),
+                ),
+                // --- Outside: unused (Golden, normal) ---
+                uc(
+                    ConnectorKind::Outside(ConnectorOutside {
+                        connector_a: cp(1, 0, BottomRight, Left),
+                        connector_b: cp(2, 0, BottomLeft, Left),
+                    }),
+                    vec![],
+                    vec![],
+                    false,
+                    None,
+                    None,
+                ),
+            ],
         };
+
         let player_data = PlayerData {
-            colors: Default::default(),
+            colors: HashMap::from([(P1, Color::Red), (P2, Color::Blue)]),
             dead_end_color: Color::Gray,
             unused_color: Color::Golden,
             hex_fill: Color::Beige,
@@ -440,6 +626,7 @@ mod tests {
             highlighted_hex_fill: Color::Moccasin,
             highlighted_hex_stroke: Color::DarkOrange,
         };
+
         let svg = rendertask.render(&player_data).unwrap();
         let path = format!("{}/../target/test.svg", env!("CARGO_MANIFEST_DIR"));
         dbg!(&path);
