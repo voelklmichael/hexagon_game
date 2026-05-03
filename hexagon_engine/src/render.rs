@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use svg::node::element::Polygon;
+use svg::node::element::path::Data;
+use svg::node::element::{Circle, Line, Path, Polygon};
 
 use crate::*;
 pub struct RenderTask {
@@ -44,6 +45,39 @@ pub struct PlayerData {
     pub highlighted_hex_stroke: Color,
 }
 
+fn hex_center(hex: &HexagonPosition, r: f64, h: f64) -> (f64, f64) {
+    let cx = r + hex.x as f64 * 1.5 * r;
+    let cy = h + hex.y as f64 * 2.0 * h + if hex.x % 2 != 0 { h } else { 0.0 };
+    (cx, cy)
+}
+
+fn edge_sub_point(hex: &HexagonPosition, edge_sub: &EdgeSub, r: f64, h: f64) -> (f64, f64) {
+    let (cx, cy) = hex_center(hex, r, h);
+    // Flat-top hex vertices: Right, BottomRight, BottomLeft, Left, TopLeft, TopRight
+    let v = [
+        (cx + r, cy),
+        (cx + r / 2.0, cy + h),
+        (cx - r / 2.0, cy + h),
+        (cx - r, cy),
+        (cx - r / 2.0, cy - h),
+        (cx + r / 2.0, cy - h),
+    ];
+    // Each edge A→B going CCW; Left = 1/4 from A, Right = 3/4 from A
+    let (a, b) = match edge_sub.edge {
+        Edge::Top => (v[5], v[4]),
+        Edge::TopLeft => (v[4], v[3]),
+        Edge::BottomLeft => (v[3], v[2]),
+        Edge::Bottom => (v[2], v[1]),
+        Edge::BottomRight => (v[1], v[0]),
+        Edge::TopRight => (v[0], v[5]),
+    };
+    let t = match edge_sub.sub {
+        Sub::Left => 0.25,
+        Sub::Right => 0.75,
+    };
+    (a.0 + t * (b.0 - a.0), a.1 + t * (b.1 - a.1))
+}
+
 impl RenderTask {
     pub fn render(&self, player_data: &PlayerData) -> Result<svg::Document, String> {
         use svg::Document;
@@ -68,8 +102,7 @@ impl RenderTask {
             let (mut max_x, mut max_y) = (f64::MIN, f64::MIN);
 
             for hex in hexagons {
-                let cx = R + hex.x as f64 * 1.5 * R;
-                let cy = h + hex.y as f64 * 2.0 * h + if hex.x % 2 != 0 { h } else { 0.0 };
+                let (cx, cy) = hex_center(hex, R, h);
                 min_x = min_x.min(cx - R);
                 min_y = min_y.min(cy - h);
                 max_x = max_x.max(cx + R);
@@ -115,7 +148,65 @@ impl RenderTask {
             }
             (min_x, max_x, min_y, max_y)
         };
+
         // Step2: add the connectors
+        {
+            for connector in connectors {
+                let UsedConnector {
+                    connector,
+                    used_by,
+                    previews_used_by,
+                    is_connected_to_dead_end,
+                    is_connected_to_player_start,
+                    is_connected_to_player_target,
+                } = connector;
+                match connector {
+                    ConnectorKind::DeadEnd(ConnectorDeadEnd { position }) => {
+                        let (px, py) = edge_sub_point(&position.hexagon, &position.edge_sub, R, h);
+                        let circle = Circle::new()
+                            .set("cx", px)
+                            .set("cy", py)
+                            .set("r", 5)
+                            .set("fill", "#808080");
+                        document = document.add(circle);
+                    }
+                    ConnectorKind::OnHex(ConnectorOnHex {
+                        hexagon,
+                        edge_sub: ConnectorEdgeSub { a, b },
+                    }) => {
+                        let (ax, ay) = edge_sub_point(hexagon, a, R, h);
+                        let (bx, by) = edge_sub_point(hexagon, b, R, h);
+                        let (qx, qy) = hex_center(hexagon, R, h);
+                        let data = Data::new()
+                            .move_to((ax, ay))
+                            .quadratic_curve_to((qx, qy, bx, by));
+                        let path_elem = Path::new()
+                            .set("d", data)
+                            .set("fill", "none")
+                            .set("stroke", "#808080")
+                            .set("stroke-width", 3);
+                        document = document.add(path_elem);
+                    }
+                    ConnectorKind::Outside(ConnectorOutside {
+                        connector_a,
+                        connector_b,
+                    }) => {
+                        let (ax, ay) =
+                            edge_sub_point(&connector_a.hexagon, &connector_a.edge_sub, R, h);
+                        let (bx, by) =
+                            edge_sub_point(&connector_b.hexagon, &connector_b.edge_sub, R, h);
+                        let line = Line::new()
+                            .set("x1", ax)
+                            .set("y1", ay)
+                            .set("x2", bx)
+                            .set("y2", by)
+                            .set("stroke", "#808080")
+                            .set("stroke-width", 3);
+                        document = document.add(line);
+                    }
+                }
+            }
+        }
 
         if !hexagons.is_empty() {
             let (w, h_box) = ((max_x - min_x) * 1.1, (max_y - min_y) * 1.1);
@@ -176,6 +267,29 @@ mod tests {
                             b: EdgeSub {
                                 edge: Edge::BottomRight,
                                 sub: Sub::Right,
+                            },
+                        },
+                    }),
+                    used_by: Default::default(),
+                    previews_used_by: Default::default(),
+                    is_connected_to_dead_end: true,
+                    is_connected_to_player_start: None,
+                    is_connected_to_player_target: None,
+                },
+                UsedConnector {
+                    connector: ConnectorKind::Outside(ConnectorOutside {
+                        connector_a: ConnectorPosition {
+                            hexagon: HexagonPosition { x: 1, y: 0 },
+                            edge_sub: EdgeSub {
+                                edge: Edge::Top,
+                                sub: Sub::Right,
+                            },
+                        },
+                        connector_b: ConnectorPosition {
+                            hexagon: HexagonPosition { x: 0, y: 0 },
+                            edge_sub: EdgeSub {
+                                edge: Edge::TopRight,
+                                sub: Sub::Left,
                             },
                         },
                     }),
