@@ -51,7 +51,7 @@ pub struct ConnectorDeadEnd {
 
 pub struct ConnectorOnHex {
     pub hexagon: HexagonPosition,
-    pub edge_sub: EdgeSub,
+    pub edge_sub: ConnectorEdgeSub,
 }
 
 pub struct ConnectorEdgeSub {
