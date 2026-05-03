@@ -1,11 +1,15 @@
 // a (de)-serializeable rng
+
+use derive_aliases::derive;
+
+#[derive(..SerdeClone)]
 pub struct RandomNumberGenerator {
-    seed: usize,
-    count: usize,
+    seed: u32,
+    count: u32,
 }
 
 impl RandomNumberGenerator {
-    pub fn new(seed: usize) -> RandomNumberGenerator {
+    pub fn new(seed: u32) -> RandomNumberGenerator {
         RandomNumberGenerator { seed, count: 0 }
     }
 
@@ -18,6 +22,8 @@ impl RandomNumberGenerator {
         (t ^ (t >> 14)) as f64 / 4294967296.0
     }
 
+    /// This removes a random element from the list and returns it
+    /// TODO: this should return a result, in case that the list is empty
     pub(crate) fn select_random_element<T>(&mut self, list: &mut Vec<T>) -> T {
         assert!(!list.is_empty());
         let length_before = list.len();

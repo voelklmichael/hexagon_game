@@ -1,6 +1,7 @@
 use derive_aliases::derive;
 
 #[derive(..SerdeClone)]
+#[derive(PartialEq)]
 pub struct HexagonId(pub u32);
 
 #[derive(..SerdeClone)]
@@ -39,7 +40,7 @@ pub struct Hexagon2HexagonConnector {
 }
 
 #[derive(..SerdeClone)]
-#[derive(Copy, strum::VariantArray, strum::EnumIter)]
+#[derive(Copy, PartialEq, strum::VariantArray, strum::EnumIter)]
 pub enum HexagonEdge {
     Top,
     TopRight,
@@ -59,10 +60,32 @@ impl HexagonEdge {
             Self::Bottom => Self::Top,
         }
     }
+
+    fn rotate_cw(&self) -> Self {
+        match self {
+            Self::Top => Self::TopRight,
+            Self::TopRight => Self::BottomRight,
+            Self::BottomRight => Self::Bottom,
+            Self::Bottom => Self::BottomLeft,
+            Self::BottomLeft => Self::TopLeft,
+            Self::TopLeft => Self::Top,
+        }
+    }
+
+    fn rotate_ccw(&self) -> Self {
+        match self {
+            Self::Top => Self::TopLeft,
+            Self::TopLeft => Self::BottomLeft,
+            Self::BottomLeft => Self::Bottom,
+            Self::Bottom => Self::BottomRight,
+            Self::BottomRight => Self::TopRight,
+            Self::TopRight => Self::Top,
+        }
+    }
 }
 
 #[derive(..SerdeClone)]
-#[derive(Copy, strum::VariantArray, strum::EnumIter)]
+#[derive(Copy, PartialEq, strum::VariantArray, strum::EnumIter)]
 pub enum HexagonSub {
     Left,
     Right,
@@ -77,12 +100,14 @@ impl HexagonSub {
 }
 
 #[derive(..SerdeClone)]
+#[derive(PartialEq)]
 pub struct HexagonConnectorPosition {
     pub hexagon: HexagonId,
     pub edge_sub: HexagonEdgeSub,
 }
 
 #[derive(..SerdeClone)]
+#[derive(PartialEq)]
 pub struct HexagonEdgeSub {
     pub edge: HexagonEdge,
     pub sub: HexagonSub,
@@ -131,8 +156,72 @@ impl HexagonBoard {
             connectors,
         }
     }
+    pub fn get_dead_ends(&self) -> Vec<&HexagonConnectorDeadEnd> {
+        self.connectors
+            .iter()
+            .filter_map(|c| match c {
+                HexagonConnector::DeadEnd(d) if !d.was_removed => Some(d),
+                _ => None,
+            })
+            .collect()
+    }
+
+    pub fn play_tile(&mut self, position: HexagonPosition, tile: HexagonTile) {
+        let id = &self
+            .hexagons
+            .iter()
+            .find(|x| !x.was_removed && x.position.x == position.x && x.position.y == position.y)
+            .expect("No matching hexagon found")
+            .id;
+
+        let mut next_connector_id = self
+            .connectors
+            .iter()
+            .map(|c| match c {
+                HexagonConnector::Direct(d) => d.id.0,
+                HexagonConnector::DeadEnd(d) => d.id.0,
+            })
+            .max()
+            .unwrap_or(0)
+            + 1;
+
+        for (a, b) in tile.inner_connectors {
+            self.connectors
+                .push(HexagonConnector::Direct(HexagonConnectorDirect {
+                    id: HexagonConnectorId(next_connector_id),
+                    connector_a: HexagonConnectorPosition {
+                        hexagon: HexagonId(id.0),
+                        edge_sub: a,
+                    },
+                    connector_b: HexagonConnectorPosition {
+                        hexagon: HexagonId(id.0),
+                        edge_sub: b,
+                    },
+                    was_removed: false,
+                    weight: 1,
+                    kind: HexagonConnectorDirectKind::OnHex,
+                }));
+            next_connector_id += 1;
+        }
+    }
 }
 
+#[derive(..SerdeClone)]
 pub struct HexagonTile {
-    inner_connectors: Vec<HexagonEdgeSub>,
+    pub inner_connectors: Vec<(HexagonEdgeSub, HexagonEdgeSub)>,
+}
+impl HexagonTile {
+    pub fn rotate_left(&mut self) {
+        for (start, end) in &mut self.inner_connectors {
+            start.edge = start.edge.rotate_ccw();
+            end.edge = end.edge.rotate_ccw();
+        }
+    }
+
+    pub fn rotate_right(&mut self) {
+        for (start, end) in &mut self.inner_connectors {
+            start.edge = start.edge.rotate_cw();
+            end.edge = end.edge.rotate_cw();
+        }
+    }
 }

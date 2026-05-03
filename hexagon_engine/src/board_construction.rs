@@ -1,6 +1,5 @@
+use derive_aliases::derive;
 use std::collections::HashMap;
-
-use serde::{Deserialize, Serialize};
 
 use crate::{
     Hexagon, HexagonBoard, HexagonConnector, HexagonConnectorDeadEnd, HexagonConnectorDirect,
@@ -8,18 +7,18 @@ use crate::{
     HexagonEdgeSub, HexagonId, HexagonSub,
 };
 
-#[derive(Deserialize, Serialize)]
+#[derive(..SerdeClone)]
 pub struct BoardConstructionOptionsSimple {
     pub radius: u32,
     pub add_outer_connectors: bool,
 }
 
 impl BoardConstructionOptionsSimple {
-    pub fn construct(self) -> Result<HexagonBoard, String> {
+    pub fn construct(&self) -> Result<HexagonBoard, String> {
         let Self {
             radius,
             add_outer_connectors,
-        } = self;
+        } = self.clone();
 
         if radius == 0 {
             return Err(format!(
@@ -114,11 +113,17 @@ impl BoardConstructionOptionsSimple {
                                 id: HexagonConnectorId(id_generator.next()),
                                 connector_a: HexagonConnectorPosition {
                                     hexagon: HexagonId(h.id.0),
-                                    edge_sub: HexagonEdgeSub { edge: edge_a.clone(), sub: sub.clone() },
+                                    edge_sub: HexagonEdgeSub {
+                                        edge: edge_a.clone(),
+                                        sub: sub.clone(),
+                                    },
                                 },
                                 connector_b: HexagonConnectorPosition {
                                     hexagon: HexagonId(neighbor_id),
-                                    edge_sub: HexagonEdgeSub { edge: edge_b.clone(), sub: sub.invert() },
+                                    edge_sub: HexagonEdgeSub {
+                                        edge: edge_b.clone(),
+                                        sub: sub.invert(),
+                                    },
                                 },
                                 was_removed: false,
                                 weight: 1,
@@ -155,11 +160,17 @@ impl BoardConstructionOptionsSimple {
                                 id: HexagonConnectorId(id_generator.next()),
                                 connector_a: HexagonConnectorPosition {
                                     hexagon: HexagonId(h.id.0),
-                                    edge_sub: HexagonEdgeSub { edge: directions[next_dir_idx].1.clone(), sub: HexagonSub::Left },
+                                    edge_sub: HexagonEdgeSub {
+                                        edge: directions[next_dir_idx].1.clone(),
+                                        sub: HexagonSub::Left,
+                                    },
                                 },
                                 connector_b: HexagonConnectorPosition {
                                     hexagon: HexagonId(n_id),
-                                    edge_sub: HexagonEdgeSub { edge: directions[n_dir].1.clone(), sub: HexagonSub::Right },
+                                    edge_sub: HexagonEdgeSub {
+                                        edge: directions[n_dir].1.clone(),
+                                        sub: HexagonSub::Right,
+                                    },
                                 },
                                 was_removed: false,
                                 weight: 1,
@@ -179,11 +190,17 @@ impl BoardConstructionOptionsSimple {
                                 id: HexagonConnectorId(id_generator.next()),
                                 connector_a: HexagonConnectorPosition {
                                     hexagon: HexagonId(h.id.0),
-                                    edge_sub: HexagonEdgeSub { edge: directions[dir_idx].1.clone(), sub: HexagonSub::Right },
+                                    edge_sub: HexagonEdgeSub {
+                                        edge: directions[dir_idx].1.clone(),
+                                        sub: HexagonSub::Right,
+                                    },
                                 },
                                 connector_b: HexagonConnectorPosition {
                                     hexagon: HexagonId(n_id),
-                                    edge_sub: HexagonEdgeSub { edge: directions[n_dir].1.clone(), sub: HexagonSub::Left },
+                                    edge_sub: HexagonEdgeSub {
+                                        edge: directions[n_dir].1.clone(),
+                                        sub: HexagonSub::Left,
+                                    },
                                 },
                                 was_removed: false,
                                 weight: 1,
@@ -209,7 +226,10 @@ impl BoardConstructionOptionsSimple {
                             id: HexagonConnectorId(id_generator.next()),
                             hexagon_a: HexagonConnectorPosition {
                                 hexagon: HexagonId(h.id.0),
-                                edge_sub: HexagonEdgeSub { edge: edge.clone(), sub },
+                                edge_sub: HexagonEdgeSub {
+                                    edge: edge.clone(),
+                                    sub,
+                                },
                             },
                             was_removed: false,
                         }));

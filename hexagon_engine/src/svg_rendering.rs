@@ -205,6 +205,10 @@ fn get_sub_edge_midpoint(
 mod tests {
     use std::path::Path;
 
+    use crate::{
+        HexagonPosition, game_state::DeliveryGameOptions, random_tile::random_tile_fully_connected,
+    };
+
     #[test]
     fn test_board_construction() {
         for radius in 2..8 {
@@ -223,5 +227,50 @@ mod tests {
                 board.render(path);
             }
         }
+    }
+
+    #[test]
+    fn test_board_with_tile() {
+        let options = crate::BoardConstructionOptionsSimple {
+            radius: 2,
+            add_outer_connectors: true,
+        };
+        let mut board = options.construct().unwrap();
+        let mut rng = crate::Rng::new(123);
+        let tile = random_tile_fully_connected(&mut rng);
+        board.play_tile(HexagonPosition { x: 0, y: 0 }, tile);
+        let ouputfile = format!("{}/target/played_board.json", env!("CARGO_MANIFEST_DIR"));
+        let path = Path::new(&ouputfile);
+        let json = serde_json::to_string_pretty(&board).unwrap();
+        std::fs::write(path, json).unwrap();
+
+        let ouputfile = format!("{}/target/played_board.svg", env!("CARGO_MANIFEST_DIR"));
+        let path = Path::new(&ouputfile);
+        board.render(path);
+    }
+
+    #[test]
+    fn test_game_with_tile() {
+        let options = crate::BoardConstructionOptionsSimple {
+            radius: 2,
+            add_outer_connectors: true,
+        };
+        let options = DeliveryGameOptions {
+            board_options: options,
+            random_salt: 123,
+            hand_size: 3,
+            npc_count: 2,
+            player_has_target: true,
+            npcs_have_target: true,
+        };
+        let board = options.start_game();
+        let ouputfile = format!("{}/target/played_board.json", env!("CARGO_MANIFEST_DIR"));
+        let path = Path::new(&ouputfile);
+        let json = serde_json::to_string_pretty(&board).unwrap();
+        std::fs::write(path, json).unwrap();
+
+        let ouputfile = format!("{}/target/played_board.svg", env!("CARGO_MANIFEST_DIR"));
+        let path = Path::new(&ouputfile);
+        // board.render(path);
     }
 }
