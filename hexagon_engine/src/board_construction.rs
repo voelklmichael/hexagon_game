@@ -3,8 +3,9 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    Hexagon, HexagonBoard, HexagonConnector, HexagonConnectorDirect, HexagonConnectorDirectKind,
-    HexagonConnectorId, HexagonConnectorPosition, HexagonEdge, HexagonEdgeSub, HexagonId,
+    Hexagon, HexagonBoard, HexagonConnector, HexagonConnectorDeadEnd, HexagonConnectorDirect,
+    HexagonConnectorDirectKind, HexagonConnectorId, HexagonConnectorPosition, HexagonEdge,
+    HexagonEdgeSub, HexagonId,
 };
 
 #[derive(Deserialize, Serialize)]
@@ -17,7 +18,7 @@ impl BoardConstructionOptionsSimple {
     pub fn construct(self) -> Result<HexagonBoard, String> {
         let Self {
             radius,
-            add_outer_connectors: _,
+            add_outer_connectors,
         } = self;
 
         if radius == 0 {
@@ -92,14 +93,22 @@ impl BoardConstructionOptionsSimple {
             ((1, -1), HE::TopRight),
         ];
 
+        // (hexagon_id, dir_idx, sub_idx) for every position covered by a Direct connector
+        let mut used_positions = std::collections::HashSet::<(u32, usize, usize)>::new();
+
         for h in &hexagons {
-            for ((dx, dy), edge_a) in &directions {
+            for (dir_idx, ((dx, dy), edge_a)) in directions.iter().enumerate() {
                 let edge_b = edge_a.invert();
                 let nx = h.position.x + dx;
                 let ny = h.position.y + dy;
                 if let Some(&neighbor_id) = pos_map.get(&(nx, ny)) {
                     if neighbor_id > h.id.0 {
-                        for sub in [HexagonEdgeSub::Left, HexagonEdgeSub::Right] {
+                        let opp_dir_idx = (dir_idx + 3) % 6;
+                        for (sub_idx, sub) in
+                            [HexagonEdgeSub::Left, HexagonEdgeSub::Right].into_iter().enumerate()
+                        {
+                            used_positions.insert((h.id.0, dir_idx, sub_idx));
+                            used_positions.insert((neighbor_id, opp_dir_idx, 1 - sub_idx));
                             connectors.push(HexagonConnector::Direct(HexagonConnectorDirect {
                                 id: HexagonConnectorId(id_generator.next()),
                                 connector_a: HexagonConnectorPosition {
@@ -117,6 +126,29 @@ impl BoardConstructionOptionsSimple {
                                 kind: HexagonConnectorDirectKind::Edge2Edge,
                             }));
                         }
+                    }
+                }
+            }
+        }
+
+        for h in &hexagons {
+            for (dir_idx, (_, edge)) in directions.iter().enumerate() {
+                for sub_idx in 0..2_usize {
+                    if !used_positions.contains(&(h.id.0, dir_idx, sub_idx)) {
+                        let sub = if sub_idx == 0 {
+                            HexagonEdgeSub::Left
+                        } else {
+                            HexagonEdgeSub::Right
+                        };
+                        connectors.push(HexagonConnector::DeadEnd(HexagonConnectorDeadEnd {
+                            id: HexagonConnectorId(id_generator.next()),
+                            hexagon_a: HexagonConnectorPosition {
+                                hexagon: HexagonId(h.id.0),
+                                edge: edge.clone(),
+                                sub,
+                            },
+                            was_removed: false,
+                        }));
                     }
                 }
             }
