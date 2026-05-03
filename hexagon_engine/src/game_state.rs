@@ -213,9 +213,38 @@ impl GameState {
             todo!("Game is finished")
         }
 
-        // move all players which position is at the current players position along the new paths
-        // for each player, add an entry to the history (which might be empty)
-        // in the history, add all the movement done
+        for player in &mut self.players {
+            let mut movement = vec![];
+            if player.current_position.hexagon == current_position {
+                let mut pos = player.current_position.clone();
+                let mut prev_pos: Option<HexagonConnectorPosition> = None;
+                loop {
+                    let found = self.board.connectors.iter().find(|c| {
+                        let HexagonConnector::Direct(d) = c else { return false };
+                        if d.was_removed { return false }
+                        let at_a = d.connector_a == pos;
+                        let at_b = d.connector_b == pos;
+                        if !at_a && !at_b { return false }
+                        let other = if at_a { &d.connector_b } else { &d.connector_a };
+                        prev_pos.as_ref().map_or(true, |p| p != other)
+                    });
+                    if let Some(HexagonConnector::Direct(d)) = found {
+                        let next = if d.connector_a == pos {
+                            d.connector_b.clone()
+                        } else {
+                            d.connector_a.clone()
+                        };
+                        movement.push(HexagonConnector::Direct(d.clone()));
+                        prev_pos = Some(pos);
+                        pos = next;
+                    } else {
+                        break;
+                    }
+                }
+                player.current_position = pos;
+            }
+            player.history.push(SingleTurnHistory { history: movement });
+        }
 
         self
     }

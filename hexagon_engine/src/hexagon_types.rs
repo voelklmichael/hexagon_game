@@ -5,6 +5,7 @@ use derive_aliases::derive;
 pub struct HexagonId(pub u32);
 
 #[derive(..SerdeClone)]
+#[derive(PartialEq)]
 pub struct HexagonConnectorId(pub u32);
 
 // coordinate position on a hexagon tile
@@ -114,6 +115,7 @@ pub struct HexagonEdgeSub {
 }
 
 #[derive(..SerdeClone)]
+#[derive(PartialEq)]
 pub struct HexagonConnectorDirect {
     pub id: HexagonConnectorId,
     pub connector_a: HexagonConnectorPosition,
@@ -124,6 +126,7 @@ pub struct HexagonConnectorDirect {
 }
 
 #[derive(..SerdeClone)]
+#[derive(PartialEq)]
 pub enum HexagonConnectorDirectKind {
     Edge2Edge,
     Teleport,
