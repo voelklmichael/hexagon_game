@@ -5,3 +5,4 @@ resolver = "3"
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
 derive_aliases = "0.4"
+strum = { version = "0.28", features = ["derive"] }

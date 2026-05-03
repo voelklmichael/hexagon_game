@@ -39,6 +39,7 @@ pub struct Hexagon2HexagonConnector {
 }
 
 #[derive(..SerdeClone)]
+#[derive(Copy, strum::VariantArray, strum::EnumIter)]
 pub enum HexagonEdge {
     Top,
     TopRight,
@@ -61,11 +62,12 @@ impl HexagonEdge {
 }
 
 #[derive(..SerdeClone)]
-pub enum HexagonEdgeSub {
+#[derive(Copy, strum::VariantArray, strum::EnumIter)]
+pub enum HexagonSub {
     Left,
     Right,
 }
-impl HexagonEdgeSub {
+impl HexagonSub {
     pub fn invert(&self) -> Self {
         match self {
             Self::Left => Self::Right,
@@ -77,8 +79,12 @@ impl HexagonEdgeSub {
 #[derive(..SerdeClone)]
 pub struct HexagonConnectorPosition {
     pub hexagon: HexagonId,
+    pub edge_sub: HexagonSub,
+}
+
+pub struct HexagonEdgeSub {
     pub edge: HexagonEdge,
-    pub sub: HexagonEdgeSub,
+    pub sub: HexagonSub,
 }
 
 #[derive(..SerdeClone)]
@@ -96,6 +102,7 @@ pub enum HexagonConnectorDirectKind {
     Edge2Edge,
     Teleport,
     Outside,
+    OnHex,
 }
 
 #[derive(..SerdeClone)]
@@ -123,4 +130,8 @@ impl HexagonBoard {
             connectors,
         }
     }
+}
+
+pub struct HexagonTile {
+    inner_connectors: Vec<HexagonEdgeSub>,
 }

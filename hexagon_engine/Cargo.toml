@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 serde.workspace = true
 derive_aliases.workspace = true
+strum.workspace = true
