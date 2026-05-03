@@ -79,9 +79,10 @@ impl HexagonSub {
 #[derive(..SerdeClone)]
 pub struct HexagonConnectorPosition {
     pub hexagon: HexagonId,
-    pub edge_sub: HexagonSub,
+    pub edge_sub: HexagonEdgeSub,
 }
 
+#[derive(..SerdeClone)]
 pub struct HexagonEdgeSub {
     pub edge: HexagonEdge,
     pub sub: HexagonSub,

@@ -92,14 +92,14 @@ impl super::HexagonBoard {
                         let m1 = get_sub_edge_midpoint(
                             a_cx,
                             a_cy,
-                            &d.connector_a.edge,
-                            &d.connector_a.sub,
+                            &d.connector_a.edge_sub.edge,
+                            &d.connector_a.edge_sub.sub,
                         );
                         let m2 = get_sub_edge_midpoint(
                             b_cx,
                             b_cy,
-                            &d.connector_b.edge,
-                            &d.connector_b.sub,
+                            &d.connector_b.edge_sub.edge,
+                            &d.connector_b.edge_sub.sub,
                         );
 
                         let x1 = a_cx + (m1.0 - a_cx) * 0.85;
@@ -120,7 +120,7 @@ impl super::HexagonBoard {
                         let a_cx = a_pos.0 + offset_x;
                         let a_cy = a_pos.1 + offset_y;
                         let m =
-                            get_sub_edge_midpoint(a_cx, a_cy, &d.hexagon_a.edge, &d.hexagon_a.sub);
+                            get_sub_edge_midpoint(a_cx, a_cy, &d.hexagon_a.edge_sub.edge, &d.hexagon_a.edge_sub.sub);
                         let x = m.0;
                         let y = m.1;
                         let size = 4.0;
@@ -163,7 +163,7 @@ fn get_sub_edge_midpoint(
     cx: f64,
     cy: f64,
     edge: &crate::HexagonEdge,
-    sub: &crate::HexagonEdgeSub,
+    sub: &crate::HexagonSub,
 ) -> (f64, f64) {
     let i = match edge {
         crate::HexagonEdge::BottomRight => 0,
@@ -179,8 +179,8 @@ fn get_sub_edge_midpoint(
     let v2 = (cx + HEX_SIZE * angle2.cos(), cy + HEX_SIZE * angle2.sin());
 
     match sub {
-        crate::HexagonEdgeSub::Left => ((v1.0 * 3.0 + v2.0) / 4.0, (v1.1 * 3.0 + v2.1) / 4.0),
-        crate::HexagonEdgeSub::Right => ((v1.0 + v2.0 * 3.0) / 4.0, (v1.1 + v2.1 * 3.0) / 4.0),
+        crate::HexagonSub::Left => ((v1.0 * 3.0 + v2.0) / 4.0, (v1.1 * 3.0 + v2.1) / 4.0),
+        crate::HexagonSub::Right => ((v1.0 + v2.0 * 3.0) / 4.0, (v1.1 + v2.1 * 3.0) / 4.0),
     }
 }
 
