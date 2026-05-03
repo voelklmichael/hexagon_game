@@ -107,9 +107,22 @@ impl super::HexagonBoard {
                         let x2 = b_cx + (m2.0 - b_cx) * 0.85;
                         let y2 = b_cy + (m2.1 - b_cy) * 0.85;
 
-                        svg.push_str(&format!(
-                            "  <line x1=\"{x1:.1}\" y1=\"{y1:.1}\" x2=\"{x2:.1}\" y2=\"{y2:.1}\" stroke=\"#5a3e0a\" stroke-width=\"2\" stroke-linecap=\"round\"/>\n"
-                        ));
+                        if matches!(d.kind, crate::HexagonConnectorDirectKind::Outside) {
+                            let mid_x = (m1.0 + m2.0) / 2.0;
+                            let mid_y = (m1.1 + m2.1) / 2.0;
+                            let hex_mid_x = (a_cx + b_cx) / 2.0;
+                            let hex_mid_y = (a_cy + b_cy) / 2.0;
+
+                            let cp_x = mid_x + (mid_x - hex_mid_x) * 0.4;
+                            let cp_y = mid_y + (mid_y - hex_mid_y) * 0.4;
+                            svg.push_str(&format!(
+                                "  <path d=\"M {x1:.1} {y1:.1} Q {cp_x:.1} {cp_y:.1} {x2:.1} {y2:.1}\" fill=\"none\" stroke=\"purple\" stroke-width=\"2\" stroke-linecap=\"round\"/>\n"
+                            ));
+                        } else {
+                            svg.push_str(&format!(
+                                "  <line x1=\"{x1:.1}\" y1=\"{y1:.1}\" x2=\"{x2:.1}\" y2=\"{y2:.1}\" stroke=\"#5a3e0a\" stroke-width=\"2\" stroke-linecap=\"round\"/>\n"
+                            ));
+                        }
                     }
                 }
                 crate::HexagonConnector::DeadEnd(d) => {
@@ -119,8 +132,12 @@ impl super::HexagonBoard {
                     if let Some(&a_pos) = hex_map.get(&d.hexagon_a.hexagon.0) {
                         let a_cx = a_pos.0 + offset_x;
                         let a_cy = a_pos.1 + offset_y;
-                        let m =
-                            get_sub_edge_midpoint(a_cx, a_cy, &d.hexagon_a.edge_sub.edge, &d.hexagon_a.edge_sub.sub);
+                        let m = get_sub_edge_midpoint(
+                            a_cx,
+                            a_cy,
+                            &d.hexagon_a.edge_sub.edge,
+                            &d.hexagon_a.edge_sub.sub,
+                        );
                         let x = m.0;
                         let y = m.1;
                         let size = 4.0;
