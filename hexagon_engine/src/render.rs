@@ -19,19 +19,26 @@ pub struct UsedConnector {
     pub is_connected_to_player_target: Option<PlayerId>,
 }
 
-// a color like #ff0000
 #[derive(Clone, Copy)]
-pub struct Color(&'static str);
-impl Color {
-    pub const GRAY: Color = Color("#808080");
-    pub const GOLDEN: Color = Color("#FFD700");
-    pub const BEIGE: Color = Color("#F5F5DC");
-    pub const DARK_GRAY: Color = Color("#555555");
-    pub const MOCCASIN: Color = Color("#FFE4B5");
-    pub const DARK_ORANGE: Color = Color("#FF8C00");
+pub enum Color {
+    Gray,
+    Golden,
+    Beige,
+    DarkGray,
+    Moccasin,
+    DarkOrange,
+}
 
-    fn as_str(self) -> &'static str {
-        self.0
+impl Color {
+    pub fn to_svg_string(self) -> &'static str {
+        match self {
+            Color::Gray      => "#808080",
+            Color::Golden    => "#FFD700",
+            Color::Beige     => "#F5F5DC",
+            Color::DarkGray  => "#555555",
+            Color::Moccasin  => "#FFE4B5",
+            Color::DarkOrange => "#FF8C00",
+        }
     }
 }
 
@@ -141,13 +148,13 @@ impl RenderTask {
 
                 let (fill, stroke) = if is_highlighted {
                     (
-                        player_data.highlighted_hex_fill.as_str(),
-                        player_data.highlighted_hex_stroke.as_str(),
+                        player_data.highlighted_hex_fill.to_svg_string(),
+                        player_data.highlighted_hex_stroke.to_svg_string(),
                     )
                 } else {
                     (
-                        player_data.hex_fill.as_str(),
-                        player_data.hex_stroke.as_str(),
+                        player_data.hex_fill.to_svg_string(),
+                        player_data.hex_stroke.to_svg_string(),
                     )
                 };
 
@@ -332,12 +339,12 @@ mod tests {
         };
         let player_data = PlayerData {
             colors: Default::default(),
-            dead_end_color: Color::GRAY,
-            unused_color: Color::GOLDEN,
-            hex_fill: Color::BEIGE,
-            hex_stroke: Color::DARK_GRAY,
-            highlighted_hex_fill: Color::MOCCASIN,
-            highlighted_hex_stroke: Color::DARK_ORANGE,
+            dead_end_color: Color::Gray,
+            unused_color: Color::Golden,
+            hex_fill: Color::Beige,
+            hex_stroke: Color::DarkGray,
+            highlighted_hex_fill: Color::Moccasin,
+            highlighted_hex_stroke: Color::DarkOrange,
         };
         let svg = rendertask.render(&player_data).unwrap();
         let path = format!("{}/../target/test.svg", env!("CARGO_MANIFEST_DIR"));
