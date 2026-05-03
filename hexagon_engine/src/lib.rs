@@ -1,10 +1,8 @@
-mod board_construction;
-mod derive_alias;
-mod hexagon_types;
-mod random_number_generator;
-mod svg_rendering;
-mod random_tile;
+mod board_types;
 mod game_state;
-pub use board_construction::*;
-pub use hexagon_types::*;
-pub use random_number_generator::RandomNumberGenerator as Rng;
+mod player_types;
+mod render;
+
+use board_types::*;
+use game_state::*;
+use player_types::*;
