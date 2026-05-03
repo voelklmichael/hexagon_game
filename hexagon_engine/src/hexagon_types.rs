@@ -94,7 +94,7 @@ pub struct HexagonConnectorDirect {
 #[derive(..SerdeClone)]
 pub enum HexagonConnectorDirectKind {
     Edge2Edge,
-    Teleporter,
+    Teleport,
     Outside,
 }
 
