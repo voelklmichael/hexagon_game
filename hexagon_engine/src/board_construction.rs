@@ -94,7 +94,7 @@ impl BoardConstructionOptionsSimple {
         ];
 
         // (hexagon_id, dir_idx, sub_idx) for every position covered by a Direct connector
-        let mut used_positions = std::collections::HashSet::<(u32, usize, usize)>::new();
+        let mut used_positions = std::collections::HashSet::new();
         // add direct edge2edge connectors
         for h in &hexagons {
             for (dir_idx, ((dx, dy), edge_a)) in directions.iter().enumerate() {
