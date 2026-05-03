@@ -84,16 +84,17 @@ impl BoardConstructionOptionsSimple {
 
         use HexagonEdge as HE;
         let directions = [
-            ((1_i32, 0_i32), HE::BottomRight, HE::TopLeft),
-            ((0, 1), HE::Bottom, HE::Top),
-            ((-1, 1), HE::BottomLeft, HE::TopRight),
-            ((-1, 0), HE::TopLeft, HE::BottomRight),
-            ((0, -1), HE::Top, HE::Bottom),
-            ((1, -1), HE::TopRight, HE::BottomLeft),
+            ((1_i32, 0_i32), HE::BottomRight),
+            ((0, 1), HE::Bottom),
+            ((-1, 1), HE::BottomLeft),
+            ((-1, 0), HE::TopLeft),
+            ((0, -1), HE::Top),
+            ((1, -1), HE::TopRight),
         ];
 
         for h in &hexagons {
-            for ((dx, dy), edge_a, edge_b) in &directions {
+            for ((dx, dy), edge_a) in &directions {
+                let edge_b = edge_a.invert();
                 let nx = h.position.x + dx;
                 let ny = h.position.y + dy;
                 if let Some(&neighbor_id) = pos_map.get(&(nx, ny)) {

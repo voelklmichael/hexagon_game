@@ -47,6 +47,18 @@ pub enum HexagonEdge {
     BottomLeft,
     TopLeft,
 }
+impl HexagonEdge {
+    pub fn invert(&self) -> Self {
+        match self {
+            Self::Top => Self::Bottom,
+            Self::TopRight => Self::BottomLeft,
+            Self::TopLeft => Self::BottomRight,
+            Self::BottomLeft => Self::TopRight,
+            Self::BottomRight => Self::TopLeft,
+            Self::Bottom => Self::Top,
+        }
+    }
+}
 
 #[derive(..SerdeClone)]
 pub enum HexagonEdgeSub {
