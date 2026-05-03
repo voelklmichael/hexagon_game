@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use svg::node::element::path::Data;
-use svg::node::element::{Circle, Path, Polygon};
+use svg::node::element::{Path, Polygon};
 
 use crate::*;
 pub struct RenderTask {
@@ -242,13 +242,46 @@ impl RenderTask {
                 match connector {
                     ConnectorKind::DeadEnd(ConnectorDeadEnd { position }) => {
                         let (px, py) = edge_sub_point(&position.hexagon, &position.edge_sub, R, h);
-                        let circle = Circle::new()
-                            .set("cx", px)
-                            .set("cy", py)
-                            .set("r", 5)
-                            .set("fill", color)
+                        let (nx, ny) = edge_inward_normal(&position.edge_sub.edge);
+
+                        let make_arrow = |tail: (f64, f64), tip: (f64, f64)| {
+                            let (dx, dy) = (tip.0 - tail.0, tip.1 - tail.1);
+                            let len = (dx * dx + dy * dy).sqrt();
+                            let (dx, dy) = (dx / len, dy / len);
+                            let (perp_x, perp_y) = (-dy, dx);
+                            let head = R * 0.2;
+                            Data::new()
+                                .move_to(tail)
+                                .line_to(tip)
+                                .move_to((tip.0 - dx * head + perp_x * head, tip.1 - dy * head + perp_y * head))
+                                .line_to(tip)
+                                .line_to((tip.0 - dx * head - perp_x * head, tip.1 - dy * head - perp_y * head))
+                        };
+
+                        let data = if is_connected_to_player_start.is_some() {
+                            // arrow from outside pointing inward, tip at edge-sub point
+                            make_arrow((px - nx * R * 0.5, py - ny * R * 0.5), (px, py))
+                        } else if is_connected_to_player_target.is_some() {
+                            // arrow from edge-sub point pointing outward
+                            make_arrow((px, py), (px - nx * R * 0.5, py - ny * R * 0.5))
+                        } else {
+                            // X at 45° to the edge
+                            let (tx, ty) = (-ny, nx);
+                            let f = R * 0.2 / 2.0_f64.sqrt();
+                            Data::new()
+                                .move_to((px - (tx + nx) * f, py - (ty + ny) * f))
+                                .line_to((px + (tx + nx) * f, py + (ty + ny) * f))
+                                .move_to((px - (tx - nx) * f, py - (ty - ny) * f))
+                                .line_to((px + (tx - nx) * f, py + (ty - ny) * f))
+                        };
+
+                        let path_elem = Path::new()
+                            .set("d", data)
+                            .set("fill", "none")
+                            .set("stroke", color)
+                            .set("stroke-width", stroke_width)
                             .set("opacity", opacity);
-                        document = document.add(circle);
+                        document = document.add(path_elem);
                     }
                     ConnectorKind::OnHex(ConnectorOnHex {
                         hexagon,
