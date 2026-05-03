@@ -76,31 +76,63 @@ impl super::HexagonBoard {
         }
 
         for connector in connectors {
-            if let crate::HexagonConnector::Direct(d) = connector {
-                if d.was_removed {
-                    continue;
+            match connector {
+                crate::HexagonConnector::Direct(d) => {
+                    if d.was_removed {
+                        continue;
+                    }
+                    if let (Some(&a_pos), Some(&b_pos)) = (
+                        hex_map.get(&d.connector_a.hexagon.0),
+                        hex_map.get(&d.connector_b.hexagon.0),
+                    ) {
+                        let a_cx = a_pos.0 + offset_x;
+                        let a_cy = a_pos.1 + offset_y;
+                        let b_cx = b_pos.0 + offset_x;
+                        let b_cy = b_pos.1 + offset_y;
+                        let m1 = get_sub_edge_midpoint(
+                            a_cx,
+                            a_cy,
+                            &d.connector_a.edge,
+                            &d.connector_a.sub,
+                        );
+                        let m2 = get_sub_edge_midpoint(
+                            b_cx,
+                            b_cy,
+                            &d.connector_b.edge,
+                            &d.connector_b.sub,
+                        );
+
+                        let x1 = a_cx + (m1.0 - a_cx) * 0.85;
+                        let y1 = a_cy + (m1.1 - a_cy) * 0.85;
+                        let x2 = b_cx + (m2.0 - b_cx) * 0.85;
+                        let y2 = b_cy + (m2.1 - b_cy) * 0.85;
+
+                        svg.push_str(&format!(
+                            "  <line x1=\"{x1:.1}\" y1=\"{y1:.1}\" x2=\"{x2:.1}\" y2=\"{y2:.1}\" stroke=\"#5a3e0a\" stroke-width=\"2\" stroke-linecap=\"round\"/>\n"
+                        ));
+                    }
                 }
-                if let (Some(&a_pos), Some(&b_pos)) = (
-                    hex_map.get(&d.connector_a.hexagon.0),
-                    hex_map.get(&d.connector_b.hexagon.0),
-                ) {
-                    let a_cx = a_pos.0 + offset_x;
-                    let a_cy = a_pos.1 + offset_y;
-                    let b_cx = b_pos.0 + offset_x;
-                    let b_cy = b_pos.1 + offset_y;
-                    let m1 =
-                        get_sub_edge_midpoint(a_cx, a_cy, &d.connector_a.edge, &d.connector_a.sub);
-                    let m2 =
-                        get_sub_edge_midpoint(b_cx, b_cy, &d.connector_b.edge, &d.connector_b.sub);
-
-                    let x1 = a_cx + (m1.0 - a_cx) * 0.85;
-                    let y1 = a_cy + (m1.1 - a_cy) * 0.85;
-                    let x2 = b_cx + (m2.0 - b_cx) * 0.85;
-                    let y2 = b_cy + (m2.1 - b_cy) * 0.85;
-
-                    svg.push_str(&format!(
-                        "  <line x1=\"{x1:.1}\" y1=\"{y1:.1}\" x2=\"{x2:.1}\" y2=\"{y2:.1}\" stroke=\"#5a3e0a\" stroke-width=\"2\" stroke-linecap=\"round\"/>\n"
-                    ));
+                crate::HexagonConnector::DeadEnd(d) => {
+                    if d.was_removed {
+                        continue;
+                    }
+                    if let Some(&a_pos) = hex_map.get(&d.hexagon_a.hexagon.0) {
+                        let a_cx = a_pos.0 + offset_x;
+                        let a_cy = a_pos.1 + offset_y;
+                        let m =
+                            get_sub_edge_midpoint(a_cx, a_cy, &d.hexagon_a.edge, &d.hexagon_a.sub);
+                        let x = m.0;
+                        let y = m.1;
+                        let size = 4.0;
+                        svg.push_str(&format!(
+                            "  <line x1=\"{:.1}\" y1=\"{:.1}\" x2=\"{:.1}\" y2=\"{:.1}\" stroke=\"#8b0000\" stroke-width=\"2\" stroke-linecap=\"round\"/>\n",
+                            x - size, y - size, x + size, y + size
+                        ));
+                        svg.push_str(&format!(
+                            "  <line x1=\"{:.1}\" y1=\"{:.1}\" x2=\"{:.1}\" y2=\"{:.1}\" stroke=\"#8b0000\" stroke-width=\"2\" stroke-linecap=\"round\"/>\n",
+                            x - size, y + size, x + size, y - size
+                        ));
+                    }
                 }
             }
         }
