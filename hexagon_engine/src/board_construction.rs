@@ -95,7 +95,7 @@ impl BoardConstructionOptionsSimple {
 
         // (hexagon_id, dir_idx, sub_idx) for every position covered by a Direct connector
         let mut used_positions = std::collections::HashSet::<(u32, usize, usize)>::new();
-
+        // add direct edge2edge connectors
         for h in &hexagons {
             for (dir_idx, ((dx, dy), edge_a)) in directions.iter().enumerate() {
                 let edge_b = edge_a.invert();
@@ -104,8 +104,9 @@ impl BoardConstructionOptionsSimple {
                 if let Some(&neighbor_id) = pos_map.get(&(nx, ny)) {
                     if neighbor_id > h.id.0 {
                         let opp_dir_idx = (dir_idx + 3) % 6;
-                        for (sub_idx, sub) in
-                            [HexagonEdgeSub::Left, HexagonEdgeSub::Right].into_iter().enumerate()
+                        for (sub_idx, sub) in [HexagonEdgeSub::Left, HexagonEdgeSub::Right]
+                            .into_iter()
+                            .enumerate()
                         {
                             used_positions.insert((h.id.0, dir_idx, sub_idx));
                             used_positions.insert((neighbor_id, opp_dir_idx, 1 - sub_idx));
@@ -131,6 +132,7 @@ impl BoardConstructionOptionsSimple {
             }
         }
 
+        // add dead ends
         for h in &hexagons {
             for (dir_idx, (_, edge)) in directions.iter().enumerate() {
                 for sub_idx in 0..2_usize {
