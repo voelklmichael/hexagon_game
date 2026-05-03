@@ -27,17 +27,23 @@ pub enum Color {
     DarkGray,
     Moccasin,
     DarkOrange,
+    Green,
+    Blue,
+    Red,
 }
 
 impl Color {
     pub fn to_svg_string(self) -> &'static str {
         match self {
-            Color::Gray      => "#808080",
-            Color::Golden    => "#FFD700",
-            Color::Beige     => "#F5F5DC",
-            Color::DarkGray  => "#555555",
-            Color::Moccasin  => "#FFE4B5",
+            Color::Gray       => "#808080",
+            Color::Golden     => "#FFD700",
+            Color::Beige      => "#F5F5DC",
+            Color::DarkGray   => "#555555",
+            Color::Moccasin   => "#FFE4B5",
             Color::DarkOrange => "#FF8C00",
+            Color::Green      => "#228B22",
+            Color::Blue       => "#1E90FF",
+            Color::Red        => "#DC143C",
         }
     }
 }
