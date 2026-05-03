@@ -46,6 +46,29 @@ impl Color {
             Color::Red        => "#DC143C",
         }
     }
+
+    fn to_rgb(self) -> (u8, u8, u8) {
+        match self {
+            Color::Gray       => (0x80, 0x80, 0x80),
+            Color::Golden     => (0xFF, 0xD7, 0x00),
+            Color::Beige      => (0xF5, 0xF5, 0xDC),
+            Color::DarkGray   => (0x55, 0x55, 0x55),
+            Color::Moccasin   => (0xFF, 0xE4, 0xB5),
+            Color::DarkOrange => (0xFF, 0x8C, 0x00),
+            Color::Green      => (0x22, 0x8B, 0x22),
+            Color::Blue       => (0x1E, 0x90, 0xFF),
+            Color::Red        => (0xDC, 0x14, 0x3C),
+        }
+    }
+}
+
+fn mix_colors(colors: &[Color]) -> String {
+    let n = colors.len() as u32;
+    let (r, g, b) = colors.iter().fold((0u32, 0u32, 0u32), |(ar, ag, ab), &c| {
+        let (cr, cg, cb) = c.to_rgb();
+        (ar + cr as u32, ag + cg as u32, ab + cb as u32)
+    });
+    format!("#{:02X}{:02X}{:02X}", r / n, g / n, b / n)
 }
 
 pub struct PlayerData {
@@ -186,6 +209,36 @@ impl RenderTask {
                     is_connected_to_player_start,
                     is_connected_to_player_target,
                 } = connector;
+
+                let player_color = |pid: &PlayerId| -> Color {
+                    player_data.colors.get(pid).copied().unwrap_or(player_data.unused_color)
+                };
+                let color: String = if !used_by.is_empty() {
+                    let colors: Vec<Color> = used_by.iter()
+                        .chain(previews_used_by.iter())
+                        .map(player_color)
+                        .collect();
+                    mix_colors(&colors)
+                } else if let Some(pid) = is_connected_to_player_start.as_ref() {
+                    player_color(pid).to_svg_string().to_string()
+                } else if let Some(pid) = is_connected_to_player_target.as_ref() {
+                    player_color(pid).to_svg_string().to_string()
+                } else if *is_connected_to_dead_end {
+                    player_data.dead_end_color.to_svg_string().to_string()
+                } else {
+                    player_data.unused_color.to_svg_string().to_string()
+                };
+                let opacity: f64 = if !previews_used_by.is_empty() { 0.5 } else { 1.0 };
+                let stroke_width: f64 = if !previews_used_by.is_empty() {
+                    3.0
+                } else if is_connected_to_player_start.is_some() {
+                    5.0
+                } else if is_connected_to_player_target.is_some() {
+                    1.5
+                } else {
+                    3.0
+                };
+
                 match connector {
                     ConnectorKind::DeadEnd(ConnectorDeadEnd { position }) => {
                         let (px, py) = edge_sub_point(&position.hexagon, &position.edge_sub, R, h);
@@ -193,7 +246,8 @@ impl RenderTask {
                             .set("cx", px)
                             .set("cy", py)
                             .set("r", 5)
-                            .set("fill", "#808080");
+                            .set("fill", color)
+                            .set("opacity", opacity);
                         document = document.add(circle);
                     }
                     ConnectorKind::OnHex(ConnectorOnHex {
@@ -215,8 +269,9 @@ impl RenderTask {
                         let path_elem = Path::new()
                             .set("d", data)
                             .set("fill", "none")
-                            .set("stroke", "#808080")
-                            .set("stroke-width", 3);
+                            .set("stroke", color)
+                            .set("stroke-width", stroke_width)
+                            .set("opacity", opacity);
                         document = document.add(path_elem);
                     }
                     ConnectorKind::Outside(ConnectorOutside {
@@ -230,7 +285,6 @@ impl RenderTask {
                         let ctrl = R * 0.6;
                         let (nax, nay) = edge_inward_normal(&connector_a.edge_sub.edge);
                         let (nbx, nby) = edge_inward_normal(&connector_b.edge_sub.edge);
-                        // control points go outward (away from each hex)
                         let data = Data::new()
                             .move_to((ax, ay))
                             .cubic_curve_to((
@@ -241,8 +295,9 @@ impl RenderTask {
                         let path_elem = Path::new()
                             .set("d", data)
                             .set("fill", "none")
-                            .set("stroke", "#808080")
-                            .set("stroke-width", 3);
+                            .set("stroke", color)
+                            .set("stroke-width", stroke_width)
+                            .set("opacity", opacity);
                         document = document.add(path_elem);
                     }
                 }

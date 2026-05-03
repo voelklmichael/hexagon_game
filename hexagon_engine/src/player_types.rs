@@ -1,5 +1,6 @@
 use super::board_types::{ConnectorId, ConnectorPosition, Tile};
 
+#[derive(PartialEq, Eq, Hash)]
 pub struct PlayerId(u32);
 
 pub struct Player {
