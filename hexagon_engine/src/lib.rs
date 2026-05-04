@@ -1,6 +1,9 @@
+#![allow(unused)]
+
 mod board_types;
 mod game_state;
 mod player_types;
+pub mod random_number_generator;
 mod render;
 
 use board_types::*;

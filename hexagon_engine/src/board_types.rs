@@ -35,7 +35,7 @@ pub struct Board {
 pub struct ConnectorId(pub u32);
 
 pub struct Connector {
-    pub connectorId: ConnectorId,
+    pub connector_id: ConnectorId,
     pub kind: ConnectorKind,
     pub weight: u32,
 }
