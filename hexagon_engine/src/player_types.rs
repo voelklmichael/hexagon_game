@@ -16,3 +16,11 @@ pub struct Player {
 pub struct PlayerHistorySingleTurn {
     pub connectors: Vec<ConnectorId>,
 }
+impl PlayerHistorySingleTurn {
+    pub(crate) fn new_from_start(start: &ConnectorId) -> Vec<PlayerHistorySingleTurn> {
+        [PlayerHistorySingleTurn {
+            connectors: [start.clone()].into(),
+        }]
+        .into()
+    }
+}

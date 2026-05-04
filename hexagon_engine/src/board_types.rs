@@ -1,3 +1,7 @@
+mod board;
+mod tile;
+
+#[derive(Clone, Copy, Debug, strum::EnumIter)]
 pub enum Edge {
     Top,
     TopLeft,
@@ -7,35 +11,40 @@ pub enum Edge {
     TopRight,
 }
 
+#[derive(Clone, Copy, Debug, strum::EnumIter)]
 pub enum Sub {
     Left,
     Right,
 }
 
+#[derive(Clone)]
 pub struct EdgeSub {
     pub edge: Edge,
     pub sub: Sub,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct HexagonPosition {
     pub x: i32,
     pub y: i32,
 }
 
+#[derive(Clone)]
 pub struct ConnectorPosition {
     pub hexagon: HexagonPosition,
     pub edge_sub: EdgeSub,
 }
 
 pub struct Board {
-    hexagons: Vec<HexagonPosition>,
-    connectors: Vec<Connector>,
+    pub hexagons: Vec<HexagonPosition>,
+    pub connectors: Vec<Connector>,
 }
 
+#[derive(Clone)]
 pub struct ConnectorId(pub u32);
 
 pub struct Connector {
-    pub connector_id: ConnectorId,
+    pub id: ConnectorId,
     pub kind: ConnectorKind,
     pub weight: u32,
 }

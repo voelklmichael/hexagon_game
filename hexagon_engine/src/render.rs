@@ -100,8 +100,11 @@ pub struct PlayerData {
 }
 
 fn hex_center(hex: &HexagonPosition, r: f64, h: f64) -> (f64, f64) {
-    let cx = r + hex.x as f64 * 1.5 * r;
-    let cy = h + hex.y as f64 * 2.0 * h + if hex.x % 2 != 0 { h } else { 0.0 };
+    let q = hex.x as f64;
+    let rv = hex.y as f64;
+    // axial → screen: q-axis is horizontal, r-axis is tilted 60° (contributes q*h to cy)
+    let cx = q * 1.5 * r;
+    let cy = rv * 2.0 * h + q * h;
     (cx, cy)
 }
 
@@ -150,26 +153,42 @@ fn point_on_connector(connector: &ConnectorKind, step: f32, r: f64, h: f64) -> (
     let cubic = |p0: (f64, f64), p1: (f64, f64), p2: (f64, f64), p3: (f64, f64)| {
         let u = 1.0 - t;
         (
-            u*u*u*p0.0 + 3.0*u*u*t*p1.0 + 3.0*u*t*t*p2.0 + t*t*t*p3.0,
-            u*u*u*p0.1 + 3.0*u*u*t*p1.1 + 3.0*u*t*t*p2.1 + t*t*t*p3.1,
+            u * u * u * p0.0 + 3.0 * u * u * t * p1.0 + 3.0 * u * t * t * p2.0 + t * t * t * p3.0,
+            u * u * u * p0.1 + 3.0 * u * u * t * p1.1 + 3.0 * u * t * t * p2.1 + t * t * t * p3.1,
         )
     };
     match connector {
-        ConnectorKind::OnHex(ConnectorOnHex { hexagon, edge_sub: ConnectorEdgeSub { a, b } }) => {
+        ConnectorKind::OnHex(ConnectorOnHex {
+            hexagon,
+            edge_sub: ConnectorEdgeSub { a, b },
+        }) => {
             let (ax, ay) = edge_sub_point(hexagon, a, r, h);
             let (bx, by) = edge_sub_point(hexagon, b, r, h);
             let ctrl = r * 0.6;
             let (nax, nay) = edge_inward_normal(&a.edge);
             let (nbx, nby) = edge_inward_normal(&b.edge);
-            cubic((ax, ay), (ax + ctrl*nax, ay + ctrl*nay), (bx + ctrl*nbx, by + ctrl*nby), (bx, by))
+            cubic(
+                (ax, ay),
+                (ax + ctrl * nax, ay + ctrl * nay),
+                (bx + ctrl * nbx, by + ctrl * nby),
+                (bx, by),
+            )
         }
-        ConnectorKind::Outside(ConnectorOutside { connector_a, connector_b }) => {
+        ConnectorKind::Outside(ConnectorOutside {
+            connector_a,
+            connector_b,
+        }) => {
             let (ax, ay) = edge_sub_point(&connector_a.hexagon, &connector_a.edge_sub, r, h);
             let (bx, by) = edge_sub_point(&connector_b.hexagon, &connector_b.edge_sub, r, h);
             let ctrl = r * 0.6;
             let (nax, nay) = edge_inward_normal(&connector_a.edge_sub.edge);
             let (nbx, nby) = edge_inward_normal(&connector_b.edge_sub.edge);
-            cubic((ax, ay), (ax - ctrl*nax, ay - ctrl*nay), (bx - ctrl*nbx, by - ctrl*nby), (bx, by))
+            cubic(
+                (ax, ay),
+                (ax - ctrl * nax, ay - ctrl * nay),
+                (bx - ctrl * nbx, by - ctrl * nby),
+                (bx, by),
+            )
         }
         ConnectorKind::DeadEnd(ConnectorDeadEnd { position }) => {
             edge_sub_point(&position.hexagon, &position.edge_sub, r, h)
@@ -408,7 +427,9 @@ impl RenderTask {
         // Step3: render current player positions
         for cpp in current_player_position {
             let (px, py) = point_on_connector(&cpp.connector, cpp.step, R, h);
-            let color = player_data.colors.get(&cpp.player_id)
+            let color = player_data
+                .colors
+                .get(&cpp.player_id)
                 .copied()
                 .unwrap_or(player_data.unused_color)
                 .to_svg_string();
@@ -440,6 +461,10 @@ impl RenderTask {
 
 #[cfg(test)]
 mod tests {
+    use strum::IntoEnumIterator;
+
+    use crate::game_options::OuterConnectors;
+
     use super::*;
 
     fn pos(x: i32, y: i32) -> HexagonPosition {
@@ -699,13 +724,15 @@ mod tests {
         use Edge::*;
         use Sub::*;
 
-        let make_connector = || ConnectorKind::OnHex(ConnectorOnHex {
-            hexagon: pos(0, 0),
-            edge_sub: ConnectorEdgeSub {
-                a: es(BottomLeft, Left),
-                b: es(BottomRight, Right),
-            },
-        });
+        let make_connector = || {
+            ConnectorKind::OnHex(ConnectorOnHex {
+                hexagon: pos(0, 0),
+                edge_sub: ConnectorEdgeSub {
+                    a: es(BottomLeft, Left),
+                    b: es(BottomRight, Right),
+                },
+            })
+        };
 
         let rendertask = RenderTask {
             hexagons: vec![pos(0, 0)],
@@ -721,8 +748,16 @@ mod tests {
         };
 
         let colors = [
-            Color::Red, Color::Blue, Color::Green, Color::DarkOrange, Color::Purple,
-            Color::Cyan, Color::Pink, Color::Golden, Color::Gray, Color::Moccasin,
+            Color::Red,
+            Color::Blue,
+            Color::Green,
+            Color::DarkOrange,
+            Color::Purple,
+            Color::Cyan,
+            Color::Pink,
+            Color::Golden,
+            Color::Gray,
+            Color::Moccasin,
         ];
         let player_data = PlayerData {
             colors: HashMap::from_iter((1..=10).map(|i| (PlayerId(i), colors[i as usize - 1]))),
@@ -735,8 +770,64 @@ mod tests {
         };
 
         let svg = rendertask.render(&player_data).unwrap();
-        let path = format!("{}/../target/test_player_positions.svg", env!("CARGO_MANIFEST_DIR"));
+        let path = format!(
+            "{}/../target/test_player_positions.svg",
+            env!("CARGO_MANIFEST_DIR")
+        );
         dbg!(&path);
         std::fs::write(path, svg.to_string()).unwrap();
+    }
+
+    #[test]
+    pub fn test_board_size() {
+        for outer_connector in OuterConnectors::iter() {
+            for radius in 1..10 {
+                let Board {
+                    hexagons,
+                    connectors,
+                } = Board::create_board(radius, outer_connector.clone()).unwrap();
+                let connectors = connectors
+                    .into_iter()
+                    .map(|c| {
+                        let is_connected_to_dead_end = match &c.kind {
+                            ConnectorKind::DeadEnd(_) => true,
+                            ConnectorKind::OnHex(_) | ConnectorKind::Outside(_) => false,
+                        };
+                        UsedConnector {
+                            connector: c.kind,
+                            used_by: [].into(),
+                            preview_used_by: [].into(),
+                            is_connected_to_dead_end,
+                            is_connected_to_player_start: None,
+                            is_connected_to_player_target: None,
+                        }
+                    })
+                    .collect();
+                let rendertask = RenderTask {
+                    hexagons,
+                    hexagon_to_highlight: None,
+                    connectors,
+                    current_player_position: [].into(),
+                };
+
+                let player_data = PlayerData {
+                    colors: HashMap::from([(P1, Color::Red), (P2, Color::Blue)]),
+                    dead_end_color: Color::Gray,
+                    unused_color: Color::Golden,
+                    hex_fill: Color::Beige,
+                    hex_stroke: Color::DarkGray,
+                    highlighted_hex_fill: Color::Moccasin,
+                    highlighted_hex_stroke: Color::DarkOrange,
+                };
+
+                let svg = rendertask.render(&player_data).unwrap();
+                let path = format!(
+                    "{}/../target/board_{radius}_{outer_connector:?}.svg",
+                    env!("CARGO_MANIFEST_DIR")
+                );
+                dbg!(&path);
+                std::fs::write(path, svg.to_string()).unwrap();
+            }
+        }
     }
 }
