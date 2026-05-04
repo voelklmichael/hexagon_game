@@ -23,6 +23,34 @@ pub struct EdgeSub {
     pub sub: Sub,
 }
 
+#[derive(Clone, Copy)]
+pub enum TileRotationDirection {
+    Clockwise,
+    CounterClockwise,
+}
+impl Edge {
+    pub fn rotate(&mut self, direction: TileRotationDirection) {
+        *self = match direction {
+            TileRotationDirection::Clockwise => match self {
+                Edge::Top => Edge::TopRight,
+                Edge::TopRight => Edge::BottomRight,
+                Edge::BottomRight => Edge::Bottom,
+                Edge::Bottom => Edge::BottomLeft,
+                Edge::BottomLeft => Edge::TopLeft,
+                Edge::TopLeft => Edge::Top,
+            },
+            TileRotationDirection::CounterClockwise => match self {
+                Edge::Top => Edge::TopLeft,
+                Edge::TopLeft => Edge::BottomLeft,
+                Edge::BottomLeft => Edge::Bottom,
+                Edge::Bottom => Edge::BottomRight,
+                Edge::BottomRight => Edge::TopRight,
+                Edge::TopRight => Edge::Top,
+            },
+        };
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct HexagonPosition {
     pub x: i32,

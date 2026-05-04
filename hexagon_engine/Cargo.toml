@@ -9,3 +9,4 @@ serde_json.workspace = true
 derive_aliases.workspace = true
 strum.workspace = true
 svg.workspace = true
+tracing.workspace = true

@@ -21,4 +21,10 @@ impl Tile {
 
         Tile { inner_connectors }
     }
+    pub fn rotate(&mut self, direction: TileRotationDirection) {
+        self.inner_connectors.iter_mut().for_each(|x| {
+            x.a.edge.rotate(direction);
+            x.b.edge.rotate(direction);
+        });
+    }
 }
