@@ -62,12 +62,12 @@ impl GameOptionsDelivery {
 
         let (start, start_id) = rng
             .select_random_element(&mut dead_ends)
-            .ok_or(format!("No start found for Player"))?;
+            .ok_or("No start found for Player".to_string())?;
         let target = {
             if player_has_target {
                 Some(
                     rng.select_random_element(&mut dead_ends)
-                        .ok_or(format!("No target found for Player"))?
+                        .ok_or("No target found for Player".to_string())?
                         .0
                         .clone(),
                 )
@@ -81,7 +81,7 @@ impl GameOptionsDelivery {
         let mut players = [Player {
             id: PlayerId(0),
             current_position: start.clone(),
-            target: target,
+            target,
             history: PlayerHistorySingleTurn::new_from_start(start_id),
             is_npc: false,
             is_active: true,
@@ -111,8 +111,61 @@ impl GameOptionsDelivery {
 
         Ok(GameState {
             board,
-            current_player: players.first().unwrap().id.clone(),
+            current_player: players.first().unwrap().id,
             players,
         })
+    }
+}
+
+impl GameOptionsStandard {
+    pub fn start_game(self) -> Result<GameState, String> {
+        let Self {
+            board_radius,
+            outer_connectors,
+            random_seed,
+            player_count,
+            collision_mode,
+            winning_condition,
+            hand_size,
+        } = self;
+
+        let board = Board::create_board(board_radius, outer_connectors)?;
+        let mut rng = RandomNumberGenerator::new(random_seed);
+        let mut dead_ends = board.get_dead_ends();
+
+        let mut players = Vec::new();
+        for i in 0..player_count {
+            let (start, start_id) = rng
+                .select_random_element(&mut dead_ends)
+                .ok_or(format!("No start found for Player#{i}"))?;
+
+            let hand = (0..hand_size)
+                .map(|_| Tile::create_fully_connected(&mut rng))
+                .collect();
+            players.push(Player {
+                id: PlayerId(0),
+                current_position: start.clone(),
+                target: None,
+                history: PlayerHistorySingleTurn::new_from_start(start_id),
+                is_npc: false,
+                is_active: true,
+                hand,
+            });
+        }
+
+        Ok(GameState {
+            board,
+            current_player: players.first().unwrap().id,
+            players,
+        })
+    }
+}
+
+impl GameOptions {
+    pub fn start_game(self) -> Result<GameState, String> {
+        match self {
+            GameOptions::Delivery(game) => game.start_game(),
+            GameOptions::Standard(game) => game.start_game(),
+        }
     }
 }

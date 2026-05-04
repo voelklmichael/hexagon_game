@@ -11,7 +11,7 @@ impl RandomNumberGenerator {
     }
 
     pub fn next(&mut self) -> f64 {
-        let total = self.seed.wrapping_add(self.count) as u32;
+        let total = self.seed.wrapping_add(self.count);
         self.count = self.count.wrapping_add(1);
         let s = total.wrapping_add(0x6D2B79F5);
         let t = (s ^ (s >> 15)).wrapping_mul(1 | s);
