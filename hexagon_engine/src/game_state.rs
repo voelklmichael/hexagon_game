@@ -104,18 +104,21 @@ impl GameState {
             // if so, compute a hit point by the corresponding velocity (total distance)
             {
                 'outer: for (lindex, (lid, left)) in possible_paths.iter().enumerate() {
-                    for (rindex, (rid, right)) in possible_paths.iter().enumerate().skip(lindex + 1)
-                    {
-                        if left.iter().any(|l| right.iter().any(|r| l.0 == r.0)) {
-                            // crash
-                            // note: only two players can crash, triple crashes are not possible
-                            // the crash point can be in the middle of a connector (or anywhere along it, actually)
-                            let left_velocity: u32 = left.iter().map(|x| x.1).sum();
-                            let right_velocity: u32 = right.iter().map(|x| x.1).sum();
+                    if self.options.collision_mode() == crate::game_options::CollisionMode::BothDie {
+                        for (rindex, (rid, right)) in
+                            possible_paths.iter().enumerate().skip(lindex + 1)
+                        {
+                            if left.iter().any(|l| right.iter().any(|r| l.0 == r.0)) {
+                                // crash
+                                // note: only two players can crash, triple crashes are not possible
+                                // the crash point can be in the middle of a connector (or anywhere along it, actually)
+                                let left_velocity: u32 = left.iter().map(|x| x.1).sum();
+                                let right_velocity: u32 = right.iter().map(|x| x.1).sum();
 
-                            todo!("Crash not yet implemented");
+                                todo!("Crash not yet implemented");
 
-                            break 'outer;
+                                break 'outer;
+                            }
                         }
                     }
                     // no crash - move player along the path

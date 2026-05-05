@@ -22,7 +22,7 @@ pub enum OuterConnectors {
     ReducedDeathEnds,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum CollisionMode {
     PassThrough,
     BothDie,
@@ -121,6 +121,10 @@ impl GameOptionsDelivery {
             options: GameOptions::Delivery(self),
         })
     }
+
+    fn collision_mode(&self) -> CollisionMode {
+        CollisionMode::BothDie
+    }
 }
 
 impl GameOptionsStandard {
@@ -167,6 +171,10 @@ impl GameOptionsStandard {
             options: GameOptions::Standard(self),
         })
     }
+
+    fn collision_mode(&self) -> CollisionMode {
+        self.collision_mode
+    }
 }
 
 impl GameOptions {
@@ -174,6 +182,13 @@ impl GameOptions {
         match self {
             GameOptions::Delivery(game) => game.start_game(),
             GameOptions::Standard(game) => game.start_game(),
+        }
+    }
+
+    pub(crate) fn collision_mode(&self) -> CollisionMode {
+        match self {
+            GameOptions::Delivery(o) => o.collision_mode(),
+            GameOptions::Standard(o) => o.collision_mode(),
         }
     }
 }
