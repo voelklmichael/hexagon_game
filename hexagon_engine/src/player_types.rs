@@ -13,13 +13,25 @@ pub struct Player {
     pub hand: Vec<Tile>,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct HistoryConnector {
+    pub id: ConnectorId,
+    pub end: ConnectorEnd,
+    pub weight: u32,
+}
+
 pub struct PlayerHistorySingleTurn {
-    pub connectors: Vec<(ConnectorId, ConnectorEnd)>,
+    pub connectors: Vec<HistoryConnector>,
 }
 impl PlayerHistorySingleTurn {
     pub(crate) fn new_from_start(start: &ConnectorId) -> Vec<PlayerHistorySingleTurn> {
         [PlayerHistorySingleTurn {
-            connectors: [(start.clone(), ConnectorEnd::StartedAtA)].into(),
+            connectors: [HistoryConnector {
+                id: *start,
+                end: ConnectorEnd::StartedAtA,
+                weight: 1,
+            }]
+            .into(),
         }]
         .into()
     }

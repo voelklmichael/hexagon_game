@@ -4,7 +4,7 @@ use crate::board_types::{
     HexagonPosition, Tile, TileRotationDirection,
 };
 use crate::game_options::GameOptions;
-use crate::player_types::PlayerHistorySingleTurn;
+use crate::player_types::{HistoryConnector, PlayerHistorySingleTurn};
 use crate::random_number_generator::RandomNumberGenerator;
 use crate::{Player, PlayerId};
 
@@ -178,7 +178,10 @@ impl GameState {
                         }
                     }
                     player.history.push(PlayerHistorySingleTurn {
-                        connectors: left.iter().map(|(c, end, _)| (c.clone(), *end)).collect(),
+                        connectors: left
+                            .iter()
+                            .map(|(c, end, w)| HistoryConnector { id: *c, end: *end, weight: *w })
+                            .collect(),
                     });
                 }
             }

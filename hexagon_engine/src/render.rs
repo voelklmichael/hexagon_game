@@ -11,13 +11,213 @@ pub struct RenderTask {
     pub current_player_position: Vec<CurrentPlayerPosition>,
 }
 
+impl GameState {
+    pub fn render_task(
+        &self,
+        selected_hexagon: Option<HexagonPosition>,
+        animation: f32,
+    ) -> RenderTask {
+        let Self {
+            board,
+            players,
+            current_player,
+            rng: _,
+            options,
+        } = self;
+
+        RenderTask {
+            hexagons: board.hexagons.clone(),
+            connectors: compute_used_connectors(board, players, selected_hexagon.is_some()),
+            hexagon_to_highlight: selected_hexagon,
+            current_player_position: players
+                .iter()
+                .map(|p| compute_player_position(animation, board, p))
+                .collect(),
+        }
+    }
+}
+
+fn compute_used_connectors(
+    board: &Board,
+    players: &Vec<Player>,
+    is_preview: bool,
+) -> Vec<UsedConnector> {
+    // Fast connector lookup by id
+    let connector_map: HashMap<ConnectorId, &Connector> =
+        board.connectors.iter().map(|c| (c.id, c)).collect();
+    // Positions a connector exposes (used to link adjacent connectors)
+    let positions_of = |c: &Connector| -> Vec<ConnectorPosition> {
+        match &c.kind {
+            ConnectorKind::DeadEnd(d) => vec![d.position.clone()],
+            ConnectorKind::OnHex(d) => vec![
+                ConnectorPosition {
+                    hexagon: d.hexagon,
+                    edge_sub: d.edge_sub.a.clone(),
+                },
+                ConnectorPosition {
+                    hexagon: d.hexagon,
+                    edge_sub: d.edge_sub.b.clone(),
+                },
+            ],
+            ConnectorKind::Outside(d) | ConnectorKind::HexToHex(d) => {
+                vec![d.connector_a.clone(), d.connector_b.clone()]
+            }
+        }
+    };
+    // position → connector ids that touch it
+    let mut pos_to_connectors: HashMap<ConnectorPosition, Vec<ConnectorId>> = HashMap::new();
+    for c in &board.connectors {
+        for pos in positions_of(c) {
+            pos_to_connectors.entry(pos).or_default().push(c.id);
+        }
+    }
+    // BFS: build connected components
+    let mut component_of: HashMap<ConnectorId, usize> = HashMap::new();
+    let mut components: Vec<Vec<ConnectorId>> = Vec::new();
+    for c in &board.connectors {
+        if component_of.contains_key(&c.id) {
+            continue;
+        }
+        let comp_idx = components.len();
+        components.push(Vec::new());
+        let mut stack = vec![c.id];
+        while let Some(id) = stack.pop() {
+            if component_of.contains_key(&id) {
+                continue;
+            }
+            component_of.insert(id, comp_idx);
+            components[comp_idx].push(id);
+            for pos in positions_of(connector_map[&id]) {
+                for &nid in pos_to_connectors.get(&pos).into_iter().flatten() {
+                    if !component_of.contains_key(&nid) {
+                        stack.push(nid);
+                    }
+                }
+            }
+        }
+    }
+    // Per-component properties
+    let comp_has_dead_end: Vec<bool> = components
+        .iter()
+        .map(|comp| {
+            comp.iter()
+                .any(|id| matches!(connector_map[id].kind, ConnectorKind::DeadEnd(_)))
+        })
+        .collect();
+    let comp_player_start: Vec<Vec<PlayerId>> = components
+        .iter()
+        .map(|comp| {
+            players
+                .iter()
+                .filter_map(|p| {
+                    let start = p.history.first()?.connectors.first()?;
+                    comp.contains(&start.id).then_some(p.id)
+                })
+                .collect()
+        })
+        .collect();
+    let comp_player_target: Vec<Vec<PlayerId>> = components
+        .iter()
+        .map(|comp| {
+            players
+                .iter()
+                .filter_map(|p| comp.contains(&p.target?).then_some(p.id))
+                .collect()
+        })
+        .collect();
+    // used_by from full history
+    let mut used_by_map: HashMap<ConnectorId, Vec<PlayerId>> = HashMap::new();
+    for player in players.iter() {
+        for turn in &player.history {
+            for hc in &turn.connectors {
+                used_by_map.entry(hc.id).or_default().push(player.id);
+            }
+        }
+    }
+    board
+        .connectors
+        .iter()
+        .map(|c| {
+            let ci = component_of[&c.id];
+            UsedConnector {
+                connector: c.kind.clone(),
+                used_by: used_by_map.get(&c.id).cloned().unwrap_or_default(),
+                preview_used_by: vec![],
+                is_connected_to_dead_end: comp_has_dead_end[ci],
+                is_connected_to_player_start: comp_player_start[ci].clone(),
+                is_connected_to_player_target: comp_player_target[ci].clone(),
+            }
+        })
+        .collect()
+}
+
+fn compute_player_position(animation: f32, board: &Board, p: &Player) -> CurrentPlayerPosition {
+    let last = p.history.last().expect(
+        "History is empty. \
+                    This should never happen, \
+                    because the startpoint is added to the history",
+    );
+    let lookup = |id: &ConnectorId| {
+        board
+            .connectors
+            .iter()
+            .find(|c| &c.id == id)
+            .expect("connector id from history not found in board")
+            .kind
+            .clone()
+    };
+    let (connector, step) = {
+        if last.connectors.is_empty() {
+            if let Some(last) = p.history.iter().rev().find(|c| !c.connectors.is_empty()) {
+                let hc = last.connectors.last().unwrap();
+                let step = if hc.end == ConnectorEnd::StartedAtA {
+                    1.0
+                } else {
+                    0.0
+                };
+                (lookup(&hc.id), step)
+            } else {
+                panic!(
+                    "History consists only of empty entries. \
+                                This should never happen, \
+                                because the startpoint is added to the history",
+                )
+            }
+        } else {
+            // TODO: this needs to be improved
+            let total_weight: u32 = last.connectors.iter().map(|hc| hc.weight).sum();
+            let mut remaining = (animation * total_weight as f32).clamp(0.0, total_weight as f32);
+            let mut chosen = last.connectors.last().unwrap();
+            for hc in &last.connectors {
+                if remaining <= hc.weight as f32 {
+                    chosen = hc;
+                    break;
+                }
+                remaining -= hc.weight as f32;
+            }
+            let progress = (remaining / chosen.weight as f32).clamp(0.0, 1.0);
+            let step = if chosen.end == ConnectorEnd::StartedAtA {
+                progress
+            } else {
+                1.0 - progress
+            };
+            (lookup(&chosen.id), step)
+        }
+    };
+    CurrentPlayerPosition {
+        player_id: p.id,
+        connector,
+        step,
+    }
+}
+
 pub struct UsedConnector {
     pub connector: ConnectorKind,
     pub used_by: Vec<PlayerId>,
     pub preview_used_by: Vec<PlayerId>,
     pub is_connected_to_dead_end: bool,
-    pub is_connected_to_player_start: Option<PlayerId>,
-    pub is_connected_to_player_target: Option<PlayerId>,
+    pub is_connected_to_player_start: Vec<PlayerId>,
+    pub is_connected_to_player_target: Vec<PlayerId>,
 }
 
 pub struct CurrentPlayerPosition {
@@ -310,10 +510,20 @@ impl RenderTask {
                         .map(player_color)
                         .collect();
                     mix_colors(&colors)
-                } else if let Some(pid) = is_connected_to_player_start.as_ref() {
-                    player_color(pid).to_svg_string().to_string()
-                } else if let Some(pid) = is_connected_to_player_target.as_ref() {
-                    player_color(pid).to_svg_string().to_string()
+                } else if !is_connected_to_player_start.is_empty() {
+                    mix_colors(
+                        &is_connected_to_player_start
+                            .iter()
+                            .map(player_color)
+                            .collect::<Vec<_>>(),
+                    )
+                } else if !is_connected_to_player_target.is_empty() {
+                    mix_colors(
+                        &is_connected_to_player_target
+                            .iter()
+                            .map(player_color)
+                            .collect::<Vec<_>>(),
+                    )
                 } else if *is_connected_to_dead_end {
                     player_data.dead_end_color.to_svg_string().to_string()
                 } else {
@@ -326,9 +536,9 @@ impl RenderTask {
                 };
                 let stroke_width: f64 = if !previews_used_by.is_empty() {
                     3.0
-                } else if is_connected_to_player_start.is_some() {
+                } else if !is_connected_to_player_start.is_empty() {
                     5.0
-                } else if is_connected_to_player_target.is_some() {
+                } else if !is_connected_to_player_target.is_empty() {
                     1.5
                 } else {
                     3.0
@@ -359,10 +569,10 @@ impl RenderTask {
                                 ))
                         };
 
-                        let data = if is_connected_to_player_start.is_some() {
+                        let data = if !is_connected_to_player_start.is_empty() {
                             // arrow from outside pointing inward, tip at edge-sub point
                             make_arrow((px - nx * R * 0.5, py - ny * R * 0.5), (px, py))
-                        } else if is_connected_to_player_target.is_some() {
+                        } else if !is_connected_to_player_target.is_empty() {
                             // arrow from edge-sub point pointing outward
                             make_arrow((px, py), (px - nx * R * 0.5, py - ny * R * 0.5))
                         } else {

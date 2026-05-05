@@ -3,7 +3,7 @@ use serde::de;
 mod board;
 mod tile;
 
-#[derive(Clone, Copy, Debug, strum::EnumIter, PartialEq)]
+#[derive(Clone, Copy, Debug, strum::EnumIter, PartialEq, Eq, Hash)]
 pub enum Edge {
     Top,
     TopLeft,
@@ -13,13 +13,13 @@ pub enum Edge {
     TopRight,
 }
 
-#[derive(Clone, Copy, Debug, strum::EnumIter, PartialEq)]
+#[derive(Clone, Copy, Debug, strum::EnumIter, PartialEq, Eq, Hash)]
 pub enum Sub {
     Left,
     Right,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct EdgeSub {
     pub edge: Edge,
     pub sub: Sub,
@@ -59,7 +59,7 @@ pub struct HexagonPosition {
     pub y: i32,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ConnectorPosition {
     pub hexagon: HexagonPosition,
     pub edge_sub: EdgeSub,
@@ -70,7 +70,7 @@ pub struct Board {
     pub connectors: Vec<Connector>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ConnectorId(pub u32);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
