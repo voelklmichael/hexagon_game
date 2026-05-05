@@ -106,7 +106,7 @@ impl GameState {
                             hexagon: position.hexagon,
                             edge_sub: connector,
                         }),
-                        weight: 1,
+                        weight: 1_000,
                     });
                 });
 
@@ -162,7 +162,7 @@ impl GameState {
                                     player.current_position = (*last, *end);
                                     player.is_active = false;
                                 }
-                                ConnectorKind::HexToHex(_) => {
+                                ConnectorKind::HexToHex(_) | ConnectorKind::Outside(_) => {
                                     player.current_position = (
                                         *last,
                                         if *end == ConnectorEnd::StartedAtA {
@@ -172,7 +172,7 @@ impl GameState {
                                         },
                                     );
                                 }
-                                ConnectorKind::OnHex(_) | ConnectorKind::Outside(_) => {
+                                ConnectorKind::OnHex(_) => {
                                     panic!("Player ended up on not allowed connector: {c:?}")
                                 }
                             }
@@ -193,12 +193,30 @@ impl GameState {
                 }
             }
         }
+        // step 3: update current player
+        {
+            if let Some(next) = self
+                .players
+                .iter()
+                .cycle()
+                .take(self.players.len() * 3)
+                .skip_while(|p| p.id != self.current_player)
+                .skip(1)
+                .take(self.players.len())
+                .find(|p| p.is_active && !p.is_npc && !p.hand.is_empty())
+                .map(|p| p.id)
+            {
+                self.current_player = next;
+            }
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::game_options::{CollisionMode, GameOptionsStandard, OuterConnectors, WinningConditionStandard};
+    use crate::game_options::{
+        CollisionMode, GameOptionsStandard, OuterConnectors, WinningConditionStandard,
+    };
 
     use super::*;
 

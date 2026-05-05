@@ -222,6 +222,7 @@ fn compute_player_position(animation: f32, board: &Board, p: &Player) -> Current
         player_id: p.id,
         connector,
         step,
+        is_active: p.is_active,
     }
 }
 
@@ -240,6 +241,7 @@ pub struct CurrentPlayerPosition {
     // this is a number between 0 and 1
     // it is used for animations
     pub step: f32,
+    pub is_active: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -584,8 +586,8 @@ impl RenderTask {
                         };
 
                         let data = if !is_connected_to_player_start.is_empty() {
-                            // arrow from outside pointing inward, tip at edge-sub point
-                            make_arrow((px - nx * R * 0.5, py - ny * R * 0.5), (px, py))
+                            // arrow from edge-sub point pointing outward
+                            make_arrow((px, py), (px - nx * R * 0.5, py - ny * R * 0.5))
                         } else if !is_connected_to_player_target.is_empty() {
                             // arrow from edge-sub point pointing outward
                             make_arrow((px, py), (px - nx * R * 0.5, py - ny * R * 0.5))
@@ -677,6 +679,37 @@ impl RenderTask {
                 .copied()
                 .unwrap_or(player_data.unused_color)
                 .to_svg_string();
+            if !cpp.is_active {
+                if let ConnectorKind::DeadEnd(ConnectorDeadEnd { position }) = &cpp.connector {
+                    let (nx, ny) = edge_inward_normal(&position.edge_sub.edge);
+                    let tip = (px - nx * R * 0.5, py - ny * R * 0.5);
+                    let (dx, dy) = (tip.0 - px, tip.1 - py);
+                    let len = (dx * dx + dy * dy).sqrt();
+                    let (dx, dy) = (dx / len, dy / len);
+                    let (perp_x, perp_y) = (-dy, dx);
+                    let head = R * 0.2;
+                    let data = Data::new()
+                        .move_to((px, py))
+                        .line_to(tip)
+                        .move_to((
+                            tip.0 - dx * head + perp_x * head,
+                            tip.1 - dy * head + perp_y * head,
+                        ))
+                        .line_to(tip)
+                        .line_to((
+                            tip.0 - dx * head - perp_x * head,
+                            tip.1 - dy * head - perp_y * head,
+                        ));
+                    let arrow = Path::new()
+                        .set("fill", "none")
+                        .set("stroke", color)
+                        .set("stroke-width", 3)
+                        .set("stroke-linecap", "round")
+                        .set("d", data);
+                    document = document.add(arrow);
+                    continue;
+                }
+            }
             let circle = Circle::new()
                 .set("cx", px)
                 .set("cy", py)
@@ -988,6 +1021,7 @@ mod tests {
                     player_id: PlayerId(i + 1),
                     connector: make_connector(),
                     step: i as f32 / 9.0,
+                    is_active: true,
                 })
                 .collect(),
         };
@@ -1100,17 +1134,19 @@ mod tests {
             highlighted_hex_fill: Color::Moccasin,
             highlighted_hex_stroke: Color::DarkOrange,
         };
-        for i in 0..3 {
-            let rendertask = game.render_task(None, 0.);
-            let svg = rendertask.render(&player_data).unwrap();
-            let path = format!(
-                "{}/../target/play_tile_step_{i}.svg",
-                env!("CARGO_MANIFEST_DIR")
-            );
-            dbg!(&path);
-            std::fs::write(path, svg.to_string()).unwrap();
+        for tile_count in 0..3 {
+            let count = 10;
+            for time in 0..=count {
+                let rendertask = game.render_task(None, time as f32 / (count as f32));
+                let svg = rendertask.render(&player_data).unwrap();
+                let path = format!(
+                    "{}/../target/play_tile_step_{tile_count}_time_{time}.svg",
+                    env!("CARGO_MANIFEST_DIR")
+                );
+                std::fs::write(path, svg.to_string()).unwrap();
+            }
             let json_path = format!(
-                "{}/../target/play_tile_step_{i}.json",
+                "{}/../target/play_tile_step_{tile_count}.json",
                 env!("CARGO_MANIFEST_DIR")
             );
             std::fs::write(json_path, serde_json::to_string_pretty(&game).unwrap()).unwrap();

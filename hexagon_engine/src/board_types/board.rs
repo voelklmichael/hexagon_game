@@ -73,7 +73,7 @@ impl Board {
                     connector_a: pos_a,
                     connector_b: pos_b,
                 }),
-                weight: 1,
+                weight: 500,
             });
             id += 1;
         }
@@ -373,9 +373,7 @@ impl Board {
                     ConnectorKind::DeadEnd(c) if c.position == current_position => {
                         Some((None, ConnectorEnd::StartedAtA, x.id, x.weight))
                     }
-                    ConnectorKind::Outside(c)
-                        if c.connector_a.hexagon == current_position.hexagon =>
-                    {
+                    ConnectorKind::Outside(c) if c.connector_a == current_position => {
                         Some((
                             Some(c.connector_b.clone()),
                             ConnectorEnd::StartedAtA,
@@ -383,9 +381,7 @@ impl Board {
                             x.weight,
                         ))
                     }
-                    ConnectorKind::Outside(c)
-                        if c.connector_b.hexagon == current_position.hexagon =>
-                    {
+                    ConnectorKind::Outside(c) if c.connector_b == current_position => {
                         Some((
                             Some(c.connector_a.clone()),
                             ConnectorEnd::StartedAtB,
