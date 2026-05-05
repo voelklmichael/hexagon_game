@@ -73,6 +73,12 @@ pub struct Board {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ConnectorId(pub u32);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConnectorEnd {
+    StartedAtA,
+    StartedAtB,
+}
+
 #[derive(Debug)]
 pub struct Connector {
     pub id: ConnectorId,
@@ -80,7 +86,7 @@ pub struct Connector {
     pub weight: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ConnectorKind {
     DeadEnd(ConnectorDeadEnd),
     HexToHex(ConnectorOutside),
@@ -88,24 +94,24 @@ pub enum ConnectorKind {
     Outside(ConnectorOutside),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConnectorDeadEnd {
     pub position: ConnectorPosition,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConnectorOnHex {
     pub hexagon: HexagonPosition,
     pub edge_sub: ConnectorEdgeSub,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConnectorEdgeSub {
     pub a: EdgeSub,
     pub b: EdgeSub,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConnectorOutside {
     pub connector_a: ConnectorPosition,
     pub connector_b: ConnectorPosition,

@@ -1,5 +1,5 @@
 use crate::{
-    board_types::{Board, Tile},
+    board_types::{Board, ConnectorEnd, Tile},
     game_state::GameState,
     player_types::{Player, PlayerHistorySingleTurn, PlayerId},
     random_number_generator::RandomNumberGenerator,
@@ -64,7 +64,7 @@ impl GameOptionsDelivery {
         let mut rng = RandomNumberGenerator::new(random_seed);
         let mut dead_ends = board.get_dead_ends();
 
-        let (start, start_id) = rng
+        let start_id = rng
             .select_random_element(&mut dead_ends)
             .ok_or("No start found for Player".to_string())?;
         let target = {
@@ -72,7 +72,6 @@ impl GameOptionsDelivery {
                 Some(
                     rng.select_random_element(&mut dead_ends)
                         .ok_or("No target found for Player".to_string())?
-                        .0
                         .clone(),
                 )
             } else {
@@ -84,9 +83,9 @@ impl GameOptionsDelivery {
             .collect();
         let mut players = [Player {
             id: PlayerId(0),
-            current_position: start.clone(),
+            current_position: (start_id, ConnectorEnd::StartedAtA),
             target,
-            history: PlayerHistorySingleTurn::new_from_start(start_id),
+            history: PlayerHistorySingleTurn::new_from_start(&start_id),
             is_npc: false,
             is_active: true,
             hand,
@@ -97,16 +96,15 @@ impl GameOptionsDelivery {
             let target = rng
                 .select_random_element(&mut dead_ends)
                 .ok_or(format!("No target found for NPC#{i}"))?
-                .0
                 .clone();
-            let (start, start_id) = rng
+            let start_id = rng
                 .select_random_element(&mut dead_ends)
                 .ok_or(format!("No start found for NPC#{i}"))?;
             players.push(Player {
                 id: PlayerId(0),
-                current_position: start.clone(),
+                current_position: (start_id, ConnectorEnd::StartedAtA),
                 target: Some(target),
-                history: PlayerHistorySingleTurn::new_from_start(start_id),
+                history: PlayerHistorySingleTurn::new_from_start(&start_id),
                 is_npc: true,
                 is_active: false,
                 hand: Default::default(),
@@ -145,7 +143,7 @@ impl GameOptionsStandard {
 
         let mut players = Vec::new();
         for i in 0..player_count {
-            let (start, start_id) = rng
+            let start_id = rng
                 .select_random_element(&mut dead_ends)
                 .ok_or(format!("No start found for Player#{i}"))?;
 
@@ -154,9 +152,9 @@ impl GameOptionsStandard {
                 .collect();
             players.push(Player {
                 id: PlayerId(0),
-                current_position: start.clone(),
+                current_position: (start_id, ConnectorEnd::StartedAtA),
                 target: None,
-                history: PlayerHistorySingleTurn::new_from_start(start_id),
+                history: PlayerHistorySingleTurn::new_from_start(&start_id),
                 is_npc: false,
                 is_active: true,
                 hand,

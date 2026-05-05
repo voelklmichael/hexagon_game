@@ -92,11 +92,17 @@ impl Board {
                         kind: ConnectorKind::HexToHex(ConnectorOutside {
                             connector_a: ConnectorPosition {
                                 hexagon: *hex_a,
-                                edge_sub: EdgeSub { edge: edge_e, sub: sub_a },
+                                edge_sub: EdgeSub {
+                                    edge: edge_e,
+                                    sub: sub_a,
+                                },
                             },
                             connector_b: ConnectorPosition {
                                 hexagon: hex_b,
-                                edge_sub: EdgeSub { edge: opp, sub: sub_b },
+                                edge_sub: EdgeSub {
+                                    edge: opp,
+                                    sub: sub_b,
+                                },
                             },
                         }),
                         weight: 1,
@@ -112,12 +118,12 @@ impl Board {
         })
     }
 
-    pub fn get_dead_ends(&self) -> Vec<(&ConnectorPosition, &ConnectorId)> {
+    pub fn get_dead_ends(&self) -> Vec<ConnectorId> {
         self.connectors
             .iter()
             .filter_map(|c| {
                 if let ConnectorKind::DeadEnd(d) = &c.kind {
-                    Some((&d.position, &c.id))
+                    Some(c.id)
                 } else {
                     None
                 }
@@ -285,25 +291,47 @@ impl Board {
         ]
     }
 
+    pub fn position_of(&self, id: ConnectorId, end: ConnectorEnd) -> ConnectorPosition {
+        let connector = self
+            .connectors
+            .iter()
+            .find(|c| c.id == id)
+            .expect("connector not found");
+        match &connector.kind {
+            ConnectorKind::DeadEnd(c) => c.position.clone(),
+            ConnectorKind::OnHex(c) => ConnectorPosition {
+                hexagon: c.hexagon.clone(),
+                edge_sub: match end {
+                    ConnectorEnd::StartedAtA => c.edge_sub.a.clone(),
+                    ConnectorEnd::StartedAtB => c.edge_sub.b.clone(),
+                },
+            },
+            ConnectorKind::Outside(c) | ConnectorKind::HexToHex(c) => match end {
+                ConnectorEnd::StartedAtA => c.connector_a.clone(),
+                ConnectorEnd::StartedAtB => c.connector_b.clone(),
+            },
+        }
+    }
+
     pub(crate) fn compute_path_starting_from(
         &self,
-        current_position: &ConnectorPosition,
-    ) -> Vec<(ConnectorId, u32)> {
-        let mut current_position = current_position.clone();
+        current_position: &(ConnectorId, ConnectorEnd),
+    ) -> Vec<(ConnectorId, ConnectorEnd, u32)> {
+        let mut current_position = self.position_of(current_position.0, current_position.1);
         let mut steps = vec![];
-        if let Some((next, id, weight)) = self.connectors.iter().find_map(|x| match &x.kind {
+        if let Some((next, end, id, weight)) = self.connectors.iter().find_map(|x| match &x.kind {
             ConnectorKind::OnHex(c) if c.hexagon == current_position.hexagon => {
                 if c.edge_sub.a == current_position.edge_sub {
-                    Some((&c.edge_sub.b, x.id, x.weight))
+                    Some((&c.edge_sub.b, ConnectorEnd::StartedAtA, x.id, x.weight))
                 } else if c.edge_sub.b == current_position.edge_sub {
-                    Some((&c.edge_sub.a, x.id, x.weight))
+                    Some((&c.edge_sub.a, ConnectorEnd::StartedAtB, x.id, x.weight))
                 } else {
                     None
                 }
             }
             _ => None,
         }) {
-            steps.push((id, weight));
+            steps.push((id, end, weight));
             current_position = ConnectorPosition {
                 hexagon: current_position.hexagon.clone(),
                 edge_sub: next.clone(),
@@ -312,10 +340,10 @@ impl Board {
             return steps;
         };
         loop {
-            if let Some((next, id, weight)) = self
+            if let Some((next, end, id, weight)) = self
                 .connectors
                 .iter()
-                .filter(|x| !steps.iter().any(|(id, _)| id == &x.id))
+                .filter(|x| !steps.iter().any(|(id, _, _)| id == &x.id))
                 .find_map(|x| match &x.kind {
                     ConnectorKind::OnHex(c) if c.hexagon == current_position.hexagon => {
                         if c.edge_sub.a == current_position.edge_sub {
@@ -324,6 +352,7 @@ impl Board {
                                     hexagon: current_position.hexagon.clone(),
                                     edge_sub: c.edge_sub.b.clone(),
                                 }),
+                                ConnectorEnd::StartedAtA,
                                 x.id,
                                 x.weight,
                             ))
@@ -333,6 +362,7 @@ impl Board {
                                     hexagon: current_position.hexagon.clone(),
                                     edge_sub: c.edge_sub.a.clone(),
                                 }),
+                                ConnectorEnd::StartedAtB,
                                 x.id,
                                 x.weight,
                             ))
@@ -341,28 +371,44 @@ impl Board {
                         }
                     }
                     ConnectorKind::DeadEnd(c) if c.position == current_position => {
-                        Some((None, x.id, x.weight))
+                        Some((None, ConnectorEnd::StartedAtA, x.id, x.weight))
                     }
                     ConnectorKind::Outside(c)
                         if c.connector_a.hexagon == current_position.hexagon =>
                     {
-                        Some((Some(c.connector_b.clone()), x.id, x.weight))
+                        Some((
+                            Some(c.connector_b.clone()),
+                            ConnectorEnd::StartedAtA,
+                            x.id,
+                            x.weight,
+                        ))
                     }
                     ConnectorKind::Outside(c)
                         if c.connector_b.hexagon == current_position.hexagon =>
                     {
-                        Some((Some(c.connector_a.clone()), x.id, x.weight))
+                        Some((
+                            Some(c.connector_a.clone()),
+                            ConnectorEnd::StartedAtB,
+                            x.id,
+                            x.weight,
+                        ))
                     }
-                    ConnectorKind::HexToHex(c) if c.connector_a == current_position => {
-                        Some((Some(c.connector_b.clone()), x.id, x.weight))
-                    }
-                    ConnectorKind::HexToHex(c) if c.connector_b == current_position => {
-                        Some((Some(c.connector_a.clone()), x.id, x.weight))
-                    }
+                    ConnectorKind::HexToHex(c) if c.connector_a == current_position => Some((
+                        Some(c.connector_b.clone()),
+                        ConnectorEnd::StartedAtA,
+                        x.id,
+                        x.weight,
+                    )),
+                    ConnectorKind::HexToHex(c) if c.connector_b == current_position => Some((
+                        Some(c.connector_a.clone()),
+                        ConnectorEnd::StartedAtB,
+                        x.id,
+                        x.weight,
+                    )),
                     _ => None,
                 })
             {
-                steps.push((id, weight));
+                steps.push((id, end, weight));
                 if let Some(next) = next {
                     current_position = next
                 }

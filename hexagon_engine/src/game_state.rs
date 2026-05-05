@@ -1,7 +1,7 @@
 use crate::Board;
 use crate::board_types::{
-    Connector, ConnectorId, ConnectorKind, ConnectorOnHex, ConnectorPosition, Tile,
-    TileRotationDirection,
+    Connector, ConnectorEnd, ConnectorId, ConnectorKind, ConnectorOnHex, ConnectorPosition,
+    HexagonPosition, Tile, TileRotationDirection,
 };
 use crate::game_options::GameOptions;
 use crate::player_types::PlayerHistorySingleTurn;
@@ -48,11 +48,35 @@ impl GameState {
                 tracing::error!("No tile found");
                 return;
             }
-            let position = player.current_position.hexagon.clone();
+            let (connector, end) = player.current_position;
+            let connector_kind = &self
+                .board
+                .connectors
+                .iter()
+                .find(|x| x.id == connector)
+                .expect("No connector found")
+                .kind;
+            let position = match connector_kind {
+                ConnectorKind::DeadEnd(c) => c.position.clone(),
+                ConnectorKind::HexToHex(c) | ConnectorKind::Outside(c) => match end {
+                    ConnectorEnd::StartedAtA => c.connector_a.clone(),
+                    ConnectorEnd::StartedAtB => c.connector_b.clone(),
+                },
+                ConnectorKind::OnHex(c) => {
+                    let edge_sub = match end {
+                        ConnectorEnd::StartedAtA => c.edge_sub.a.clone(),
+                        ConnectorEnd::StartedAtB => c.edge_sub.b.clone(),
+                    };
+                    ConnectorPosition {
+                        hexagon: c.hexagon.clone(),
+                        edge_sub,
+                    }
+                }
+            };
 
             if let Some(connector) = self.board.connectors.iter().find_map(|x| match &x.kind {
                 ConnectorKind::OnHex(connector_on_hex) => {
-                    (connector_on_hex.hexagon == position).then_some(&x.id)
+                    (connector_on_hex.hexagon == position.hexagon).then_some(&x.id)
                 }
                 _ => None,
             }) {
@@ -76,7 +100,7 @@ impl GameState {
                     self.board.connectors.push(Connector {
                         id: ConnectorId(offset + i as u32),
                         kind: ConnectorKind::OnHex(ConnectorOnHex {
-                            hexagon: position.clone(),
+                            hexagon: position.hexagon.clone(),
                             edge_sub: connector,
                         }),
                         weight: 1,
@@ -104,7 +128,8 @@ impl GameState {
             // if so, compute a hit point by the corresponding velocity (total distance)
             {
                 'outer: for (lindex, (lid, left)) in possible_paths.iter().enumerate() {
-                    if self.options.collision_mode() == crate::game_options::CollisionMode::BothDie {
+                    if self.options.collision_mode() == crate::game_options::CollisionMode::BothDie
+                    {
                         for (rindex, (rid, right)) in
                             possible_paths.iter().enumerate().skip(lindex + 1)
                         {
@@ -112,8 +137,8 @@ impl GameState {
                                 // crash
                                 // note: only two players can crash, triple crashes are not possible
                                 // the crash point can be in the middle of a connector (or anywhere along it, actually)
-                                let left_velocity: u32 = left.iter().map(|x| x.1).sum();
-                                let right_velocity: u32 = right.iter().map(|x| x.1).sum();
+                                let left_velocity: u32 = left.iter().map(|x| x.2).sum();
+                                let right_velocity: u32 = right.iter().map(|x| x.2).sum();
 
                                 todo!("Crash not yet implemented");
 
@@ -127,50 +152,22 @@ impl GameState {
                         .iter_mut()
                         .find(|p| &p.id == lid)
                         .expect("No player with id={lid:?} found");
-                    if let Some((last, _)) = left.last() {
+                    if let Some((last, end, _)) = left.last() {
                         if let Some(c) = self.board.connectors.iter().find(|x| &x.id == last) {
                             match &c.kind {
-                                ConnectorKind::DeadEnd(c) => {
-                                    player.current_position = c.position.clone();
+                                ConnectorKind::DeadEnd(_) => {
+                                    player.current_position = (*last, *end);
                                     player.is_active = false;
                                 }
-                                ConnectorKind::HexToHex(hex_to_hex) => {
-                                    let arrived_at_a = if left.len() >= 2 {
-                                        let second_last_id = left[left.len() - 2].0;
-                                        let second_last = self
-                                            .board
-                                            .connectors
-                                            .iter()
-                                            .find(|x| x.id == second_last_id)
-                                            .expect("second-to-last connector not found");
-                                        match &second_last.kind {
-                                            ConnectorKind::OnHex(prev) => {
-                                                ConnectorPosition {
-                                                    hexagon: prev.hexagon.clone(),
-                                                    edge_sub: prev.edge_sub.a.clone(),
-                                                } == hex_to_hex.connector_a
-                                                    || ConnectorPosition {
-                                                        hexagon: prev.hexagon.clone(),
-                                                        edge_sub: prev.edge_sub.b.clone(),
-                                                    } == hex_to_hex.connector_a
-                                            }
-                                            ConnectorKind::Outside(prev)
-                                            | ConnectorKind::HexToHex(prev) => {
-                                                prev.connector_a == hex_to_hex.connector_a
-                                                    || prev.connector_b == hex_to_hex.connector_a
-                                            }
-                                            ConnectorKind::DeadEnd(prev) => {
-                                                prev.position == hex_to_hex.connector_a
-                                            }
-                                        }
-                                    } else {
-                                        player.current_position == hex_to_hex.connector_a
-                                    };
-                                    player.current_position = if arrived_at_a {
-                                        hex_to_hex.connector_b.clone()
-                                    } else {
-                                        hex_to_hex.connector_a.clone()
-                                    };
+                                ConnectorKind::HexToHex(_) => {
+                                    player.current_position = (
+                                        *last,
+                                        if *end == ConnectorEnd::StartedAtA {
+                                            ConnectorEnd::StartedAtB
+                                        } else {
+                                            ConnectorEnd::StartedAtA
+                                        },
+                                    );
                                 }
                                 ConnectorKind::OnHex(_) | ConnectorKind::Outside(_) => {
                                     panic!("Player ended up on not allowed connector: {c:?}")
@@ -181,7 +178,7 @@ impl GameState {
                         }
                     }
                     player.history.push(PlayerHistorySingleTurn {
-                        connectors: left.iter().map(|(c, _)| c.clone()).collect(),
+                        connectors: left.iter().map(|(c, end, _)| (c.clone(), *end)).collect(),
                     });
                 }
             }
