@@ -5,6 +5,7 @@ use crate::{
     random_number_generator::RandomNumberGenerator,
 };
 
+#[derive(Clone)]
 pub struct GameOptionsStandard {
     pub board_radius: usize,
     pub outer_connectors: OuterConnectors,
@@ -21,16 +22,19 @@ pub enum OuterConnectors {
     ReducedDeathEnds,
 }
 
+#[derive(Clone)]
 pub enum CollisionMode {
     PassThrough,
     BothDie,
 }
 
+#[derive(Clone)]
 pub enum WinningConditionStandard {
     LastManStanding,
     LongestWay,
     HighestVelocity,
 }
+#[derive(Clone)]
 pub struct GameOptionsDelivery {
     pub board_radius: usize,
     pub outer_connectors: OuterConnectors,
@@ -54,7 +58,7 @@ impl GameOptionsDelivery {
             npc_count,
             player_has_target,
             hand_size,
-        } = self;
+        } = self.clone();
 
         let board = Board::create_board(board_radius, outer_connectors)?;
         let mut rng = RandomNumberGenerator::new(random_seed);
@@ -113,6 +117,8 @@ impl GameOptionsDelivery {
             board,
             current_player: players.first().unwrap().id,
             players,
+            rng,
+            options: GameOptions::Delivery(self),
         })
     }
 }
@@ -127,7 +133,7 @@ impl GameOptionsStandard {
             collision_mode,
             winning_condition,
             hand_size,
-        } = self;
+        } = self.clone();
 
         let board = Board::create_board(board_radius, outer_connectors)?;
         let mut rng = RandomNumberGenerator::new(random_seed);
@@ -157,6 +163,8 @@ impl GameOptionsStandard {
             board,
             current_player: players.first().unwrap().id,
             players,
+            rng,
+            options: GameOptions::Standard(self),
         })
     }
 }

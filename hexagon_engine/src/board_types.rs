@@ -1,7 +1,9 @@
+use serde::de;
+
 mod board;
 mod tile;
 
-#[derive(Clone, Copy, Debug, strum::EnumIter)]
+#[derive(Clone, Copy, Debug, strum::EnumIter, PartialEq)]
 pub enum Edge {
     Top,
     TopLeft,
@@ -11,13 +13,13 @@ pub enum Edge {
     TopRight,
 }
 
-#[derive(Clone, Copy, Debug, strum::EnumIter)]
+#[derive(Clone, Copy, Debug, strum::EnumIter, PartialEq)]
 pub enum Sub {
     Left,
     Right,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct EdgeSub {
     pub edge: Edge,
     pub sub: Sub,
@@ -57,7 +59,7 @@ pub struct HexagonPosition {
     pub y: i32,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ConnectorPosition {
     pub hexagon: HexagonPosition,
     pub edge_sub: EdgeSub,
@@ -68,34 +70,42 @@ pub struct Board {
     pub connectors: Vec<Connector>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ConnectorId(pub u32);
 
+#[derive(Debug)]
 pub struct Connector {
     pub id: ConnectorId,
     pub kind: ConnectorKind,
     pub weight: u32,
 }
 
+#[derive(Debug)]
 pub enum ConnectorKind {
     DeadEnd(ConnectorDeadEnd),
+    HexToHex(ConnectorOutside),
     OnHex(ConnectorOnHex),
     Outside(ConnectorOutside),
 }
+
+#[derive(Debug)]
 pub struct ConnectorDeadEnd {
     pub position: ConnectorPosition,
 }
 
+#[derive(Debug)]
 pub struct ConnectorOnHex {
     pub hexagon: HexagonPosition,
     pub edge_sub: ConnectorEdgeSub,
 }
 
+#[derive(Debug)]
 pub struct ConnectorEdgeSub {
     pub a: EdgeSub,
     pub b: EdgeSub,
 }
 
+#[derive(Debug)]
 pub struct ConnectorOutside {
     pub connector_a: ConnectorPosition,
     pub connector_b: ConnectorPosition,

@@ -190,6 +190,22 @@ fn point_on_connector(connector: &ConnectorKind, step: f32, r: f64, h: f64) -> (
                 (bx, by),
             )
         }
+        ConnectorKind::HexToHex(ConnectorOutside {
+            connector_a,
+            connector_b,
+        }) => {
+            let (ax, ay) = edge_sub_point(&connector_a.hexagon, &connector_a.edge_sub, r, h);
+            let (bx, by) = edge_sub_point(&connector_b.hexagon, &connector_b.edge_sub, r, h);
+            let ctrl = r * 0.6;
+            let (nax, nay) = edge_inward_normal(&connector_a.edge_sub.edge);
+            let (nbx, nby) = edge_inward_normal(&connector_b.edge_sub.edge);
+            cubic(
+                (ax, ay),
+                (ax - ctrl * nax, ay - ctrl * nay),
+                (bx - ctrl * nbx, by - ctrl * nby),
+                (bx, by),
+            )
+        }
         ConnectorKind::DeadEnd(ConnectorDeadEnd { position }) => {
             edge_sub_point(&position.hexagon, &position.edge_sub, r, h)
         }
@@ -394,6 +410,10 @@ impl RenderTask {
                         document = document.add(path_elem);
                     }
                     ConnectorKind::Outside(ConnectorOutside {
+                        connector_a,
+                        connector_b,
+                    })
+                    | ConnectorKind::HexToHex(ConnectorOutside {
                         connector_a,
                         connector_b,
                     }) => {
@@ -791,7 +811,9 @@ mod tests {
                     .map(|c| {
                         let is_connected_to_dead_end = match &c.kind {
                             ConnectorKind::DeadEnd(_) => true,
-                            ConnectorKind::OnHex(_) | ConnectorKind::Outside(_) => false,
+                            ConnectorKind::HexToHex(_)
+                            | ConnectorKind::OnHex(_)
+                            | ConnectorKind::Outside(_) => false,
                         };
                         UsedConnector {
                             connector: c.kind,

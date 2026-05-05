@@ -15,20 +15,27 @@ impl Board {
 
         // For ReducedDeathEnds: compute which outer positions get outside connectors.
         // Those positions are NOT dead ends.
-        let outside_pairs: Vec<(ConnectorPosition, ConnectorPosition)> =
-            match outer_connectors {
-                OuterConnectors::OnlyDeathEnds => vec![],
-                OuterConnectors::ReducedDeathEnds => {
-                    Self::compute_outside_pairs(&hex_set, &hexagons)
-                }
-            };
+        let outside_pairs: Vec<(ConnectorPosition, ConnectorPosition)> = match outer_connectors {
+            OuterConnectors::OnlyDeathEnds => vec![],
+            OuterConnectors::ReducedDeathEnds => Self::compute_outside_pairs(&hex_set, &hexagons),
+        };
 
         let outside_keys: HashSet<(i32, i32, u8, u8)> = outside_pairs
             .iter()
             .flat_map(|(a, b)| {
                 [
-                    (a.hexagon.x, a.hexagon.y, edge_idx(a.edge_sub.edge), sub_idx(a.edge_sub.sub)),
-                    (b.hexagon.x, b.hexagon.y, edge_idx(b.edge_sub.edge), sub_idx(b.edge_sub.sub)),
+                    (
+                        a.hexagon.x,
+                        a.hexagon.y,
+                        edge_idx(a.edge_sub.edge),
+                        sub_idx(a.edge_sub.sub),
+                    ),
+                    (
+                        b.hexagon.x,
+                        b.hexagon.y,
+                        edge_idx(b.edge_sub.edge),
+                        sub_idx(b.edge_sub.sub),
+                    ),
                 ]
             })
             .collect();
@@ -71,7 +78,38 @@ impl Board {
             id += 1;
         }
 
-        Ok(Board { hexagons, connectors })
+        for hex_a in &hexagons {
+            let pa = (hex_a.x, hex_a.y);
+            for (edge_e, hex_b) in Self::neighbors(hex_a) {
+                let pb = (hex_b.x, hex_b.y);
+                if !hex_set.contains(&pb) || pa >= pb {
+                    continue;
+                }
+                let opp = Self::opposite_edge(edge_e);
+                for (sub_a, sub_b) in [(Sub::Left, Sub::Right), (Sub::Right, Sub::Left)] {
+                    connectors.push(Connector {
+                        id: ConnectorId(id),
+                        kind: ConnectorKind::HexToHex(ConnectorOutside {
+                            connector_a: ConnectorPosition {
+                                hexagon: *hex_a,
+                                edge_sub: EdgeSub { edge: edge_e, sub: sub_a },
+                            },
+                            connector_b: ConnectorPosition {
+                                hexagon: hex_b,
+                                edge_sub: EdgeSub { edge: opp, sub: sub_b },
+                            },
+                        }),
+                        weight: 1,
+                    });
+                    id += 1;
+                }
+            }
+        }
+
+        Ok(Board {
+            hexagons,
+            connectors,
+        })
     }
 
     pub fn get_dead_ends(&self) -> Vec<(&ConnectorPosition, &ConnectorId)> {
@@ -143,11 +181,17 @@ impl Board {
                     pairs.push((
                         ConnectorPosition {
                             hexagon: *hex_a,
-                            edge_sub: EdgeSub { edge: prev_a, sub: Sub::Right },
+                            edge_sub: EdgeSub {
+                                edge: prev_a,
+                                sub: Sub::Right,
+                            },
                         },
                         ConnectorPosition {
                             hexagon: hex_b,
-                            edge_sub: EdgeSub { edge: start_b, sub: Sub::Left },
+                            edge_sub: EdgeSub {
+                                edge: start_b,
+                                sub: Sub::Left,
+                            },
                         },
                     ));
                 }
@@ -160,11 +204,17 @@ impl Board {
                     pairs.push((
                         ConnectorPosition {
                             hexagon: *hex_a,
-                            edge_sub: EdgeSub { edge: next_a, sub: Sub::Left },
+                            edge_sub: EdgeSub {
+                                edge: next_a,
+                                sub: Sub::Left,
+                            },
                         },
                         ConnectorPosition {
                             hexagon: hex_b,
-                            edge_sub: EdgeSub { edge: end_b, sub: Sub::Right },
+                            edge_sub: EdgeSub {
+                                edge: end_b,
+                                sub: Sub::Right,
+                            },
                         },
                     ));
                 }
@@ -178,36 +228,47 @@ impl Board {
     // Derived from the flat-top axial vertex geometry.
     fn adjacent_at_start(e: Edge) -> (Edge, Edge) {
         match e {
-            Edge::Top         => (Edge::TopRight,   Edge::BottomRight),
-            Edge::TopLeft     => (Edge::Top,         Edge::TopRight),
-            Edge::BottomLeft  => (Edge::TopLeft,     Edge::Top),
-            Edge::Bottom      => (Edge::BottomLeft,  Edge::TopLeft),
-            Edge::BottomRight => (Edge::Bottom,      Edge::BottomLeft),
-            Edge::TopRight    => (Edge::BottomRight, Edge::Bottom),
+            Edge::Top => (Edge::TopRight, Edge::BottomRight),
+            Edge::TopLeft => (Edge::Top, Edge::TopRight),
+            Edge::BottomLeft => (Edge::TopLeft, Edge::Top),
+            Edge::Bottom => (Edge::BottomLeft, Edge::TopLeft),
+            Edge::BottomRight => (Edge::Bottom, Edge::BottomLeft),
+            Edge::TopRight => (Edge::BottomRight, Edge::Bottom),
         }
     }
 
     // (next edge of A, adjacent-end edge of B) at the END vertex of edge E.
     fn adjacent_at_end(e: Edge) -> (Edge, Edge) {
         match e {
-            Edge::Top         => (Edge::TopLeft,    Edge::BottomLeft),
-            Edge::TopLeft     => (Edge::BottomLeft, Edge::Bottom),
-            Edge::BottomLeft  => (Edge::Bottom,     Edge::BottomRight),
-            Edge::Bottom      => (Edge::BottomRight, Edge::TopRight),
-            Edge::BottomRight => (Edge::TopRight,   Edge::Top),
-            Edge::TopRight    => (Edge::Top,        Edge::TopLeft),
+            Edge::Top => (Edge::TopLeft, Edge::BottomLeft),
+            Edge::TopLeft => (Edge::BottomLeft, Edge::Bottom),
+            Edge::BottomLeft => (Edge::Bottom, Edge::BottomRight),
+            Edge::Bottom => (Edge::BottomRight, Edge::TopRight),
+            Edge::BottomRight => (Edge::TopRight, Edge::Top),
+            Edge::TopRight => (Edge::Top, Edge::TopLeft),
+        }
+    }
+
+    fn opposite_edge(e: Edge) -> Edge {
+        match e {
+            Edge::Top => Edge::Bottom,
+            Edge::Bottom => Edge::Top,
+            Edge::TopLeft => Edge::BottomRight,
+            Edge::BottomRight => Edge::TopLeft,
+            Edge::BottomLeft => Edge::TopRight,
+            Edge::TopRight => Edge::BottomLeft,
         }
     }
 
     fn neighbor_dir(pos: (i32, i32), edge: Edge) -> (i32, i32) {
         let (q, r) = pos;
         match edge {
-            Edge::Top         => (q,     r - 1),
-            Edge::TopLeft     => (q - 1, r),
-            Edge::BottomLeft  => (q - 1, r + 1),
-            Edge::Bottom      => (q,     r + 1),
+            Edge::Top => (q, r - 1),
+            Edge::TopLeft => (q - 1, r),
+            Edge::BottomLeft => (q - 1, r + 1),
+            Edge::Bottom => (q, r + 1),
             Edge::BottomRight => (q + 1, r),
-            Edge::TopRight    => (q + 1, r - 1),
+            Edge::TopRight => (q + 1, r - 1),
         }
     }
 
@@ -215,23 +276,118 @@ impl Board {
     fn neighbors(pos: &HexagonPosition) -> [(Edge, HexagonPosition); 6] {
         let (q, r) = (pos.x, pos.y);
         [
-            (Edge::Top,         HexagonPosition { x: q,     y: r - 1 }),
-            (Edge::TopLeft,     HexagonPosition { x: q - 1, y: r     }),
-            (Edge::BottomLeft,  HexagonPosition { x: q - 1, y: r + 1 }),
-            (Edge::Bottom,      HexagonPosition { x: q,     y: r + 1 }),
-            (Edge::BottomRight, HexagonPosition { x: q + 1, y: r     }),
-            (Edge::TopRight,    HexagonPosition { x: q + 1, y: r - 1 }),
+            (Edge::Top, HexagonPosition { x: q, y: r - 1 }),
+            (Edge::TopLeft, HexagonPosition { x: q - 1, y: r }),
+            (Edge::BottomLeft, HexagonPosition { x: q - 1, y: r + 1 }),
+            (Edge::Bottom, HexagonPosition { x: q, y: r + 1 }),
+            (Edge::BottomRight, HexagonPosition { x: q + 1, y: r }),
+            (Edge::TopRight, HexagonPosition { x: q + 1, y: r - 1 }),
         ]
+    }
+
+    pub(crate) fn compute_path_starting_from(
+        &self,
+        current_position: &ConnectorPosition,
+    ) -> Vec<(ConnectorId, u32)> {
+        let mut current_position = current_position.clone();
+        let mut steps = vec![];
+        if let Some((next, id, weight)) = self.connectors.iter().find_map(|x| match &x.kind {
+            ConnectorKind::OnHex(c) if c.hexagon == current_position.hexagon => {
+                if c.edge_sub.a == current_position.edge_sub {
+                    Some((&c.edge_sub.b, x.id, x.weight))
+                } else if c.edge_sub.b == current_position.edge_sub {
+                    Some((&c.edge_sub.a, x.id, x.weight))
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }) {
+            steps.push((id, weight));
+            current_position = ConnectorPosition {
+                hexagon: current_position.hexagon.clone(),
+                edge_sub: next.clone(),
+            };
+        } else {
+            return steps;
+        };
+        loop {
+            if let Some((next, id, weight)) = self
+                .connectors
+                .iter()
+                .filter(|x| !steps.iter().any(|(id, _)| id == &x.id))
+                .find_map(|x| match &x.kind {
+                    ConnectorKind::OnHex(c) if c.hexagon == current_position.hexagon => {
+                        if c.edge_sub.a == current_position.edge_sub {
+                            Some((
+                                Some(ConnectorPosition {
+                                    hexagon: current_position.hexagon.clone(),
+                                    edge_sub: c.edge_sub.b.clone(),
+                                }),
+                                x.id,
+                                x.weight,
+                            ))
+                        } else if c.edge_sub.b == current_position.edge_sub {
+                            Some((
+                                Some(ConnectorPosition {
+                                    hexagon: current_position.hexagon.clone(),
+                                    edge_sub: c.edge_sub.a.clone(),
+                                }),
+                                x.id,
+                                x.weight,
+                            ))
+                        } else {
+                            None
+                        }
+                    }
+                    ConnectorKind::DeadEnd(c) if c.position == current_position => {
+                        Some((None, x.id, x.weight))
+                    }
+                    ConnectorKind::Outside(c)
+                        if c.connector_a.hexagon == current_position.hexagon =>
+                    {
+                        Some((Some(c.connector_b.clone()), x.id, x.weight))
+                    }
+                    ConnectorKind::Outside(c)
+                        if c.connector_b.hexagon == current_position.hexagon =>
+                    {
+                        Some((Some(c.connector_a.clone()), x.id, x.weight))
+                    }
+                    ConnectorKind::HexToHex(c) if c.connector_a == current_position => {
+                        Some((Some(c.connector_b.clone()), x.id, x.weight))
+                    }
+                    ConnectorKind::HexToHex(c) if c.connector_b == current_position => {
+                        Some((Some(c.connector_a.clone()), x.id, x.weight))
+                    }
+                    _ => None,
+                })
+            {
+                steps.push((id, weight));
+                if let Some(next) = next {
+                    current_position = next
+                }
+            } else {
+                break;
+            };
+        }
+        steps
     }
 }
 
 fn edge_idx(edge: Edge) -> u8 {
     match edge {
-        Edge::Top => 0, Edge::TopLeft => 1, Edge::BottomLeft => 2,
-        Edge::Bottom => 3, Edge::BottomRight => 4, Edge::TopRight => 5,
+        Edge::Top => 0,
+        Edge::TopLeft => 1,
+        Edge::BottomLeft => 2,
+        Edge::Bottom => 3,
+        Edge::BottomRight => 4,
+        Edge::TopRight => 5,
     }
 }
 
 fn sub_idx(sub: Sub) -> u8 {
-    match sub { Sub::Left => 0, Sub::Right => 1 }
+    match sub {
+        Sub::Left => 0,
+        Sub::Right => 1,
+    }
 }
