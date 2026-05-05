@@ -1,5 +1,8 @@
 // a (de)-serializable rng
 
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize)]
 pub struct RandomNumberGenerator {
     seed: u32,
     count: u32,

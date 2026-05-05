@@ -125,12 +125,26 @@ fn compute_used_connectors(
                 .collect()
         })
         .collect();
-    // used_by from full history
     let mut used_by_map: HashMap<ConnectorId, Vec<PlayerId>> = HashMap::new();
+    let mut preview_used_by_map: HashMap<ConnectorId, Vec<PlayerId>> = HashMap::new();
     for player in players.iter() {
-        for turn in &player.history {
+        let (committed, preview) = if is_preview {
+            let split = player.history.len().saturating_sub(1);
+            (&player.history[..split], player.history.last())
+        } else {
+            (&player.history[..], None)
+        };
+        for turn in committed {
             for hc in &turn.connectors {
                 used_by_map.entry(hc.id).or_default().push(player.id);
+            }
+        }
+        if let Some(turn) = preview {
+            for hc in &turn.connectors {
+                preview_used_by_map
+                    .entry(hc.id)
+                    .or_default()
+                    .push(player.id);
             }
         }
     }
@@ -142,7 +156,7 @@ fn compute_used_connectors(
             UsedConnector {
                 connector: c.kind.clone(),
                 used_by: used_by_map.get(&c.id).cloned().unwrap_or_default(),
-                preview_used_by: vec![],
+                preview_used_by: preview_used_by_map.get(&c.id).cloned().unwrap_or_default(),
                 is_connected_to_dead_end: comp_has_dead_end[ci],
                 is_connected_to_player_start: comp_player_start[ci].clone(),
                 is_connected_to_player_target: comp_player_target[ci].clone(),
@@ -674,10 +688,10 @@ impl RenderTask {
         }
 
         if !hexagons.is_empty() {
-            let (w, h_box) = ((max_x - min_x) * 1.1, (max_y - min_y) * 1.1);
+            let (w, h_box) = ((max_x - min_x) * 1.2, (max_y - min_y) * 1.2);
             let (vx, vy) = (
-                min_x - (max_x - min_x) * 0.05,
-                min_y - (max_y - min_y) * 0.05,
+                min_x - (max_x - min_x) * 0.15,
+                min_y - (max_y - min_y) * 0.15,
             );
             document = document
                 .set("viewBox", format!("{vx:.2} {vy:.2} {w:.2} {h_box:.2}"))
@@ -693,7 +707,7 @@ impl RenderTask {
 mod tests {
     use strum::IntoEnumIterator;
 
-    use crate::game_options::OuterConnectors;
+    use crate::game_options::{GameOptionsStandard, OuterConnectors};
 
     use super::*;
 
@@ -1060,6 +1074,41 @@ mod tests {
                 dbg!(&path);
                 std::fs::write(path, svg.to_string()).unwrap();
             }
+        }
+    }
+
+    #[test]
+    pub fn test_play_tile() {
+        let options = GameOptionsStandard {
+            board_radius: 1,
+            outer_connectors: OuterConnectors::ReducedDeathEnds,
+            random_seed: 0,
+            player_count: 2,
+            collision_mode: game_options::CollisionMode::PassThrough,
+            winning_condition: game_options::WinningConditionStandard::HighestVelocity,
+            hand_size: 3,
+        };
+        let mut game = options.start_game().unwrap();
+
+        let player_data = PlayerData {
+            colors: HashMap::from([(P1, Color::Red), (P2, Color::Blue)]),
+            dead_end_color: Color::Gray,
+            unused_color: Color::Golden,
+            hex_fill: Color::Beige,
+            hex_stroke: Color::DarkGray,
+            highlighted_hex_fill: Color::Moccasin,
+            highlighted_hex_stroke: Color::DarkOrange,
+        };
+        for i in 0..1 {
+            let rendertask = game.render_task(None, 0.);
+            let svg = rendertask.render(&player_data).unwrap();
+            let path = format!(
+                "{}/../target/play_tile_step_{i}.svg",
+                env!("CARGO_MANIFEST_DIR")
+            );
+            dbg!(&path);
+            std::fs::write(path, svg.to_string()).unwrap();
+            // serialize the game state and save it as a json file
         }
     }
 }

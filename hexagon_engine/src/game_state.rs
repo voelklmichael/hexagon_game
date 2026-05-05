@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::Board;
 use crate::board_types::{
     Connector, ConnectorEnd, ConnectorId, ConnectorKind, ConnectorOnHex, ConnectorPosition,
@@ -8,6 +10,7 @@ use crate::player_types::{HistoryConnector, PlayerHistorySingleTurn};
 use crate::random_number_generator::RandomNumberGenerator;
 use crate::{Player, PlayerId};
 
+#[derive(Serialize, Deserialize)]
 pub struct GameState {
     pub board: Board,
     pub players: Vec<Player>,
@@ -190,5 +193,33 @@ impl GameState {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::game_options::{CollisionMode, GameOptionsStandard, OuterConnectors, WinningConditionStandard};
+
+    use super::*;
+
+    #[test]
+    fn test_serialize_game_state() {
+        let options = GameOptionsStandard {
+            board_radius: 1,
+            outer_connectors: OuterConnectors::ReducedDeathEnds,
+            random_seed: 0,
+            player_count: 2,
+            collision_mode: CollisionMode::PassThrough,
+            winning_condition: WinningConditionStandard::HighestVelocity,
+            hand_size: 3,
+        };
+        let game = options.start_game().unwrap();
+        let json = serde_json::to_string_pretty(&game).unwrap();
+        let path = format!("{}/../target/game_state.json", env!("CARGO_MANIFEST_DIR"));
+        std::fs::write(&path, &json).unwrap();
+        dbg!(&path);
+
+        let restored: GameState = serde_json::from_str(&json).unwrap();
+        assert_eq!(restored.players.len(), game.players.len());
     }
 }

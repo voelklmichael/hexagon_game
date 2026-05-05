@@ -1,9 +1,9 @@
-use serde::de;
+use serde::{Deserialize, Serialize};
 
 mod board;
 mod tile;
 
-#[derive(Clone, Copy, Debug, strum::EnumIter, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, strum::EnumIter, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Edge {
     Top,
     TopLeft,
@@ -13,19 +13,19 @@ pub enum Edge {
     TopRight,
 }
 
-#[derive(Clone, Copy, Debug, strum::EnumIter, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, strum::EnumIter, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Sub {
     Left,
     Right,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct EdgeSub {
     pub edge: Edge,
     pub sub: Sub,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize, Deserialize)]
 pub enum TileRotationDirection {
     Clockwise,
     CounterClockwise,
@@ -53,40 +53,41 @@ impl Edge {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct HexagonPosition {
     pub x: i32,
     pub y: i32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ConnectorPosition {
     pub hexagon: HexagonPosition,
     pub edge_sub: EdgeSub,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct Board {
     pub hexagons: Vec<HexagonPosition>,
     pub connectors: Vec<Connector>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ConnectorId(pub u32);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ConnectorEnd {
     StartedAtA,
     StartedAtB,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Connector {
     pub id: ConnectorId,
     pub kind: ConnectorKind,
     pub weight: u32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ConnectorKind {
     DeadEnd(ConnectorDeadEnd),
     HexToHex(ConnectorOutside),
@@ -94,29 +95,30 @@ pub enum ConnectorKind {
     Outside(ConnectorOutside),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConnectorDeadEnd {
     pub position: ConnectorPosition,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConnectorOnHex {
     pub hexagon: HexagonPosition,
     pub edge_sub: ConnectorEdgeSub,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConnectorEdgeSub {
     pub a: EdgeSub,
     pub b: EdgeSub,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConnectorOutside {
     pub connector_a: ConnectorPosition,
     pub connector_b: ConnectorPosition,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct Tile {
     pub inner_connectors: Vec<ConnectorEdgeSub>,
 }

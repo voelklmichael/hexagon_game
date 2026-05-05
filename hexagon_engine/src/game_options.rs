@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{
     board_types::{Board, ConnectorEnd, Tile},
     game_state::GameState,
@@ -5,7 +7,7 @@ use crate::{
     random_number_generator::RandomNumberGenerator,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct GameOptionsStandard {
     pub board_radius: usize,
     pub outer_connectors: OuterConnectors,
@@ -16,25 +18,25 @@ pub struct GameOptionsStandard {
     pub hand_size: usize,
 }
 
-#[derive(strum::EnumIter, Clone, Debug)]
+#[derive(strum::EnumIter, Clone, Debug, Serialize, Deserialize)]
 pub enum OuterConnectors {
     OnlyDeathEnds,
     ReducedDeathEnds,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum CollisionMode {
     PassThrough,
     BothDie,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum WinningConditionStandard {
     LastManStanding,
     LongestWay,
     HighestVelocity,
 }
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct GameOptionsDelivery {
     pub board_radius: usize,
     pub outer_connectors: OuterConnectors,
@@ -44,6 +46,7 @@ pub struct GameOptionsDelivery {
     pub hand_size: usize,
 }
 
+#[derive(Serialize, Deserialize)]
 pub enum GameOptions {
     Delivery(GameOptionsDelivery),
     Standard(GameOptionsStandard),
@@ -149,7 +152,7 @@ impl GameOptionsStandard {
                 .map(|_| Tile::create_fully_connected(&mut rng))
                 .collect();
             players.push(Player {
-                id: PlayerId(0),
+                id: PlayerId(i as u32),
                 current_position: (start_id, ConnectorEnd::StartedAtA),
                 target: None,
                 history: PlayerHistorySingleTurn::new_from_start(&start_id),
