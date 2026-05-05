@@ -71,8 +71,7 @@ impl GameOptionsDelivery {
             if player_has_target {
                 Some(
                     rng.select_random_element(&mut dead_ends)
-                        .ok_or("No target found for Player".to_string())?
-                        .clone(),
+                        .ok_or("No target found for Player".to_string())?,
                 )
             } else {
                 None
@@ -95,8 +94,7 @@ impl GameOptionsDelivery {
         for i in 0..npc_count {
             let target = rng
                 .select_random_element(&mut dead_ends)
-                .ok_or(format!("No target found for NPC#{i}"))?
-                .clone();
+                .ok_or(format!("No target found for NPC#{i}"))?;
             let start_id = rng
                 .select_random_element(&mut dead_ends)
                 .ok_or(format!("No start found for NPC#{i}"))?;

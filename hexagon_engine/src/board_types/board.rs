@@ -300,7 +300,7 @@ impl Board {
         match &connector.kind {
             ConnectorKind::DeadEnd(c) => c.position.clone(),
             ConnectorKind::OnHex(c) => ConnectorPosition {
-                hexagon: c.hexagon.clone(),
+                hexagon: c.hexagon,
                 edge_sub: match end {
                     ConnectorEnd::StartedAtA => c.edge_sub.a.clone(),
                     ConnectorEnd::StartedAtB => c.edge_sub.b.clone(),
@@ -333,7 +333,7 @@ impl Board {
         }) {
             steps.push((id, end, weight));
             current_position = ConnectorPosition {
-                hexagon: current_position.hexagon.clone(),
+                hexagon: current_position.hexagon,
                 edge_sub: next.clone(),
             };
         } else {
@@ -349,7 +349,7 @@ impl Board {
                         if c.edge_sub.a == current_position.edge_sub {
                             Some((
                                 Some(ConnectorPosition {
-                                    hexagon: current_position.hexagon.clone(),
+                                    hexagon: current_position.hexagon,
                                     edge_sub: c.edge_sub.b.clone(),
                                 }),
                                 ConnectorEnd::StartedAtA,
@@ -359,7 +359,7 @@ impl Board {
                         } else if c.edge_sub.b == current_position.edge_sub {
                             Some((
                                 Some(ConnectorPosition {
-                                    hexagon: current_position.hexagon.clone(),
+                                    hexagon: current_position.hexagon,
                                     edge_sub: c.edge_sub.a.clone(),
                                 }),
                                 ConnectorEnd::StartedAtB,

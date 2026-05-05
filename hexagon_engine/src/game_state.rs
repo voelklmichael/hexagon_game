@@ -68,7 +68,7 @@ impl GameState {
                         ConnectorEnd::StartedAtB => c.edge_sub.b.clone(),
                     };
                     ConnectorPosition {
-                        hexagon: c.hexagon.clone(),
+                        hexagon: c.hexagon,
                         edge_sub,
                     }
                 }
@@ -100,7 +100,7 @@ impl GameState {
                     self.board.connectors.push(Connector {
                         id: ConnectorId(offset + i as u32),
                         kind: ConnectorKind::OnHex(ConnectorOnHex {
-                            hexagon: position.hexagon.clone(),
+                            hexagon: position.hexagon,
                             edge_sub: connector,
                         }),
                         weight: 1,
