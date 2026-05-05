@@ -688,7 +688,7 @@ impl RenderTask {
         }
 
         if !hexagons.is_empty() {
-            let (w, h_box) = ((max_x - min_x) * 1.2, (max_y - min_y) * 1.2);
+            let (w, h_box) = ((max_x - min_x) * 1.3, (max_y - min_y) * 1.3);
             let (vx, vy) = (
                 min_x - (max_x - min_x) * 0.15,
                 min_y - (max_y - min_y) * 0.15,
@@ -724,6 +724,7 @@ mod tests {
         }
     }
 
+    const P0: PlayerId = PlayerId(0); // Green
     const P1: PlayerId = PlayerId(1); // Red
     const P2: PlayerId = PlayerId(2); // Blue
 
@@ -1080,7 +1081,7 @@ mod tests {
     #[test]
     pub fn test_play_tile() {
         let options = GameOptionsStandard {
-            board_radius: 1,
+            board_radius: 2,
             outer_connectors: OuterConnectors::ReducedDeathEnds,
             random_seed: 0,
             player_count: 2,
@@ -1091,7 +1092,7 @@ mod tests {
         let mut game = options.start_game().unwrap();
 
         let player_data = PlayerData {
-            colors: HashMap::from([(P1, Color::Red), (P2, Color::Blue)]),
+            colors: HashMap::from([(P0, Color::Green), (P1, Color::Red)]),
             dead_end_color: Color::Gray,
             unused_color: Color::Golden,
             hex_fill: Color::Beige,
@@ -1099,7 +1100,7 @@ mod tests {
             highlighted_hex_fill: Color::Moccasin,
             highlighted_hex_stroke: Color::DarkOrange,
         };
-        for i in 0..1 {
+        for i in 0..3 {
             let rendertask = game.render_task(None, 0.);
             let svg = rendertask.render(&player_data).unwrap();
             let path = format!(
@@ -1108,7 +1109,12 @@ mod tests {
             );
             dbg!(&path);
             std::fs::write(path, svg.to_string()).unwrap();
-            // serialize the game state and save it as a json file
+            let json_path = format!(
+                "{}/../target/play_tile_step_{i}.json",
+                env!("CARGO_MANIFEST_DIR")
+            );
+            std::fs::write(json_path, serde_json::to_string_pretty(&game).unwrap()).unwrap();
+            game.play_tile(0);
         }
     }
 }
