@@ -151,7 +151,7 @@ impl GameState {
                         .players
                         .iter_mut()
                         .find(|p| &p.id == lid)
-                        .expect("No player with id={lid:?} found");
+                        .expect("No player found");
                     if let Some((last, end, _)) = left.last() {
                         if let Some(c) = self.board.connectors.iter().find(|x| &x.id == last) {
                             match &c.kind {
@@ -180,7 +180,11 @@ impl GameState {
                     player.history.push(PlayerHistorySingleTurn {
                         connectors: left
                             .iter()
-                            .map(|(c, end, w)| HistoryConnector { id: *c, end: *end, weight: *w })
+                            .map(|(c, end, w)| HistoryConnector {
+                                id: *c,
+                                end: *end,
+                                weight: *w,
+                            })
                             .collect(),
                     });
                 }

@@ -339,8 +339,8 @@ impl Board {
         } else {
             return steps;
         };
-        loop {
-            if let Some((next, end, id, weight)) = self
+        {
+            while let Some((next, end, id, weight)) = self
                 .connectors
                 .iter()
                 .filter(|x| !steps.iter().any(|(id, _, _)| id == &x.id))
@@ -412,9 +412,7 @@ impl Board {
                 if let Some(next) = next {
                     current_position = next
                 }
-            } else {
-                break;
-            };
+            }
         }
         steps
     }

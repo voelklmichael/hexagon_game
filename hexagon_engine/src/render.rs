@@ -39,7 +39,7 @@ impl GameState {
 
 fn compute_used_connectors(
     board: &Board,
-    players: &Vec<Player>,
+    players: &[Player],
     is_preview: bool,
 ) -> Vec<UsedConnector> {
     // Fast connector lookup by id
