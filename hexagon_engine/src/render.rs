@@ -726,8 +726,8 @@ mod tests {
             used_by,
             preview_used_by,
             is_connected_to_dead_end,
-            is_connected_to_player_start,
-            is_connected_to_player_target,
+            is_connected_to_player_start: is_connected_to_player_start.into_iter().collect(),
+            is_connected_to_player_target: is_connected_to_player_target.into_iter().collect(),
         }
     }
 
@@ -1030,8 +1030,8 @@ mod tests {
                             used_by: [].into(),
                             preview_used_by: [].into(),
                             is_connected_to_dead_end,
-                            is_connected_to_player_start: None,
-                            is_connected_to_player_target: None,
+                            is_connected_to_player_start: Default::default(),
+                            is_connected_to_player_target: Default::default(),
                         }
                     })
                     .collect();
