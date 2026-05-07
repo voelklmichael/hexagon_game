@@ -12,6 +12,7 @@ egui = "0.34.1"
 eframe = { version = "0.34.1", features = ["persistence"] }
 hexagon_engine = { path = "../hexagon_engine" }
 indexmap.workspace = true
+strum.workspace = true
 log = "0.4.27"
 serde.workspace = true
 

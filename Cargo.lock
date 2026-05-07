@@ -1517,6 +1517,7 @@ dependencies = [
  "indexmap",
  "log",
  "serde",
+ "strum",
  "wasm-bindgen-futures",
  "web-sys",
 ]

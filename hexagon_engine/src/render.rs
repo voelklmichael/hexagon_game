@@ -254,7 +254,7 @@ pub struct CurrentPlayerPosition {
     pub is_active: bool,
 }
 
-#[derive(Clone, Copy, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize, strum::VariantArray)]
 pub enum Color {
     Gray,
     Golden,

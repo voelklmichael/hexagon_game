@@ -91,7 +91,16 @@ pub struct RenderingData {
 impl Default for RenderingData {
     fn default() -> Self {
         Self {
-            player_colors: IndexMap::new(),
+            player_colors: [
+                (PlayerId(0), Color::Green),
+                (PlayerId(1), Color::Red),
+                (PlayerId(2), Color::Blue),
+                (PlayerId(3), Color::Purple),
+                (PlayerId(4), Color::Cyan),
+                (PlayerId(5), Color::Pink),
+            ]
+            .into_iter()
+            .collect(),
             dead_end_color: Color::Gray,
             closed_loop_color: Color::Teal,
             unused_color: Color::Golden,
@@ -162,7 +171,7 @@ impl eframe::App for HexApp {
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show_inside(ui, |ui| {
-            ui.heading("Hexagon Game");
+            crate::panels::rendering::show(ui, &mut self.rendering_data);
         });
     }
 }
