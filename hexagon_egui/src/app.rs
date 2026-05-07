@@ -139,6 +139,9 @@ pub struct HexApp {
     pub interaction: BoardInteraction,
     pub options: OptionsState,
     pub music: MusicState,
+    #[serde(skip)]
+    #[cfg(not(target_arch = "wasm32"))]
+    pub music_player: Option<crate::music::MusicPlayer>,
 }
 
 impl Default for HexApp {
@@ -150,17 +153,32 @@ impl Default for HexApp {
             interaction: BoardInteraction::default(),
             options: OptionsState::default(),
             music: MusicState::default(),
+            #[cfg(not(target_arch = "wasm32"))]
+            music_player: None,
         }
     }
 }
 
 impl HexApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        if let Some(storage) = cc.storage {
+        let mut app: Self = if let Some(storage) = cc.storage {
             eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
         } else {
             Default::default()
+        };
+
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            app.music_player = crate::music::MusicPlayer::new(app.music.volume);
+            if let Some(player) = &app.music_player {
+                player.play_file(std::path::Path::new(concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../private_assets/alexzavesa-dance-playful-night-510786.mp3"
+                )));
+            }
         }
+
+        app
     }
 }
 
