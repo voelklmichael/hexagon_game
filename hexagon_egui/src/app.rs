@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 use hexagon_engine::{
     CollisionMode, Color, GameOptionsDelivery, GameOptionsDiscriminants, GameOptionsStandard,
@@ -98,7 +98,7 @@ impl Default for GameHistory {
 pub struct HexApp {
     pub game: Option<GameState>,
     pub history: GameHistory,
-    pub player_colors: HashMap<PlayerId, Color>,
+    pub player_colors: IndexMap<PlayerId, Color>,
     pub interaction: BoardInteraction,
     pub options: OptionsState,
     pub music: MusicState,
@@ -109,7 +109,7 @@ impl Default for HexApp {
         Self {
             game: None,
             history: GameHistory::default(),
-            player_colors: HashMap::new(),
+            player_colors: IndexMap::new(),
             interaction: BoardInteraction::default(),
             options: OptionsState::default(),
             music: MusicState::default(),

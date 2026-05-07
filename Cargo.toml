@@ -9,6 +9,7 @@ derive_aliases = "0.4"
 strum = { version = "0.28", features = ["derive"] }
 svg = "*"
 tracing = "0.1.44"
+indexmap = { version = "2", features = ["serde"] }
 
 [profile.release]
 opt-level = 2 # fast and small wasm
