@@ -77,6 +77,34 @@ impl Default for BoardInteraction {
 
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(default, rename_all = "camelCase")]
+pub struct RenderingData {
+    pub player_colors: IndexMap<PlayerId, Color>,
+    pub dead_end_color: Color,
+    pub closed_loop_color: Color,
+    pub unused_color: Color,
+    pub hex_fill: Color,
+    pub hex_stroke: Color,
+    pub highlighted_hex_fill: Color,
+    pub highlighted_hex_stroke: Color,
+}
+
+impl Default for RenderingData {
+    fn default() -> Self {
+        Self {
+            player_colors: IndexMap::new(),
+            dead_end_color: Color::Gray,
+            closed_loop_color: Color::Teal,
+            unused_color: Color::Golden,
+            hex_fill: Color::Beige,
+            hex_stroke: Color::DarkGray,
+            highlighted_hex_fill: Color::Moccasin,
+            highlighted_hex_stroke: Color::DarkOrange,
+        }
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(default, rename_all = "camelCase")]
 pub struct GameHistory {
     #[serde(skip)]
     pub undo_stack: Vec<GameState>,
@@ -98,7 +126,7 @@ impl Default for GameHistory {
 pub struct HexApp {
     pub game: Option<GameState>,
     pub history: GameHistory,
-    pub player_colors: IndexMap<PlayerId, Color>,
+    pub rendering_data: RenderingData,
     pub interaction: BoardInteraction,
     pub options: OptionsState,
     pub music: MusicState,
@@ -109,7 +137,7 @@ impl Default for HexApp {
         Self {
             game: None,
             history: GameHistory::default(),
-            player_colors: IndexMap::new(),
+            rendering_data: RenderingData::default(),
             interaction: BoardInteraction::default(),
             options: OptionsState::default(),
             music: MusicState::default(),
