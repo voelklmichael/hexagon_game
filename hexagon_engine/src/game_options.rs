@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     board_types::{Board, ConnectorEnd, Tile},
-    game_state::GameState,
+    game_state::{GameResult, GameState},
     player_types::{Player, PlayerHistorySingleTurn, PlayerId},
     random_number_generator::RandomNumberGenerator,
     statistics::Statistics,
@@ -117,6 +117,7 @@ impl GameOptionsDelivery {
             board,
             current_player: players.first().unwrap().id,
             statistics: Statistics::compute(&players),
+            result: None,
             players,
             rng,
             options: GameOptions::Delivery(self),
@@ -125,6 +126,47 @@ impl GameOptionsDelivery {
 
     fn collision_mode(&self) -> CollisionMode {
         CollisionMode::BothDie
+    }
+
+    pub(crate) fn check_winning_condition(
+        &self,
+        players: &[Player],
+        _stats: &Statistics,
+    ) -> Option<GameResult> {
+        let with_targets: Vec<_> = players
+            .iter()
+            .filter(|p| !p.is_npc && p.target.is_some())
+            .collect();
+
+        // A non-NPC player left the board without a target → Loss
+        if players
+            .iter()
+            .any(|p| !p.is_npc && !p.is_active && p.target.is_none())
+        {
+            return Some(GameResult::Loss);
+        }
+
+        if with_targets.is_empty() {
+            return None;
+        }
+
+        // Any player with a target became inactive without reaching it → Loss
+        if with_targets
+            .iter()
+            .any(|p| !p.is_active && !p.target.is_some_and(|t| t == p.current_position.0))
+        {
+            return Some(GameResult::Loss);
+        }
+
+        // All players with targets reached them → Win
+        if with_targets
+            .iter()
+            .all(|p| !p.is_active && p.target.is_some_and(|t| t == p.current_position.0))
+        {
+            return Some(GameResult::Win(with_targets.iter().map(|p| p.id).collect()));
+        }
+
+        None
     }
 }
 
@@ -168,6 +210,7 @@ impl GameOptionsStandard {
             board,
             current_player: players.first().unwrap().id,
             statistics: Statistics::compute(&players),
+            result: None,
             players,
             rng,
             options: GameOptions::Standard(self),
@@ -176,6 +219,60 @@ impl GameOptionsStandard {
 
     fn collision_mode(&self) -> CollisionMode {
         self.collision_mode
+    }
+
+    pub(crate) fn check_winning_condition(
+        &self,
+        players: &[Player],
+        stats: &Statistics,
+    ) -> Option<GameResult> {
+        match self.winning_condition {
+            WinningConditionStandard::LastManStanding => {
+                let active: Vec<_> = players
+                    .iter()
+                    .filter(|p| p.is_active && !p.is_npc)
+                    .collect();
+                let total_non_npc = players.iter().filter(|p| !p.is_npc).count();
+                if total_non_npc == 0 {
+                    return None;
+                }
+                match active.len() {
+                    0 => Some(GameResult::Draw(
+                        players.iter().filter(|p| !p.is_npc).map(|p| p.id).collect(),
+                    )),
+                    1 => Some(GameResult::Win(vec![active[0].id])),
+                    _ => None,
+                }
+            }
+            WinningConditionStandard::LongestWay => {
+                let all_done = players.iter().filter(|p| !p.is_npc).all(|p| !p.is_active);
+                if !all_done {
+                    return None;
+                }
+                let max = stats.total_path_weight.values().copied().max().unwrap_or(0);
+                let top: Vec<PlayerId> = stats
+                    .total_path_weight
+                    .iter()
+                    .filter(|&(_, &w)| w == max)
+                    .map(|(&pid, _)| pid)
+                    .collect();
+                if top.len() == 1 { Some(GameResult::Win(top)) } else { Some(GameResult::Draw(top)) }
+            }
+            WinningConditionStandard::HighestVelocity => {
+                let all_done = players.iter().filter(|p| !p.is_npc).all(|p| !p.is_active);
+                if !all_done {
+                    return None;
+                }
+                let max = stats.max_velocity.values().copied().max().unwrap_or(0);
+                let top: Vec<PlayerId> = stats
+                    .max_velocity
+                    .iter()
+                    .filter(|&(_, &v)| v == max)
+                    .map(|(&pid, _)| pid)
+                    .collect();
+                if top.len() == 1 { Some(GameResult::Win(top)) } else { Some(GameResult::Draw(top)) }
+            }
+        }
     }
 }
 

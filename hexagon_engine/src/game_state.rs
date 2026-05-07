@@ -5,11 +5,18 @@ use crate::board_types::{
     Connector, ConnectorEnd, ConnectorId, ConnectorKind, ConnectorOnHex, ConnectorPosition,
     HexagonPosition, Tile, TileRotationDirection,
 };
-use crate::game_options::GameOptions;
+use crate::game_options::{GameOptions, WinningConditionStandard};
 use crate::player_types::{HistoryConnector, PlayerHistorySingleTurn};
 use crate::random_number_generator::RandomNumberGenerator;
 use crate::statistics::Statistics;
 use crate::{Player, PlayerId};
+
+#[derive(Serialize, Deserialize)]
+pub enum GameResult {
+    Win(Vec<PlayerId>),
+    Draw(Vec<PlayerId>),
+    Loss,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct GameState {
@@ -19,6 +26,7 @@ pub struct GameState {
     pub rng: RandomNumberGenerator,
     pub options: GameOptions,
     pub statistics: Statistics,
+    pub result: Option<GameResult>,
 }
 
 impl GameState {
@@ -212,6 +220,18 @@ impl GameState {
             }
         }
         self.statistics = Statistics::compute(&self.players);
+        self.check_winning_condition();
+    }
+
+    fn check_winning_condition(&mut self) {
+        if self.result.is_some() {
+            return;
+        }
+        let result = match &self.options {
+            GameOptions::Delivery(d) => d.check_winning_condition(&self.players, &self.statistics),
+            GameOptions::Standard(s) => s.check_winning_condition(&self.players, &self.statistics),
+        };
+        self.result = result;
     }
 }
 

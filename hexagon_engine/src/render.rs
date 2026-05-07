@@ -24,6 +24,7 @@ impl GameState {
             rng: _,
             options,
             statistics: _,
+            result: _,
         } = self;
 
         RenderTask {
