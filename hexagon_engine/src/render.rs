@@ -125,6 +125,12 @@ fn compute_used_connectors(
                 .collect()
         })
         .collect();
+    let mut start_connector_map: HashMap<ConnectorId, Vec<PlayerId>> = HashMap::new();
+    for p in players.iter() {
+        if let Some(start) = p.history.first().and_then(|t| t.connectors.first()) {
+            start_connector_map.entry(start.id).or_default().push(p.id);
+        }
+    }
     let mut used_by_map: HashMap<ConnectorId, Vec<PlayerId>> = HashMap::new();
     let mut preview_used_by_map: HashMap<ConnectorId, Vec<PlayerId>> = HashMap::new();
     for player in players.iter() {
@@ -160,6 +166,7 @@ fn compute_used_connectors(
                 is_connected_to_dead_end: comp_has_dead_end[ci],
                 is_connected_to_player_start: comp_player_start[ci].clone(),
                 is_connected_to_player_target: comp_player_target[ci].clone(),
+                is_player_start: start_connector_map.get(&c.id).cloned().unwrap_or_default(),
             }
         })
         .collect()
@@ -233,6 +240,7 @@ pub struct UsedConnector {
     pub is_connected_to_dead_end: bool,
     pub is_connected_to_player_start: Vec<PlayerId>,
     pub is_connected_to_player_target: Vec<PlayerId>,
+    pub is_player_start: Vec<PlayerId>,
 }
 
 pub struct CurrentPlayerPosition {
@@ -514,6 +522,7 @@ impl RenderTask {
                     is_connected_to_dead_end,
                     is_connected_to_player_start,
                     is_connected_to_player_target,
+                    is_player_start,
                 } = connector;
 
                 let player_color = |pid: &PlayerId| -> Color {
@@ -589,7 +598,7 @@ impl RenderTask {
                                 ))
                         };
 
-                        let data = if !is_connected_to_player_start.is_empty() {
+                        let data = if !is_player_start.is_empty() {
                             // arrow from outside pointing toward the edge — player enters here
                             make_arrow((px - nx * R * 0.5, py - ny * R * 0.5), (px, py))
                         } else if !is_connected_to_player_target.is_empty() {
@@ -772,6 +781,7 @@ mod tests {
         is_connected_to_dead_end: bool,
         is_connected_to_player_start: Option<PlayerId>,
         is_connected_to_player_target: Option<PlayerId>,
+        is_player_start: Option<PlayerId>,
     ) -> UsedConnector {
         UsedConnector {
             connector,
@@ -780,6 +790,7 @@ mod tests {
             is_connected_to_dead_end,
             is_connected_to_player_start: is_connected_to_player_start.into_iter().collect(),
             is_connected_to_player_target: is_connected_to_player_target.into_iter().collect(),
+            is_player_start: is_player_start.into_iter().collect(),
         }
     }
 
@@ -809,6 +820,7 @@ mod tests {
                     false,
                     Some(P1),
                     None,
+                    Some(P1),
                 ),
                 // --- DeadEnd: outward arrow (player_target → Blue, thin) ---
                 uc(
@@ -820,6 +832,7 @@ mod tests {
                     false,
                     None,
                     Some(P2),
+                    None,
                 ),
                 // --- DeadEnd: X in dead_end_color (Gray) ---
                 uc(
@@ -831,6 +844,7 @@ mod tests {
                     true,
                     None,
                     None,
+                    None,
                 ),
                 // --- DeadEnd: X in unused_color (Golden) ---
                 uc(
@@ -840,6 +854,7 @@ mod tests {
                     vec![],
                     vec![],
                     false,
+                    None,
                     None,
                     None,
                 ),
@@ -857,6 +872,7 @@ mod tests {
                     false,
                     None,
                     None,
+                    None,
                 ),
                 // --- OnHex: used_by two players + preview (mixed Red+Blue+Blue, translucent) ---
                 uc(
@@ -870,6 +886,7 @@ mod tests {
                     vec![P1, P2],
                     vec![P2],
                     false,
+                    None,
                     None,
                     None,
                 ),
@@ -887,6 +904,7 @@ mod tests {
                     false,
                     Some(P1),
                     None,
+                    None,
                 ),
                 // --- OnHex: player_target (Blue, thin) ---
                 uc(
@@ -902,6 +920,7 @@ mod tests {
                     false,
                     None,
                     Some(P2),
+                    None,
                 ),
                 // --- OnHex: dead_end (Gray, normal) ---
                 uc(
@@ -915,6 +934,7 @@ mod tests {
                     vec![],
                     vec![],
                     true,
+                    None,
                     None,
                     None,
                 ),
@@ -932,6 +952,7 @@ mod tests {
                     false,
                     None,
                     None,
+                    None,
                 ),
                 // --- Outside: used_by single + preview (Red, translucent) ---
                 uc(
@@ -942,6 +963,7 @@ mod tests {
                     vec![P1],
                     vec![P1],
                     false,
+                    None,
                     None,
                     None,
                 ),
@@ -956,6 +978,7 @@ mod tests {
                     false,
                     Some(P1),
                     None,
+                    None,
                 ),
                 // --- Outside: player_target (Blue, thin) ---
                 uc(
@@ -968,6 +991,7 @@ mod tests {
                     false,
                     None,
                     Some(P2),
+                    None,
                 ),
                 // --- Outside: unused (Golden, normal) ---
                 uc(
@@ -978,6 +1002,7 @@ mod tests {
                     vec![],
                     vec![],
                     false,
+                    None,
                     None,
                     None,
                 ),
@@ -1020,7 +1045,7 @@ mod tests {
         let rendertask = RenderTask {
             hexagons: vec![pos(0, 0)],
             hexagon_to_highlight: None,
-            connectors: vec![uc(make_connector(), vec![], vec![], false, None, None)],
+            connectors: vec![uc(make_connector(), vec![], vec![], false, None, None, None)],
             current_player_position: (0..10)
                 .map(|i| CurrentPlayerPosition {
                     player_id: PlayerId(i + 1),
@@ -1087,6 +1112,7 @@ mod tests {
                             is_connected_to_dead_end,
                             is_connected_to_player_start: Default::default(),
                             is_connected_to_player_target: Default::default(),
+                            is_player_start: Default::default(),
                         }
                     })
                     .collect();
@@ -1098,7 +1124,7 @@ mod tests {
                 };
 
                 let player_data = PlayerData {
-                    colors: HashMap::from([(P1, Color::Red), (P2, Color::Blue)]),
+                    colors: HashMap::from([(P0, Color::Red), (P1, Color::Blue)]),
                     dead_end_color: Color::Gray,
                     unused_color: Color::Golden,
                     hex_fill: Color::Beige,
