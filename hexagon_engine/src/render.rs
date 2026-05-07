@@ -258,6 +258,7 @@ pub enum Color {
     Purple,
     Cyan,
     Pink,
+    Teal,
 }
 
 impl Color {
@@ -275,6 +276,7 @@ impl Color {
             Color::Purple => "#800080",
             Color::Cyan => "#00CED1",
             Color::Pink => "#FF69B4",
+            Color::Teal => "#008080",
         }
     }
 
@@ -292,6 +294,7 @@ impl Color {
             Color::Purple => (0x80, 0x00, 0x80),
             Color::Cyan => (0x00, 0xCE, 0xD1),
             Color::Pink => (0xFF, 0x69, 0xB4),
+            Color::Teal => (0x00, 0x80, 0x80),
         }
     }
 }
@@ -308,6 +311,7 @@ fn mix_colors(colors: &[Color]) -> String {
 pub struct PlayerData {
     pub colors: HashMap<PlayerId, Color>,
     pub dead_end_color: Color,
+    pub closed_loop_color: Color,
     pub unused_color: Color,
     pub hex_fill: Color,
     pub hex_stroke: Color,
@@ -543,7 +547,7 @@ impl RenderTask {
                 } else if *is_connected_to_dead_end {
                     player_data.dead_end_color.to_svg_string().to_string()
                 } else {
-                    player_data.unused_color.to_svg_string().to_string()
+                    player_data.closed_loop_color.to_svg_string().to_string()
                 };
                 let opacity: f64 = if !previews_used_by.is_empty() {
                     0.5
@@ -586,10 +590,10 @@ impl RenderTask {
                         };
 
                         let data = if !is_connected_to_player_start.is_empty() {
-                            // arrow from edge-sub point pointing outward
-                            make_arrow((px, py), (px - nx * R * 0.5, py - ny * R * 0.5))
+                            // arrow from outside pointing toward the edge — player enters here
+                            make_arrow((px - nx * R * 0.5, py - ny * R * 0.5), (px, py))
                         } else if !is_connected_to_player_target.is_empty() {
-                            // arrow from edge-sub point pointing outward
+                            // arrow pointing outward (away from hex) — player exits here
                             make_arrow((px, py), (px - nx * R * 0.5, py - ny * R * 0.5))
                         } else {
                             // X at 45° to the edge
@@ -984,6 +988,7 @@ mod tests {
         let player_data = PlayerData {
             colors: HashMap::from([(P1, Color::Red), (P2, Color::Blue)]),
             dead_end_color: Color::Gray,
+            closed_loop_color: Color::Teal,
             unused_color: Color::Golden,
             hex_fill: Color::Beige,
             hex_stroke: Color::DarkGray,
@@ -1041,6 +1046,7 @@ mod tests {
         let player_data = PlayerData {
             colors: HashMap::from_iter((1..=10).map(|i| (PlayerId(i), colors[i as usize - 1]))),
             dead_end_color: Color::Gray,
+            closed_loop_color: Color::Teal,
             unused_color: Color::Golden,
             hex_fill: Color::Beige,
             hex_stroke: Color::DarkGray,
@@ -1099,6 +1105,7 @@ mod tests {
                     hex_stroke: Color::DarkGray,
                     highlighted_hex_fill: Color::Moccasin,
                     highlighted_hex_stroke: Color::DarkOrange,
+                    closed_loop_color: Color::Teal,
                 };
 
                 let svg = rendertask.render(&player_data).unwrap();
@@ -1128,6 +1135,7 @@ mod tests {
         let player_data = PlayerData {
             colors: HashMap::from([(P0, Color::Green), (P1, Color::Red)]),
             dead_end_color: Color::Gray,
+            closed_loop_color: Color::Teal,
             unused_color: Color::Golden,
             hex_fill: Color::Beige,
             hex_stroke: Color::DarkGray,
