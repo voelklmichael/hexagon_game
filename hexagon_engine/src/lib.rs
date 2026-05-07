@@ -20,5 +20,6 @@ pub use game_options::{
     OuterConnectors, WinningConditionStandard,
 };
 pub use game_state::{GameResult, GameState};
+pub use statistics::Statistics;
 pub use player_types::PlayerId;
 pub use render::Color;

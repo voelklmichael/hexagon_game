@@ -172,6 +172,8 @@ impl eframe::App for HexApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show_inside(ui, |ui| {
             crate::panels::rendering::show(ui, &mut self.rendering_data);
+            ui.separator();
+            crate::panels::statistics::show(ui, &self.rendering_data, self.game.as_ref().map(|g| &g.statistics));
         });
     }
 }
