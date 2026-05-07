@@ -47,7 +47,8 @@ pub struct GameOptionsDelivery {
     pub hand_size: usize,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, strum::EnumDiscriminants)]
+#[strum_discriminants(derive(serde::Serialize, serde::Deserialize))]
 pub enum GameOptions {
     Delivery(GameOptionsDelivery),
     Standard(GameOptionsStandard),

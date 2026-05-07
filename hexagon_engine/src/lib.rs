@@ -13,3 +13,12 @@ use board_types::*;
 use game_state::*;
 use player_types::*;
 use statistics::*;
+
+pub use board_types::HexagonPosition;
+pub use game_options::{
+    CollisionMode, GameOptionsDelivery, GameOptionsDiscriminants, GameOptionsStandard,
+    OuterConnectors, WinningConditionStandard,
+};
+pub use game_state::{GameResult, GameState};
+pub use player_types::PlayerId;
+pub use render::Color;
