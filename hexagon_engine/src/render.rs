@@ -23,6 +23,7 @@ impl GameState {
             current_player,
             rng: _,
             options,
+            statistics: _,
         } = self;
 
         RenderTask {

@@ -5,6 +5,7 @@ use crate::{
     game_state::GameState,
     player_types::{Player, PlayerHistorySingleTurn, PlayerId},
     random_number_generator::RandomNumberGenerator,
+    statistics::Statistics,
 };
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -115,6 +116,7 @@ impl GameOptionsDelivery {
         Ok(GameState {
             board,
             current_player: players.first().unwrap().id,
+            statistics: Statistics::compute(&players),
             players,
             rng,
             options: GameOptions::Delivery(self),
@@ -165,6 +167,7 @@ impl GameOptionsStandard {
         Ok(GameState {
             board,
             current_player: players.first().unwrap().id,
+            statistics: Statistics::compute(&players),
             players,
             rng,
             options: GameOptions::Standard(self),

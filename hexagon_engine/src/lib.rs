@@ -7,7 +7,9 @@ mod game_state;
 mod player_types;
 mod random_number_generator;
 mod render;
+mod statistics;
 
 use board_types::*;
 use game_state::*;
 use player_types::*;
+use statistics::*;

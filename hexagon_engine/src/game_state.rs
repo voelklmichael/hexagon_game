@@ -8,6 +8,7 @@ use crate::board_types::{
 use crate::game_options::GameOptions;
 use crate::player_types::{HistoryConnector, PlayerHistorySingleTurn};
 use crate::random_number_generator::RandomNumberGenerator;
+use crate::statistics::Statistics;
 use crate::{Player, PlayerId};
 
 #[derive(Serialize, Deserialize)]
@@ -17,6 +18,7 @@ pub struct GameState {
     pub current_player: PlayerId,
     pub rng: RandomNumberGenerator,
     pub options: GameOptions,
+    pub statistics: Statistics,
 }
 
 impl GameState {
@@ -209,6 +211,7 @@ impl GameState {
                 self.current_player = next;
             }
         }
+        self.statistics = Statistics::compute(&self.players);
     }
 }
 
