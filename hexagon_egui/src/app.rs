@@ -42,14 +42,16 @@ impl Default for OptionsState {
 #[serde(default, rename_all = "camelCase")]
 pub struct MusicState {
     pub volume: f32,
-    pub muted: bool,
+    pub paused: bool,
+    pub current_track: usize,
 }
 
 impl Default for MusicState {
     fn default() -> Self {
         Self {
             volume: 1.0,
-            muted: false,
+            paused: false,
+            current_track: 0,
         }
     }
 }
@@ -169,12 +171,13 @@ impl HexApp {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
+            app.music.current_track = app.music.current_track.min(crate::music::TRACKS.len() - 1);
             app.music_player = crate::music::MusicPlayer::new(app.music.volume);
             if let Some(player) = &app.music_player {
-                player.play_file(std::path::Path::new(concat!(
-                    env!("CARGO_MANIFEST_DIR"),
-                    "/../private_assets/alexzavesa-dance-playful-night-510786.mp3"
-                )));
+                player.play_track(&crate::music::track_path(app.music.current_track));
+                if app.music.paused {
+                    player.set_paused(true);
+                }
             }
         }
 
@@ -188,10 +191,21 @@ impl eframe::App for HexApp {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        #[cfg(not(target_arch = "wasm32"))]
+        if let Some(player) = &self.music_player {
+            if !self.music.paused && player.check_and_reset_finished() {
+                self.music.current_track = (self.music.current_track + 1) % crate::music::TRACKS.len();
+                player.play_track(&crate::music::track_path(self.music.current_track));
+            }
+        }
+
         egui::CentralPanel::default().show_inside(ui, |ui| {
             crate::panels::rendering::show(ui, &mut self.rendering_data);
             ui.separator();
             crate::panels::statistics::show(ui, &self.rendering_data, self.game.as_ref().map(|g| &g.statistics));
+            ui.separator();
+            #[cfg(not(target_arch = "wasm32"))]
+            crate::panels::music::show(ui, &mut self.music, self.music_player.as_ref());
         });
     }
 }

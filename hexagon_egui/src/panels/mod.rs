@@ -1,3 +1,4 @@
+pub mod music;
 pub mod rendering;
 pub mod statistics;
 
