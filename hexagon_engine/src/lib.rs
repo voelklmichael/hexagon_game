@@ -16,7 +16,7 @@ use statistics::*;
 
 pub use board_types::{
     ConnectorDeadEnd, ConnectorEdgeSub, ConnectorKind, ConnectorOnHex, ConnectorOutside,
-    ConnectorPosition, Edge, EdgeSub, HexagonPosition, Sub,
+    ConnectorPosition, Edge, EdgeSub, HexagonPosition, Sub, TileRotationDirection,
 };
 pub use game_options::{
     CollisionMode, GameOptions, GameOptionsDelivery, GameOptionsDiscriminants, GameOptionsStandard,

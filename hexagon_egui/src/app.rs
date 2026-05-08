@@ -215,8 +215,10 @@ impl eframe::App for HexApp {
                 }
             }
             ui.separator();
-            if let Some(game) = &self.game {
+            if let Some(game) = &mut self.game {
                 crate::panels::game_board::show(ui, game, &self.rendering_data, &mut self.interaction);
+                ui.separator();
+                crate::panels::hand::show(ui, game, &self.rendering_data, &mut self.interaction);
                 ui.separator();
             }
             crate::panels::controls::show(ui, &mut self.game, &mut self.history);
