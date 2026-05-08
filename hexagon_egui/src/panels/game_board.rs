@@ -205,6 +205,17 @@ pub fn show(
         .then(|| game.current_player_hexagon())
         .flatten();
 
+    let game = {
+        if let Some(_) = selected_hexagon {
+            let mut game = game.clone();
+            game.play_tile(interaction.selected_tile.unwrap());
+            game
+        } else {
+            game.clone()
+        }
+    };
+    let game = &game;
+
     let render_task = game.render_task(selected_hexagon, interaction.animation_t);
 
     if render_task.hexagons.is_empty() {
@@ -285,18 +296,15 @@ pub fn show(
                 .copied()
                 .unwrap_or(player_data.unused_color)
         };
-        let current_color = player_color(&game.current_player);
 
         let base_color = if !uc.used_by.is_empty() {
             let cols: Vec<Color> = uc
                 .used_by
                 .iter()
+                .chain(uc.preview_used_by.iter())
                 .map(player_color)
-                .chain(uc.preview_used_by.iter().map(|_| current_color))
                 .collect();
             mix_colors(&cols)
-        } else if !uc.preview_used_by.is_empty() {
-            color_to_egui(current_color)
         } else if !uc.is_connected_to_player_start.is_empty() {
             mix_colors(
                 &uc.is_connected_to_player_start
@@ -420,47 +428,7 @@ pub fn show(
         }
     }
 
-    // Step 2b: ghost overlay for selected tile
-    if let (Some(hex), Some(tile_index)) = (selected_hexagon, interaction.selected_tile)
-        && let Some(player) = game.players.iter().find(|p| p.id == game.current_player)
-            && let Some(tile) = player.hand.get(tile_index) {
-                let ctrl = R * 0.6;
-                let ghost_color = with_opacity(
-                    color_to_egui(
-                        player_data
-                            .colors
-                            .get(&game.current_player)
-                            .copied()
-                            .unwrap_or(player_data.unused_color),
-                    ),
-                    0.4,
-                );
-                let ghost_stroke = egui::Stroke::new(3.0 * scale, ghost_color);
-                for conn in &tile.inner_connectors {
-                    let fake_hex = HexagonPosition { x: hex.x, y: hex.y };
-                    let a = EdgeSub {
-                        edge: conn.a.edge,
-                        sub: conn.a.sub,
-                    };
-                    let b = EdgeSub {
-                        edge: conn.b.edge,
-                        sub: conn.b.sub,
-                    };
-                    let (ax, ay) = edge_sub_point(&fake_hex, &a);
-                    let (bx, by) = edge_sub_point(&fake_hex, &b);
-                    let (nax, nay) = edge_inward_normal(&a.edge);
-                    let (nbx, nby) = edge_inward_normal(&b.edge);
-                    draw_cubic(
-                        &painter,
-                        to_screen(ax, ay),
-                        to_screen(ax + ctrl * nax, ay + ctrl * nay),
-                        to_screen(bx + ctrl * nbx, by + ctrl * nby),
-                        to_screen(bx, by),
-                        ghost_stroke,
-                    );
-                }
-            }
-
+   
     // Step 3: player positions
     for cpp in &render_task.current_player_position {
         let (px, py) = point_on_connector(&cpp.connector, cpp.step);
@@ -474,18 +442,19 @@ pub fn show(
         let pos = to_screen(px, py);
 
         if !cpp.is_active
-            && let ConnectorKind::DeadEnd(ConnectorDeadEnd { position }) = &cpp.connector {
-                let (nx, ny) = edge_inward_normal(&position.edge_sub.edge);
-                let tip = to_screen(px - nx * R * 0.5, py - ny * R * 0.5);
-                draw_arrow(
-                    &painter,
-                    pos,
-                    tip,
-                    R as f32 * 0.2 * scale,
-                    egui::Stroke::new(3.0 * scale, color),
-                );
-                continue;
-            }
+            && let ConnectorKind::DeadEnd(ConnectorDeadEnd { position }) = &cpp.connector
+        {
+            let (nx, ny) = edge_inward_normal(&position.edge_sub.edge);
+            let tip = to_screen(px - nx * R * 0.5, py - ny * R * 0.5);
+            draw_arrow(
+                &painter,
+                pos,
+                tip,
+                R as f32 * 0.2 * scale,
+                egui::Stroke::new(3.0 * scale, color),
+            );
+            continue;
+        }
         painter.circle_filled(pos, 7.0 * scale, color);
         painter.circle_stroke(
             pos,
