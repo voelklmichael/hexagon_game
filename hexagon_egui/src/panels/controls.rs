@@ -13,8 +13,7 @@ pub fn show(ui: &mut egui::Ui, game: &mut Option<GameState>, history: &mut GameH
         if ui
             .add_enabled(has_game, egui::Button::new("Restart this game"))
             .clicked()
-        {
-            if let Some(current) = game {
+            && let Some(current) = game {
                 let opts = current.options.clone();
                 match opts.start_game() {
                     Ok(new_game) => {
@@ -25,13 +24,11 @@ pub fn show(ui: &mut egui::Ui, game: &mut Option<GameState>, history: &mut GameH
                     Err(e) => eprintln!("Restart failed: {e}"),
                 }
             }
-        }
 
         if ui
             .add_enabled(has_game, egui::Button::new("New game"))
             .clicked()
-        {
-            if let Some(current) = game {
+            && let Some(current) = game {
                 let mut opts = current.options.clone();
                 opts.randomize_seed();
                 match opts.start_game() {
@@ -43,30 +40,25 @@ pub fn show(ui: &mut egui::Ui, game: &mut Option<GameState>, history: &mut GameH
                     Err(e) => eprintln!("New game failed: {e}"),
                 }
             }
-        }
 
         if ui
             .add_enabled(can_undo, egui::Button::new("Undo"))
             .clicked()
-        {
-            if let Some(prev) = history.undo_stack.pop() {
+            && let Some(prev) = history.undo_stack.pop() {
                 if let Some(current) = game.take() {
                     history.redo_stack.push(current);
                 }
                 *game = Some(prev);
             }
-        }
 
         if ui
             .add_enabled(can_redo, egui::Button::new("Redo"))
             .clicked()
-        {
-            if let Some(next) = history.redo_stack.pop() {
+            && let Some(next) = history.redo_stack.pop() {
                 if let Some(current) = game.take() {
                     history.undo_stack.push(current);
                 }
                 *game = Some(next);
             }
-        }
     });
 }

@@ -221,14 +221,13 @@ pub fn show(
             }
         });
 
-        if let Some(tile_index) = interaction.selected_tile {
-            if ui.button("Play selected tile").clicked() {
+        if let Some(tile_index) = interaction.selected_tile
+            && ui.button("Play selected tile").clicked() {
                 history.undo_stack.push(game.clone());
                 history.redo_stack.clear();
                 game.play_tile(tile_index);
                 interaction.selected_tile = None;
                 interaction.animation_t = 0.0;
             }
-        }
     });
 }

@@ -421,9 +421,9 @@ pub fn show(
     }
 
     // Step 2b: ghost overlay for selected tile
-    if let (Some(hex), Some(tile_index)) = (selected_hexagon, interaction.selected_tile) {
-        if let Some(player) = game.players.iter().find(|p| p.id == game.current_player) {
-            if let Some(tile) = player.hand.get(tile_index) {
+    if let (Some(hex), Some(tile_index)) = (selected_hexagon, interaction.selected_tile)
+        && let Some(player) = game.players.iter().find(|p| p.id == game.current_player)
+            && let Some(tile) = player.hand.get(tile_index) {
                 let ctrl = R * 0.6;
                 let ghost_color = with_opacity(
                     color_to_egui(
@@ -460,8 +460,6 @@ pub fn show(
                     );
                 }
             }
-        }
-    }
 
     // Step 3: player positions
     for cpp in &render_task.current_player_position {
@@ -475,8 +473,8 @@ pub fn show(
         );
         let pos = to_screen(px, py);
 
-        if !cpp.is_active {
-            if let ConnectorKind::DeadEnd(ConnectorDeadEnd { position }) = &cpp.connector {
+        if !cpp.is_active
+            && let ConnectorKind::DeadEnd(ConnectorDeadEnd { position }) = &cpp.connector {
                 let (nx, ny) = edge_inward_normal(&position.edge_sub.edge);
                 let tip = to_screen(px - nx * R * 0.5, py - ny * R * 0.5);
                 draw_arrow(
@@ -488,7 +486,6 @@ pub fn show(
                 );
                 continue;
             }
-        }
         painter.circle_filled(pos, 7.0 * scale, color);
         painter.circle_stroke(
             pos,

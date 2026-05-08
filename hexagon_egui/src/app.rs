@@ -113,6 +113,7 @@ impl Default for RenderingData {
 
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(default, rename_all = "camelCase")]
+#[derive(Default)]
 pub struct GameHistory {
     #[serde(skip)]
     pub undo_stack: Vec<GameState>,
@@ -120,17 +121,10 @@ pub struct GameHistory {
     pub redo_stack: Vec<GameState>,
 }
 
-impl Default for GameHistory {
-    fn default() -> Self {
-        Self {
-            undo_stack: Vec::new(),
-            redo_stack: Vec::new(),
-        }
-    }
-}
 
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(default, rename_all = "camelCase")]
+#[derive(Default)]
 pub struct HexApp {
     pub game: Option<GameState>,
     pub history: GameHistory,
@@ -143,20 +137,6 @@ pub struct HexApp {
     pub music_player: Option<crate::music::MusicPlayer>,
 }
 
-impl Default for HexApp {
-    fn default() -> Self {
-        Self {
-            game: None,
-            history: GameHistory::default(),
-            rendering_data: RenderingData::default(),
-            interaction: BoardInteraction::default(),
-            options: OptionsState::default(),
-            music: MusicState::default(),
-            #[cfg(not(target_arch = "wasm32"))]
-            music_player: None,
-        }
-    }
-}
 
 impl HexApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
@@ -189,13 +169,12 @@ impl eframe::App for HexApp {
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         #[cfg(not(target_arch = "wasm32"))]
-        if let Some(player) = &self.music_player {
-            if !self.music.paused && player.check_and_reset_finished() {
+        if let Some(player) = &self.music_player
+            && !self.music.paused && player.check_and_reset_finished() {
                 self.music.current_track =
                     (self.music.current_track + 1) % crate::music::TRACKS.len();
                 player.play_track(&crate::music::track_path(self.music.current_track));
             }
-        }
 
         if self.interaction.animation_t < 1.0 {
             let dt = ui.ctx().input(|i| i.stable_dt);

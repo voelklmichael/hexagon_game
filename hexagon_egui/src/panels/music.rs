@@ -47,10 +47,9 @@ pub fn show(ui: &mut egui::Ui, state: &mut MusicState, player: Option<&crate::mu
     ui.horizontal(|ui| {
         ui.label("Volume");
         let resp = ui.add(egui::Slider::new(&mut state.volume, 0.0..=1.0));
-        if resp.changed() {
-            if let Some(p) = player {
+        if resp.changed()
+            && let Some(p) = player {
                 p.set_volume(state.volume);
             }
-        }
     });
 }

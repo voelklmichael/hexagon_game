@@ -711,8 +711,8 @@ impl RenderTask {
                 .copied()
                 .unwrap_or(player_data.unused_color)
                 .to_svg_string();
-            if !cpp.is_active {
-                if let ConnectorKind::DeadEnd(ConnectorDeadEnd { position }) = &cpp.connector {
+            if !cpp.is_active
+                && let ConnectorKind::DeadEnd(ConnectorDeadEnd { position }) = &cpp.connector {
                     let (nx, ny) = edge_inward_normal(&position.edge_sub.edge);
                     let tip = (px - nx * r * 0.5, py - ny * r * 0.5);
                     let (dx, dy) = (tip.0 - px, tip.1 - py);
@@ -741,7 +741,6 @@ impl RenderTask {
                     document = document.add(arrow);
                     continue;
                 }
-            }
             let circle = Circle::new()
                 .set("cx", px)
                 .set("cy", py)
