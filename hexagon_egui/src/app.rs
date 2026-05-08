@@ -215,6 +215,8 @@ impl eframe::App for HexApp {
                 );
                 ui.separator();
             }
+            crate::panels::predefined_games::show(ui, &mut self.game);
+            ui.separator();
             crate::panels::controls::show(ui, &mut self.game, &mut self.history);
             ui.separator();
             crate::panels::game_state_json::show(ui, self.game.as_ref());
@@ -229,6 +231,8 @@ impl eframe::App for HexApp {
             ui.separator();
             #[cfg(not(target_arch = "wasm32"))]
             crate::panels::music::show(ui, &mut self.music, self.music_player.as_ref());
+            ui.separator();
+            crate::panels::help::show(ui);
         });
     }
 }
