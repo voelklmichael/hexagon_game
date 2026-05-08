@@ -104,7 +104,7 @@ impl GameOptionsDelivery {
                 .select_random_element(&mut dead_ends)
                 .ok_or(format!("No start found for NPC#{i}"))?;
             players.push(Player {
-                id: PlayerId(0),
+                id: PlayerId(1 + i as u32),
                 current_position: (start_id, ConnectorEnd::StartedAtA),
                 target: Some(target),
                 history: PlayerHistorySingleTurn::new_from_start(&start_id),
