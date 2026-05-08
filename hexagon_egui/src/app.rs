@@ -199,6 +199,12 @@ impl eframe::App for HexApp {
             }
         }
 
+        if self.interaction.animation_t < 1.0 {
+            let dt = ui.ctx().input(|i| i.stable_dt);
+            self.interaction.animation_t = (self.interaction.animation_t + dt * 2.0).min(1.0);
+            ui.ctx().request_repaint();
+        }
+
         egui::CentralPanel::default().show_inside(ui, |ui| {
             if crate::panels::options::show(ui, &mut self.options) {
                 let result = match self.options.selected {

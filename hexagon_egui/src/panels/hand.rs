@@ -1,5 +1,5 @@
 use hexagon_engine::{
-    ConnectorEdgeSub, Edge, EdgeSub, GameState, Sub,
+    ConnectorEdgeSub, Edge, EdgeSub, GameResult, GameState, Sub,
     TileRotationDirection,
 };
 
@@ -127,13 +127,30 @@ pub fn show(
         .copied()
         .unwrap_or(hexagon_engine::Color::Gray);
 
+    if let Some(result) = &game.result {
+        ui.label(egui::RichText::new("The game is finished").strong().heading());
+        let (text, color) = match result {
+            GameResult::Win(winners) => {
+                let names: Vec<String> = winners.iter().map(|p| format!("Player {}", p.0 + 1)).collect();
+                (format!("Winner: {}", names.join(", ")), egui::Color32::GOLD)
+            }
+            GameResult::Draw(players) => {
+                let names: Vec<String> = players.iter().map(|p| format!("Player {}", p.0 + 1)).collect();
+                (format!("Draw: {}", names.join(", ")), egui::Color32::from_rgb(180, 180, 180))
+            }
+            GameResult::Loss => ("Loss".to_string(), egui::Color32::from_rgb(200, 60, 60)),
+        };
+        ui.label(egui::RichText::new(text).strong().color(color).heading());
+        return;
+    }
+
     ui.horizontal(|ui| {
         let (rect, _) = ui.allocate_exact_size(egui::vec2(16.0, 16.0), egui::Sense::hover());
         ui.painter().rect_filled(rect, 2.0, color_to_egui(player_color));
         ui.label(format!("Player {}", current_id.0 + 1));
     });
 
-    let disabled = game.result.is_some() || player.is_npc;
+    let disabled = player.is_npc;
 
     let hand_len = player.hand.len();
     let selected_tile = interaction.selected_tile;
@@ -167,14 +184,17 @@ pub fn show(
                         } else {
                             Some(i)
                         };
+                        interaction.animation_t = 1.0;
                     }
 
                     ui.horizontal(|ui| {
                         if ui.small_button("↺").clicked() {
                             game.rotate_tile(i, TileRotationDirection::CounterClockwise);
+                            interaction.animation_t = 1.0;
                         }
                         if ui.small_button("↻").clicked() {
                             game.rotate_tile(i, TileRotationDirection::Clockwise);
+                            interaction.animation_t = 1.0;
                         }
                     });
                 });
@@ -186,6 +206,7 @@ pub fn show(
                 game.play_tile(tile_index);
                 interaction.selected_tile = None;
                 interaction.selected_hexagon = None;
+                interaction.animation_t = 0.0;
             }
         }
     });
