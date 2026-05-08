@@ -444,7 +444,34 @@ fn point_on_connector(connector: &ConnectorKind, step: f32, r: f64, h: f64) -> (
 
 impl RenderTask {
     pub fn render(&self, player_data: &PlayerData) -> Result<svg::Document, String> {
+        let r = 50.0_f64;
+        let h = r * 3.0_f64.sqrt() / 2.0;
+
+        let (mut min_x, mut min_y) = (f64::MAX, f64::MAX);
+        let (mut max_x, mut max_y) = (f64::MIN, f64::MIN);
+        for hex in &self.hexagons {
+            let (cx, cy) = hex_center(hex, r, h);
+            min_x = min_x.min(cx - r);
+            min_y = min_y.min(cy - h);
+            max_x = max_x.max(cx + r);
+            max_y = max_y.max(cy + h);
+        }
+
+        self.render_with_view(player_data, min_x, max_x, min_y, max_y)
+    }
+
+    pub fn render_with_view(
+        &self,
+        player_data: &PlayerData,
+        min_x: f64,
+        max_x: f64,
+        min_y: f64,
+        max_y: f64,
+    ) -> Result<svg::Document, String> {
         use svg::Document;
+
+        let r = 50.0_f64;
+        let h = r * 3.0_f64.sqrt() / 2.0;
 
         let mut document = Document::new();
 
@@ -455,31 +482,20 @@ impl RenderTask {
             current_player_position,
         } = self;
 
-        const R: f64 = 50.0;
-        let h = R * 3.0_f64.sqrt() / 2.0;
-
         // Step1: add the hexagon boundaries to the svg
         // fill also in the background
         // note: for the highlighted hexagon, use a different boundary color and a different background color
-        // also, compute the bounding box
-        let (min_x, max_x, min_y, max_y) = {
-            let (mut min_x, mut min_y) = (f64::MAX, f64::MAX);
-            let (mut max_x, mut max_y) = (f64::MIN, f64::MIN);
-
+        {
             for hex in hexagons {
-                let (cx, cy) = hex_center(hex, R, h);
-                min_x = min_x.min(cx - R);
-                min_y = min_y.min(cy - h);
-                max_x = max_x.max(cx + R);
-                max_y = max_y.max(cy + h);
+                let (cx, cy) = hex_center(hex, r, h);
 
                 let vertices = [
-                    (cx + R, cy),
-                    (cx + R / 2.0, cy + h),
-                    (cx - R / 2.0, cy + h),
-                    (cx - R, cy),
-                    (cx - R / 2.0, cy - h),
-                    (cx + R / 2.0, cy - h),
+                    (cx + r, cy),
+                    (cx + r / 2.0, cy + h),
+                    (cx - r / 2.0, cy + h),
+                    (cx - r, cy),
+                    (cx - r / 2.0, cy - h),
+                    (cx + r / 2.0, cy - h),
                 ];
                 let points = vertices
                     .iter()
@@ -511,8 +527,7 @@ impl RenderTask {
 
                 document = document.add(polygon);
             }
-            (min_x, max_x, min_y, max_y)
-        };
+        }
 
         // Step2: add the connectors
         {
@@ -577,7 +592,7 @@ impl RenderTask {
 
                 match connector {
                     ConnectorKind::DeadEnd(ConnectorDeadEnd { position }) => {
-                        let (px, py) = edge_sub_point(&position.hexagon, &position.edge_sub, R, h);
+                        let (px, py) = edge_sub_point(&position.hexagon, &position.edge_sub, r, h);
                         let (nx, ny) = edge_inward_normal(&position.edge_sub.edge);
 
                         let make_arrow = |tail: (f64, f64), tip: (f64, f64)| {
@@ -585,7 +600,7 @@ impl RenderTask {
                             let len = (dx * dx + dy * dy).sqrt();
                             let (dx, dy) = (dx / len, dy / len);
                             let (perp_x, perp_y) = (-dy, dx);
-                            let head = R * 0.2;
+                            let head = r * 0.2;
                             Data::new()
                                 .move_to(tail)
                                 .line_to(tip)
@@ -602,14 +617,14 @@ impl RenderTask {
 
                         let data = if !is_player_start.is_empty() {
                             // arrow from outside pointing toward the edge — player enters here
-                            make_arrow((px - nx * R * 0.5, py - ny * R * 0.5), (px, py))
+                            make_arrow((px - nx * r * 0.5, py - ny * r * 0.5), (px, py))
                         } else if !is_connected_to_player_target.is_empty() {
                             // arrow pointing outward (away from hex) — player exits here
-                            make_arrow((px, py), (px - nx * R * 0.5, py - ny * R * 0.5))
+                            make_arrow((px, py), (px - nx * r * 0.5, py - ny * r * 0.5))
                         } else {
                             // X at 45° to the edge
                             let (tx, ty) = (-ny, nx);
-                            let f = R * 0.2 / 2.0_f64.sqrt();
+                            let f = r * 0.2 / 2.0_f64.sqrt();
                             Data::new()
                                 .move_to((px - (tx + nx) * f, py - (ty + ny) * f))
                                 .line_to((px + (tx + nx) * f, py + (ty + ny) * f))
@@ -629,9 +644,9 @@ impl RenderTask {
                         hexagon,
                         edge_sub: ConnectorEdgeSub { a, b },
                     }) => {
-                        let (ax, ay) = edge_sub_point(hexagon, a, R, h);
-                        let (bx, by) = edge_sub_point(hexagon, b, R, h);
-                        let ctrl = R * 0.6;
+                        let (ax, ay) = edge_sub_point(hexagon, a, r, h);
+                        let (bx, by) = edge_sub_point(hexagon, b, r, h);
+                        let ctrl = r * 0.6;
                         let (nax, nay) = edge_inward_normal(&a.edge);
                         let (nbx, nby) = edge_inward_normal(&b.edge);
                         let data = Data::new().move_to((ax, ay)).cubic_curve_to((
@@ -659,10 +674,10 @@ impl RenderTask {
                         connector_b,
                     }) => {
                         let (ax, ay) =
-                            edge_sub_point(&connector_a.hexagon, &connector_a.edge_sub, R, h);
+                            edge_sub_point(&connector_a.hexagon, &connector_a.edge_sub, r, h);
                         let (bx, by) =
-                            edge_sub_point(&connector_b.hexagon, &connector_b.edge_sub, R, h);
-                        let ctrl = R * 0.6;
+                            edge_sub_point(&connector_b.hexagon, &connector_b.edge_sub, r, h);
+                        let ctrl = r * 0.6;
                         let (nax, nay) = edge_inward_normal(&connector_a.edge_sub.edge);
                         let (nbx, nby) = edge_inward_normal(&connector_b.edge_sub.edge);
                         let data = Data::new().move_to((ax, ay)).cubic_curve_to((
@@ -687,7 +702,7 @@ impl RenderTask {
 
         // Step3: render current player positions
         for cpp in current_player_position {
-            let (px, py) = point_on_connector(&cpp.connector, cpp.step, R, h);
+            let (px, py) = point_on_connector(&cpp.connector, cpp.step, r, h);
             let color = player_data
                 .colors
                 .get(&cpp.player_id)
@@ -697,12 +712,12 @@ impl RenderTask {
             if !cpp.is_active {
                 if let ConnectorKind::DeadEnd(ConnectorDeadEnd { position }) = &cpp.connector {
                     let (nx, ny) = edge_inward_normal(&position.edge_sub.edge);
-                    let tip = (px - nx * R * 0.5, py - ny * R * 0.5);
+                    let tip = (px - nx * r * 0.5, py - ny * r * 0.5);
                     let (dx, dy) = (tip.0 - px, tip.1 - py);
                     let len = (dx * dx + dy * dy).sqrt();
                     let (dx, dy) = (dx / len, dy / len);
                     let (perp_x, perp_y) = (-dy, dx);
-                    let head = R * 0.2;
+                    let head = r * 0.2;
                     let data = Data::new()
                         .move_to((px, py))
                         .line_to(tip)
