@@ -14,7 +14,10 @@ use game_state::*;
 use player_types::*;
 use statistics::*;
 
-pub use board_types::HexagonPosition;
+pub use board_types::{
+    ConnectorDeadEnd, ConnectorEdgeSub, ConnectorKind, ConnectorOnHex, ConnectorOutside,
+    ConnectorPosition, Edge, EdgeSub, HexagonPosition, Sub,
+};
 pub use game_options::{
     CollisionMode, GameOptions, GameOptionsDelivery, GameOptionsDiscriminants, GameOptionsStandard,
     OuterConnectors, WinningConditionStandard,
@@ -22,4 +25,4 @@ pub use game_options::{
 pub use game_state::{GameResult, GameState};
 pub use statistics::Statistics;
 pub use player_types::PlayerId;
-pub use render::Color;
+pub use render::{Color, CurrentPlayerPosition, PlayerData, RenderTask, UsedConnector};

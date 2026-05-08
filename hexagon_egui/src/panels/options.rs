@@ -76,7 +76,7 @@ fn show_standard(ui: &mut egui::Ui, options: &mut OptionsState) {
             ui.end_row();
 
             ui.label("Player count");
-            int_buttons(ui, &mut s.player_count, 1);
+            int_buttons(ui, &mut s.player_count, 2);
             ui.end_row();
 
             ui.label("Collision");
