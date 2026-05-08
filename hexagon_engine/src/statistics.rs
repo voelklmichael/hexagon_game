@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{Player, PlayerId};
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Statistics {
     pub total_path_segments: HashMap<PlayerId, u32>,
     pub total_path_weight: HashMap<PlayerId, u32>,

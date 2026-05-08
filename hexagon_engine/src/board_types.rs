@@ -65,7 +65,7 @@ pub struct ConnectorPosition {
     pub edge_sub: EdgeSub,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Board {
     pub hexagons: Vec<HexagonPosition>,
     pub connectors: Vec<Connector>,
@@ -80,7 +80,7 @@ pub enum ConnectorEnd {
     StartedAtB,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Connector {
     pub id: ConnectorId,
     pub kind: ConnectorKind,
@@ -118,7 +118,7 @@ pub struct ConnectorOutside {
     pub connector_b: ConnectorPosition,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Tile {
     pub inner_connectors: Vec<ConnectorEdgeSub>,
 }

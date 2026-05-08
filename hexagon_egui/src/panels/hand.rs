@@ -3,7 +3,7 @@ use hexagon_engine::{
     TileRotationDirection,
 };
 
-use crate::app::{BoardInteraction, RenderingData};
+use crate::app::{BoardInteraction, GameHistory, RenderingData};
 use crate::panels::color_to_egui;
 
 const PREVIEW_R: f64 = 28.0;
@@ -112,6 +112,7 @@ pub fn show(
     game: &mut GameState,
     rendering_data: &RenderingData,
     interaction: &mut BoardInteraction,
+    history: &mut GameHistory,
 ) {
     ui.heading("Player Hand");
 
@@ -205,6 +206,8 @@ pub fn show(
 
         if let Some(tile_index) = interaction.selected_tile {
             if ui.button("Play selected tile").clicked() {
+                history.undo_stack.push(game.clone());
+                history.redo_stack.clear();
                 game.play_tile(tile_index);
                 interaction.selected_tile = None;
                 interaction.selected_hexagon = None;

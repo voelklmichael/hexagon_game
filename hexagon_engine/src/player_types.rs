@@ -5,7 +5,7 @@ use super::board_types::{ConnectorEnd, ConnectorId, ConnectorPosition, Tile};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct PlayerId(pub u32);
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Player {
     pub id: PlayerId,
     pub current_position: (ConnectorId, ConnectorEnd),
@@ -23,7 +23,7 @@ pub struct HistoryConnector {
     pub weight: u32,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct PlayerHistorySingleTurn {
     pub connectors: Vec<HistoryConnector>,
 }

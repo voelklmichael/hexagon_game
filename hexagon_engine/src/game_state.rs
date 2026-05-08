@@ -11,14 +11,14 @@ use crate::random_number_generator::RandomNumberGenerator;
 use crate::statistics::Statistics;
 use crate::{Player, PlayerId};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum GameResult {
     Win(Vec<PlayerId>),
     Draw(Vec<PlayerId>),
     Loss,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct GameState {
     pub board: Board,
     pub players: Vec<Player>,

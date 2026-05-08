@@ -223,10 +223,15 @@ pub fn show(
         let player_color = |pid: &hexagon_engine::PlayerId| -> Color {
             player_data.colors.get(pid).copied().unwrap_or(player_data.unused_color)
         };
+        let current_color = player_color(&game.current_player);
 
         let base_color = if !uc.used_by.is_empty() {
-            let cols: Vec<Color> = uc.used_by.iter().chain(uc.preview_used_by.iter()).map(player_color).collect();
+            let cols: Vec<Color> = uc.used_by.iter().map(player_color)
+                .chain(uc.preview_used_by.iter().map(|_| current_color))
+                .collect();
             mix_colors(&cols)
+        } else if !uc.preview_used_by.is_empty() {
+            color_to_egui(current_color)
         } else if !uc.is_connected_to_player_start.is_empty() {
             mix_colors(&uc.is_connected_to_player_start.iter().map(player_color).collect::<Vec<_>>())
         } else if !uc.is_connected_to_player_target.is_empty() {
