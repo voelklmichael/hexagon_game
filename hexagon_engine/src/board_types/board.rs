@@ -373,22 +373,18 @@ impl Board {
                     ConnectorKind::DeadEnd(c) if c.position == current_position => {
                         Some((None, ConnectorEnd::StartedAtA, x.id, x.weight))
                     }
-                    ConnectorKind::Outside(c) if c.connector_a == current_position => {
-                        Some((
-                            Some(c.connector_b.clone()),
-                            ConnectorEnd::StartedAtA,
-                            x.id,
-                            x.weight,
-                        ))
-                    }
-                    ConnectorKind::Outside(c) if c.connector_b == current_position => {
-                        Some((
-                            Some(c.connector_a.clone()),
-                            ConnectorEnd::StartedAtB,
-                            x.id,
-                            x.weight,
-                        ))
-                    }
+                    ConnectorKind::Outside(c) if c.connector_a == current_position => Some((
+                        Some(c.connector_b.clone()),
+                        ConnectorEnd::StartedAtA,
+                        x.id,
+                        x.weight,
+                    )),
+                    ConnectorKind::Outside(c) if c.connector_b == current_position => Some((
+                        Some(c.connector_a.clone()),
+                        ConnectorEnd::StartedAtB,
+                        x.id,
+                        x.weight,
+                    )),
                     ConnectorKind::HexToHex(c) if c.connector_a == current_position => Some((
                         Some(c.connector_b.clone()),
                         ConnectorEnd::StartedAtA,

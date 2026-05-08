@@ -33,7 +33,12 @@ impl GameState {
     pub fn current_player_hexagon(&self) -> Option<HexagonPosition> {
         let player = self.players.iter().find(|p| p.id == self.current_player)?;
         let (connector_id, end) = player.current_position;
-        let kind = &self.board.connectors.iter().find(|c| c.id == connector_id)?.kind;
+        let kind = &self
+            .board
+            .connectors
+            .iter()
+            .find(|c| c.id == connector_id)?
+            .kind;
         let hexagon = match kind {
             ConnectorKind::DeadEnd(c) => c.position.hexagon,
             ConnectorKind::HexToHex(c) | ConnectorKind::Outside(c) => match end {

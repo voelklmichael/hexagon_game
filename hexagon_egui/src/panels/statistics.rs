@@ -58,8 +58,16 @@ pub fn show(ui: &mut egui::Ui, rendering_data: &RenderingData, statistics: Optio
                         ui.allocate_exact_size(egui::vec2(14.0, 14.0), egui::Sense::hover());
                     ui.painter().rect_filled(rect, 2.0, color_to_egui(color));
                 }
-                let segments = statistics.total_path_segments.get(player_id).copied().unwrap_or(0);
-                let weight = statistics.total_path_weight.get(player_id).copied().unwrap_or(0);
+                let segments = statistics
+                    .total_path_segments
+                    .get(player_id)
+                    .copied()
+                    .unwrap_or(0);
+                let weight = statistics
+                    .total_path_weight
+                    .get(player_id)
+                    .copied()
+                    .unwrap_or(0);
                 let velocity = statistics.max_velocity.get(player_id).copied().unwrap_or(0);
                 highlight_label(ui, segments, max_segments);
                 highlight_label(ui, weight, max_weight);

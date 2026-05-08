@@ -1,7 +1,7 @@
 #![warn(clippy::all, rust_2018_idioms)]
 
 mod app;
-mod panels;
 #[cfg(not(target_arch = "wasm32"))]
 mod music;
+mod panels;
 pub use app::HexApp;

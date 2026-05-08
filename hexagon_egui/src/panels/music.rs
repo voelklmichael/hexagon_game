@@ -1,5 +1,5 @@
 use crate::app::MusicState;
-use crate::music::{track_path, TRACKS};
+use crate::music::{TRACKS, track_path};
 
 pub fn show(ui: &mut egui::Ui, state: &mut MusicState, player: Option<&crate::music::MusicPlayer>) {
     ui.heading("Music");

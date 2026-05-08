@@ -257,7 +257,11 @@ impl GameOptionsStandard {
                     .filter(|&(_, &w)| w == max)
                     .map(|(&pid, _)| pid)
                     .collect();
-                if top.len() == 1 { Some(GameResult::Win(top)) } else { Some(GameResult::Draw(top)) }
+                if top.len() == 1 {
+                    Some(GameResult::Win(top))
+                } else {
+                    Some(GameResult::Draw(top))
+                }
             }
             WinningConditionStandard::HighestVelocity => {
                 let all_done = players.iter().filter(|p| !p.is_npc).all(|p| !p.is_active);
@@ -271,7 +275,11 @@ impl GameOptionsStandard {
                     .filter(|&(_, &v)| v == max)
                     .map(|(&pid, _)| pid)
                     .collect();
-                if top.len() == 1 { Some(GameResult::Win(top)) } else { Some(GameResult::Draw(top)) }
+                if top.len() == 1 {
+                    Some(GameResult::Win(top))
+                } else {
+                    Some(GameResult::Draw(top))
+                }
             }
         }
     }

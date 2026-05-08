@@ -1,6 +1,5 @@
 use hexagon_engine::{
-    ConnectorEdgeSub, Edge, EdgeSub, GameResult, GameState, Sub,
-    TileRotationDirection,
+    ConnectorEdgeSub, Edge, EdgeSub, GameResult, GameState, Sub, TileRotationDirection,
 };
 
 use crate::app::{BoardInteraction, GameHistory, RenderingData};
@@ -83,7 +82,11 @@ fn draw_tile_preview(
     } else {
         egui::Stroke::new(1.5_f32, hex_stroke)
     };
-    painter.add(egui::Shape::convex_polygon(hex_verts, hex_fill, border_stroke));
+    painter.add(egui::Shape::convex_polygon(
+        hex_verts,
+        hex_fill,
+        border_stroke,
+    ));
 
     let ctrl = PREVIEW_R * 0.6;
     for ConnectorEdgeSub { a, b } in connectors {
@@ -129,15 +132,28 @@ pub fn show(
         .unwrap_or(hexagon_engine::Color::Gray);
 
     if let Some(result) = &game.result {
-        ui.label(egui::RichText::new("The game is finished").strong().heading());
+        ui.label(
+            egui::RichText::new("The game is finished")
+                .strong()
+                .heading(),
+        );
         let (text, color) = match result {
             GameResult::Win(winners) => {
-                let names: Vec<String> = winners.iter().map(|p| format!("Player {}", p.0 + 1)).collect();
+                let names: Vec<String> = winners
+                    .iter()
+                    .map(|p| format!("Player {}", p.0 + 1))
+                    .collect();
                 (format!("Winner: {}", names.join(", ")), egui::Color32::GOLD)
             }
             GameResult::Draw(players) => {
-                let names: Vec<String> = players.iter().map(|p| format!("Player {}", p.0 + 1)).collect();
-                (format!("Draw: {}", names.join(", ")), egui::Color32::from_rgb(180, 180, 180))
+                let names: Vec<String> = players
+                    .iter()
+                    .map(|p| format!("Player {}", p.0 + 1))
+                    .collect();
+                (
+                    format!("Draw: {}", names.join(", ")),
+                    egui::Color32::from_rgb(180, 180, 180),
+                )
             }
             GameResult::Loss => ("Loss".to_string(), egui::Color32::from_rgb(200, 60, 60)),
         };
@@ -147,7 +163,8 @@ pub fn show(
 
     ui.horizontal(|ui| {
         let (rect, _) = ui.allocate_exact_size(egui::vec2(16.0, 16.0), egui::Sense::hover());
-        ui.painter().rect_filled(rect, 2.0, color_to_egui(player_color));
+        ui.painter()
+            .rect_filled(rect, 2.0, color_to_egui(player_color));
         ui.label(format!("Player {}", current_id.0 + 1));
     });
 

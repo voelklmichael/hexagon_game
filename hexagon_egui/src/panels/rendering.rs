@@ -26,7 +26,11 @@ pub fn show(ui: &mut egui::Ui, data: &mut RenderingData) {
     color_selector(ui, "Hex Fill", &mut data.hex_fill);
     color_selector(ui, "Hex Stroke", &mut data.hex_stroke);
     color_selector(ui, "Highlighted Hex Fill", &mut data.highlighted_hex_fill);
-    color_selector(ui, "Highlighted Hex Stroke", &mut data.highlighted_hex_stroke);
+    color_selector(
+        ui,
+        "Highlighted Hex Stroke",
+        &mut data.highlighted_hex_stroke,
+    );
     color_selector(ui, "Dead End", &mut data.dead_end_color);
     color_selector(ui, "Closed Loop", &mut data.closed_loop_color);
     color_selector(ui, "Unused", &mut data.unused_color);

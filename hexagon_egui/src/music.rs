@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 const ASSETS_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../private_assets/");
 

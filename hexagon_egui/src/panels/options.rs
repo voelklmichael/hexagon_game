@@ -53,7 +53,11 @@ fn outer_connectors_combo(ui: &mut egui::Ui, id: &str, value: &mut OuterConnecto
         .selected_text(outer_connectors_label(value))
         .show_ui(ui, |ui| {
             ui.selectable_value(value, OuterConnectors::OnlyDeathEnds, "Only death ends");
-            ui.selectable_value(value, OuterConnectors::ReducedDeathEnds, "Reduced death ends");
+            ui.selectable_value(
+                value,
+                OuterConnectors::ReducedDeathEnds,
+                "Reduced death ends",
+            );
         });
 }
 
@@ -86,7 +90,11 @@ fn show_standard(ui: &mut egui::Ui, options: &mut OptionsState) {
                     CollisionMode::BothDie => "Both die",
                 })
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut s.collision_mode, CollisionMode::PassThrough, "Pass through");
+                    ui.selectable_value(
+                        &mut s.collision_mode,
+                        CollisionMode::PassThrough,
+                        "Pass through",
+                    );
                     ui.selectable_value(&mut s.collision_mode, CollisionMode::BothDie, "Both die");
                 });
             ui.end_row();
@@ -99,9 +107,21 @@ fn show_standard(ui: &mut egui::Ui, options: &mut OptionsState) {
                     WinningConditionStandard::HighestVelocity => "Highest velocity",
                 })
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut s.winning_condition, WinningConditionStandard::LastManStanding, "Last man standing");
-                    ui.selectable_value(&mut s.winning_condition, WinningConditionStandard::LongestWay, "Longest way");
-                    ui.selectable_value(&mut s.winning_condition, WinningConditionStandard::HighestVelocity, "Highest velocity");
+                    ui.selectable_value(
+                        &mut s.winning_condition,
+                        WinningConditionStandard::LastManStanding,
+                        "Last man standing",
+                    );
+                    ui.selectable_value(
+                        &mut s.winning_condition,
+                        WinningConditionStandard::LongestWay,
+                        "Longest way",
+                    );
+                    ui.selectable_value(
+                        &mut s.winning_condition,
+                        WinningConditionStandard::HighestVelocity,
+                        "Highest velocity",
+                    );
                 });
             ui.end_row();
 
