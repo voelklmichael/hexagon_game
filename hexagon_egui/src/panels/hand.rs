@@ -190,10 +190,12 @@ pub fn show(
                     ui.horizontal(|ui| {
                         if ui.small_button("↺").clicked() {
                             game.rotate_tile(i, TileRotationDirection::CounterClockwise);
+                            interaction.selected_tile = Some(i);
                             interaction.animation_t = 1.0;
                         }
                         if ui.small_button("↻").clicked() {
                             game.rotate_tile(i, TileRotationDirection::Clockwise);
+                            interaction.selected_tile = Some(i);
                             interaction.animation_t = 1.0;
                         }
                     });

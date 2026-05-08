@@ -152,7 +152,15 @@ pub fn show(
     interaction: &mut BoardInteraction,
 ) {
     let player_data = make_player_data(rendering_data);
-    let render_task = game.render_task(interaction.selected_hexagon, interaction.animation_t);
+
+    let preview_hex = interaction
+        .selected_tile
+        .is_some()
+        .then(|| game.current_player_hexagon())
+        .flatten();
+
+    let effective_selected_hexagon = preview_hex.or(interaction.selected_hexagon);
+    let render_task = game.render_task(effective_selected_hexagon, interaction.animation_t);
 
     if render_task.hexagons.is_empty() {
         return;
@@ -295,6 +303,36 @@ pub fn show(
                     to_screen(bx, by),
                     stroke,
                 );
+            }
+        }
+    }
+
+    // Step 2b: ghost overlay for selected tile
+    if let (Some(hex), Some(tile_index)) = (preview_hex, interaction.selected_tile) {
+        if let Some(player) = game.players.iter().find(|p| p.id == game.current_player) {
+            if let Some(tile) = player.hand.get(tile_index) {
+                let ctrl = R * 0.6;
+                let ghost_color = with_opacity(
+                    color_to_egui(player_data.colors.get(&game.current_player).copied().unwrap_or(player_data.unused_color)),
+                    0.4,
+                );
+                let ghost_stroke = egui::Stroke::new(3.0 * scale, ghost_color);
+                for conn in &tile.inner_connectors {
+                    let fake_hex = HexagonPosition { x: hex.x, y: hex.y };
+                    let a = EdgeSub { edge: conn.a.edge, sub: conn.a.sub };
+                    let b = EdgeSub { edge: conn.b.edge, sub: conn.b.sub };
+                    let (ax, ay) = edge_sub_point(&fake_hex, &a);
+                    let (bx, by) = edge_sub_point(&fake_hex, &b);
+                    let (nax, nay) = edge_inward_normal(&a.edge);
+                    let (nbx, nby) = edge_inward_normal(&b.edge);
+                    draw_cubic(&painter,
+                        to_screen(ax, ay),
+                        to_screen(ax + ctrl * nax, ay + ctrl * nay),
+                        to_screen(bx + ctrl * nbx, by + ctrl * nby),
+                        to_screen(bx, by),
+                        ghost_stroke,
+                    );
+                }
             }
         }
     }

@@ -30,6 +30,21 @@ pub struct GameState {
 }
 
 impl GameState {
+    pub fn current_player_hexagon(&self) -> Option<HexagonPosition> {
+        let player = self.players.iter().find(|p| p.id == self.current_player)?;
+        let (connector_id, end) = player.current_position;
+        let kind = &self.board.connectors.iter().find(|c| c.id == connector_id)?.kind;
+        let hexagon = match kind {
+            ConnectorKind::DeadEnd(c) => c.position.hexagon,
+            ConnectorKind::HexToHex(c) | ConnectorKind::Outside(c) => match end {
+                ConnectorEnd::StartedAtA => c.connector_a.hexagon,
+                ConnectorEnd::StartedAtB => c.connector_b.hexagon,
+            },
+            ConnectorKind::OnHex(c) => c.hexagon,
+        };
+        Some(hexagon)
+    }
+
     pub fn rotate_tile(&mut self, tile: usize, direction: TileRotationDirection) {
         let Some(player) = self
             .players
