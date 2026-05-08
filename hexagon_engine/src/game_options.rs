@@ -19,7 +19,7 @@ pub struct GameOptionsStandard {
     pub hand_size: usize,
 }
 
-#[derive(strum::EnumIter, Clone, Debug, Serialize, Deserialize)]
+#[derive(strum::EnumIter, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum OuterConnectors {
     OnlyDeathEnds,
     ReducedDeathEnds,
@@ -31,7 +31,7 @@ pub enum CollisionMode {
     BothDie,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub enum WinningConditionStandard {
     LastManStanding,
     LongestWay,
@@ -47,7 +47,7 @@ pub struct GameOptionsDelivery {
     pub hand_size: usize,
 }
 
-#[derive(Serialize, Deserialize, strum::EnumDiscriminants)]
+#[derive(Clone, Serialize, Deserialize, strum::EnumDiscriminants)]
 #[strum_discriminants(derive(serde::Serialize, serde::Deserialize))]
 pub enum GameOptions {
     Delivery(GameOptionsDelivery),
@@ -277,11 +277,25 @@ impl GameOptionsStandard {
     }
 }
 
+fn hash_seed(seed: u32) -> u32 {
+    let s = seed.wrapping_add(0x6D2B79F5);
+    let t = (s ^ (s >> 15)).wrapping_mul(1 | s);
+    let t = t.wrapping_add((t ^ (t >> 7)).wrapping_mul(61 | t));
+    t ^ (t >> 14)
+}
+
 impl GameOptions {
     pub fn start_game(self) -> Result<GameState, String> {
         match self {
             GameOptions::Delivery(game) => game.start_game(),
             GameOptions::Standard(game) => game.start_game(),
+        }
+    }
+
+    pub fn randomize_seed(&mut self) {
+        match self {
+            GameOptions::Delivery(o) => o.random_seed = hash_seed(o.random_seed),
+            GameOptions::Standard(o) => o.random_seed = hash_seed(o.random_seed),
         }
     }
 

@@ -1632,6 +1632,7 @@ dependencies = [
  "log",
  "rodio",
  "serde",
+ "serde_json",
  "strum",
  "wasm-bindgen-futures",
  "web-sys",

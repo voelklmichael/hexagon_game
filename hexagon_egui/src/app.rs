@@ -200,6 +200,25 @@ impl eframe::App for HexApp {
         }
 
         egui::CentralPanel::default().show_inside(ui, |ui| {
+            if crate::panels::options::show(ui, &mut self.options) {
+                let result = match self.options.selected {
+                    hexagon_engine::GameOptionsDiscriminants::Standard => {
+                        self.options.standard.clone().start_game()
+                    }
+                    hexagon_engine::GameOptionsDiscriminants::Delivery => {
+                        self.options.delivery.clone().start_game()
+                    }
+                };
+                match result {
+                    Ok(game) => self.game = Some(game),
+                    Err(e) => eprintln!("Failed to start game: {e}"),
+                }
+            }
+            ui.separator();
+            crate::panels::controls::show(ui, &mut self.game, &mut self.history);
+            ui.separator();
+            crate::panels::game_state_json::show(ui, self.game.as_ref());
+            ui.separator();
             crate::panels::rendering::show(ui, &mut self.rendering_data);
             ui.separator();
             crate::panels::statistics::show(ui, &self.rendering_data, self.game.as_ref().map(|g| &g.statistics));

@@ -16,7 +16,7 @@ use statistics::*;
 
 pub use board_types::HexagonPosition;
 pub use game_options::{
-    CollisionMode, GameOptionsDelivery, GameOptionsDiscriminants, GameOptionsStandard,
+    CollisionMode, GameOptions, GameOptionsDelivery, GameOptionsDiscriminants, GameOptionsStandard,
     OuterConnectors, WinningConditionStandard,
 };
 pub use game_state::{GameResult, GameState};

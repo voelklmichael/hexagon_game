@@ -1,4 +1,7 @@
+pub mod controls;
+pub mod game_state_json;
 pub mod music;
+pub mod options;
 pub mod rendering;
 pub mod statistics;
 
