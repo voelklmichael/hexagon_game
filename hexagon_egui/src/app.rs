@@ -2,7 +2,7 @@ use indexmap::IndexMap;
 
 use hexagon_engine::{
     CollisionMode, Color, GameOptionsDelivery, GameOptionsDiscriminants, GameOptionsStandard,
-    GameState, HexagonPosition, OuterConnectors, PlayerId, WinningConditionStandard,
+    GameState, OuterConnectors, PlayerId, WinningConditionStandard,
 };
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -62,8 +62,6 @@ pub struct BoardInteraction {
     #[serde(skip)]
     pub selected_tile: Option<usize>,
     #[serde(skip)]
-    pub selected_hexagon: Option<HexagonPosition>,
-    #[serde(skip)]
     pub animation_t: f32,
 }
 
@@ -71,7 +69,6 @@ impl Default for BoardInteraction {
     fn default() -> Self {
         Self {
             selected_tile: None,
-            selected_hexagon: None,
             animation_t: 0.0,
         }
     }
@@ -194,7 +191,8 @@ impl eframe::App for HexApp {
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(player) = &self.music_player {
             if !self.music.paused && player.check_and_reset_finished() {
-                self.music.current_track = (self.music.current_track + 1) % crate::music::TRACKS.len();
+                self.music.current_track =
+                    (self.music.current_track + 1) % crate::music::TRACKS.len();
                 player.play_track(&crate::music::track_path(self.music.current_track));
             }
         }
@@ -222,9 +220,20 @@ impl eframe::App for HexApp {
             }
             ui.separator();
             if let Some(game) = &mut self.game {
-                crate::panels::game_board::show(ui, game, &self.rendering_data, &mut self.interaction);
+                crate::panels::game_board::show(
+                    ui,
+                    game,
+                    &self.rendering_data,
+                    &mut self.interaction,
+                );
                 ui.separator();
-                crate::panels::hand::show(ui, game, &self.rendering_data, &mut self.interaction, &mut self.history);
+                crate::panels::hand::show(
+                    ui,
+                    game,
+                    &self.rendering_data,
+                    &mut self.interaction,
+                    &mut self.history,
+                );
                 ui.separator();
             }
             crate::panels::controls::show(ui, &mut self.game, &mut self.history);
@@ -233,7 +242,11 @@ impl eframe::App for HexApp {
             ui.separator();
             crate::panels::rendering::show(ui, &mut self.rendering_data);
             ui.separator();
-            crate::panels::statistics::show(ui, &self.rendering_data, self.game.as_ref().map(|g| &g.statistics));
+            crate::panels::statistics::show(
+                ui,
+                &self.rendering_data,
+                self.game.as_ref().map(|g| &g.statistics),
+            );
             ui.separator();
             #[cfg(not(target_arch = "wasm32"))]
             crate::panels::music::show(ui, &mut self.music, self.music_player.as_ref());

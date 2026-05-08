@@ -254,7 +254,9 @@ pub struct CurrentPlayerPosition {
     pub is_active: bool,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize, strum::VariantArray)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize, strum::VariantArray,
+)]
 pub enum Color {
     Gray,
     Golden,
@@ -535,7 +537,7 @@ impl RenderTask {
                 let UsedConnector {
                     connector,
                     used_by,
-                    preview_used_by: previews_used_by,
+                    preview_used_by,
                     is_connected_to_dead_end,
                     is_connected_to_player_start,
                     is_connected_to_player_target,
@@ -552,7 +554,7 @@ impl RenderTask {
                 let color: String = if !used_by.is_empty() {
                     let colors: Vec<Color> = used_by
                         .iter()
-                        .chain(previews_used_by.iter())
+                        .chain(preview_used_by.iter())
                         .map(player_color)
                         .collect();
                     mix_colors(&colors)
@@ -575,12 +577,12 @@ impl RenderTask {
                 } else {
                     player_data.closed_loop_color.to_svg_string().to_string()
                 };
-                let opacity: f64 = if !previews_used_by.is_empty() {
+                let opacity: f64 = if !preview_used_by.is_empty() {
                     0.5
                 } else {
                     1.0
                 };
-                let stroke_width: f64 = if !previews_used_by.is_empty() {
+                let stroke_width: f64 = if !preview_used_by.is_empty() {
                     3.0
                 } else if !is_connected_to_player_start.is_empty() {
                     5.0
@@ -1062,7 +1064,15 @@ mod tests {
         let rendertask = RenderTask {
             hexagons: vec![pos(0, 0)],
             hexagon_to_highlight: None,
-            connectors: vec![uc(make_connector(), vec![], vec![], false, None, None, None)],
+            connectors: vec![uc(
+                make_connector(),
+                vec![],
+                vec![],
+                false,
+                None,
+                None,
+                None,
+            )],
             current_player_position: (0..10)
                 .map(|i| CurrentPlayerPosition {
                     player_id: PlayerId(i + 1),

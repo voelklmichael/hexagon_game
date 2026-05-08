@@ -210,7 +210,6 @@ pub fn show(
                 history.redo_stack.clear();
                 game.play_tile(tile_index);
                 interaction.selected_tile = None;
-                interaction.selected_hexagon = None;
                 interaction.animation_t = 0.0;
             }
         }
