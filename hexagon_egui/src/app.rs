@@ -150,7 +150,7 @@ impl Default for RenderingData {
             hex_stroke: Color::DarkGray,
             highlighted_hex_fill: Color::Moccasin,
             highlighted_hex_stroke: Color::DarkOrange,
-            background: Color::DarkGray,
+            background: Color::Black,
         }
     }
 }

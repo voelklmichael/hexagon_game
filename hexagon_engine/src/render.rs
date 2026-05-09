@@ -272,6 +272,7 @@ pub enum Color {
     Cyan,
     Pink,
     Teal,
+    Black,
 }
 
 impl Color {
@@ -291,6 +292,7 @@ impl Color {
             Color::Cyan => "#00CED1",
             Color::Pink => "#FF69B4",
             Color::Teal => "#008080",
+            Color::Black => "#000000",
         }
     }
 
@@ -310,6 +312,7 @@ impl Color {
             Color::Cyan => (0x00, 0xCE, 0xD1),
             Color::Pink => (0xFF, 0x69, 0xB4),
             Color::Teal => (0x00, 0x80, 0x80),
+            Color::Black => (0x00, 0x00, 0x00),
         }
     }
 }
