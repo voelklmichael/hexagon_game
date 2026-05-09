@@ -2,12 +2,13 @@ use hexagon_engine::GameState;
 
 use crate::app::GameHistory;
 
-pub fn show(ui: &mut egui::Ui, game: &mut Option<GameState>, history: &mut GameHistory) {
+pub fn show(ui: &mut egui::Ui, game: &mut Option<GameState>, history: &mut GameHistory) -> bool {
     ui.heading("Controls");
 
     let has_game = game.is_some();
     let can_undo = !history.undo_stack.is_empty();
     let can_redo = !history.redo_stack.is_empty();
+    let mut started = false;
 
     ui.horizontal(|ui| {
         if ui
@@ -21,6 +22,7 @@ pub fn show(ui: &mut egui::Ui, game: &mut Option<GameState>, history: &mut GameH
                     history.undo_stack.clear();
                     history.redo_stack.clear();
                     *game = Some(new_game);
+                    started = true;
                 }
                 Err(e) => eprintln!("Restart failed: {e}"),
             }
@@ -38,6 +40,7 @@ pub fn show(ui: &mut egui::Ui, game: &mut Option<GameState>, history: &mut GameH
                     history.undo_stack.clear();
                     history.redo_stack.clear();
                     *game = Some(new_game);
+                    started = true;
                 }
                 Err(e) => eprintln!("New game failed: {e}"),
             }
@@ -65,4 +68,5 @@ pub fn show(ui: &mut egui::Ui, game: &mut Option<GameState>, history: &mut GameH
             *game = Some(next);
         }
     });
+    started
 }

@@ -355,12 +355,21 @@ impl eframe::App for HexApp {
                                 }
                             };
                             match result {
-                                Ok(game) => self.game = Some(game),
+                                Ok(game) => {
+                                    self.game = Some(game);
+                                    self.left_tab = LeftTab::Hand;
+                                }
                                 Err(e) => eprintln!("Failed to start game: {e}"),
                             }
                         }
                         ui.separator();
-                        crate::panels::predefined_games::show(ui, &mut self.game, &mut self.rng);
+                        if crate::panels::predefined_games::show(
+                            ui,
+                            &mut self.game,
+                            &mut self.rng,
+                        ) {
+                            self.left_tab = LeftTab::Hand;
+                        }
                     }
                     LeftTab::Hand => {
                         crate::panels::hand::show(
@@ -372,7 +381,9 @@ impl eframe::App for HexApp {
                         );
                     }
                     LeftTab::Controls => {
-                        crate::panels::controls::show(ui, &mut self.game, &mut self.history);
+                        if crate::panels::controls::show(ui, &mut self.game, &mut self.history) {
+                            self.left_tab = LeftTab::Hand;
+                        }
                     }
                     LeftTab::Music => {
                         #[cfg(not(target_arch = "wasm32"))]

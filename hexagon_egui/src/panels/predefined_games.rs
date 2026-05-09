@@ -72,8 +72,13 @@ fn presets() -> Vec<Preset> {
     ]
 }
 
-pub fn show(ui: &mut egui::Ui, game: &mut Option<GameState>, rng: &mut RandomNumberGenerator) {
+pub fn show(
+    ui: &mut egui::Ui,
+    game: &mut Option<GameState>,
+    rng: &mut RandomNumberGenerator,
+) -> bool {
     ui.heading("Predefined Games");
+    let mut start_new_game = false;
 
     egui::Grid::new("predefined_games")
         .num_columns(2)
@@ -85,7 +90,10 @@ pub fn show(ui: &mut egui::Ui, game: &mut Option<GameState>, rng: &mut RandomNum
                         .options
                         .start_game((rng.next().abs() * (u32::MAX as f64).round()) as u32)
                     {
-                        Ok(new_game) => *game = Some(new_game),
+                        Ok(new_game) => {
+                            *game = Some(new_game);
+                            start_new_game = true;
+                        }
                         Err(e) => eprintln!("Failed to load preset: {e}"),
                     }
                 }
@@ -93,4 +101,5 @@ pub fn show(ui: &mut egui::Ui, game: &mut Option<GameState>, rng: &mut RandomNum
                 ui.end_row();
             }
         });
+    start_new_game
 }
