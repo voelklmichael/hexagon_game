@@ -7,16 +7,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in library 'hexagon_game'",
+            "name": "Debug unit tests in library 'hexagon_engine'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
                     "--lib",
-                    "--package=hexagon_game"
+                    "--package=hexagon_engine"
                 ],
                 "filter": {
-                    "name": "hexagon_game",
+                    "name": "hexagon_engine",
                     "kind": "lib"
                 }
             },
@@ -26,15 +26,34 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'hexagon_game'",
+            "name": "Debug unit tests in library 'hexagon_egui'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=hexagon_egui"
+                ],
+                "filter": {
+                    "name": "hexagon_egui",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'hexagon_egui'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=hexagon_game",
-                    "--package=hexagon_game"
+                    "--bin=hexagon_egui",
+                    "--package=hexagon_egui"
                 ],
                 "filter": {
-                    "name": "hexagon_game",
+                    "name": "hexagon_egui",
                     "kind": "bin"
                 }
             },
@@ -44,16 +63,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'hexagon_game'",
+            "name": "Debug unit tests in executable 'hexagon_egui'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=hexagon_game",
-                    "--package=hexagon_game"
+                    "--bin=hexagon_egui",
+                    "--package=hexagon_egui"
                 ],
                 "filter": {
-                    "name": "hexagon_game",
+                    "name": "hexagon_egui",
                     "kind": "bin"
                 }
             },

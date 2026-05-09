@@ -8,8 +8,8 @@
 				"$rustc"
 			],
 			"group": {
-				"kind": "build",
 				"isDefault": true,
+				"kind": "build",
 			},
 			"label": "rust: cargo check"
 		}
