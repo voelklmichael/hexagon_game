@@ -200,7 +200,6 @@ pub struct HexApp {
     #[serde(skip)]
     pub replay: Option<ReplayPlayer>,
     #[serde(skip)]
-    #[cfg(not(target_arch = "wasm32"))]
     pub music_player: Option<crate::music::MusicPlayer>,
     pub rng: RandomNumberGenerator,
 }
@@ -213,15 +212,12 @@ impl HexApp {
             Default::default()
         };
 
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            app.music.current_track = app.music.current_track.min(crate::music::TRACKS.len() - 1);
-            app.music_player = crate::music::MusicPlayer::new(app.music.volume);
-            if let Some(player) = &app.music_player {
-                player.play_track(app.music.current_track);
-                if app.music.paused {
-                    player.set_paused(true);
-                }
+        app.music.current_track = app.music.current_track.min(crate::music::TRACKS.len() - 1);
+        app.music_player = crate::music::MusicPlayer::new(app.music.volume);
+        if let Some(player) = &app.music_player {
+            player.play_track(app.music.current_track);
+            if app.music.paused {
+                player.set_paused(true);
             }
         }
 
@@ -235,7 +231,6 @@ impl eframe::App for HexApp {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        #[cfg(not(target_arch = "wasm32"))]
         if let Some(player) = &self.music_player
             && !self.music.paused
             && player.check_and_reset_finished()
@@ -390,10 +385,7 @@ impl eframe::App for HexApp {
                         }
                     }
                     LeftTab::Music => {
-                        #[cfg(not(target_arch = "wasm32"))]
                         crate::panels::music::show(ui, &mut self.music, self.music_player.as_ref());
-                        #[cfg(target_arch = "wasm32")]
-                        ui.label("Music is not available on web.");
                     }
                     LeftTab::Rendering => {
                         crate::panels::rendering::show(ui, &mut self.rendering_data);
