@@ -163,6 +163,22 @@ pub struct GameHistory {
     pub redo_stack: Vec<GameState>,
 }
 
+#[derive(Default, PartialEq, Clone, Copy)]
+enum ReplayPhase {
+    #[default]
+    InitialWait,
+    Animating,
+    LoopWait,
+}
+
+pub struct ReplayPlayer {
+    /// Snapshot sequence: [before move 1, before move 2, …, final state]
+    states: Vec<GameState>,
+    step: usize,
+    timer: f32,
+    phase: ReplayPhase,
+}
+
 
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(default, rename_all = "camelCase")]
@@ -177,6 +193,8 @@ pub struct HexApp {
     pub left_tab: LeftTab,
     pub right_panel_open: bool,
     pub right_tab: RightTab,
+    #[serde(skip)]
+    pub replay: Option<ReplayPlayer>,
     #[serde(skip)]
     #[cfg(not(target_arch = "wasm32"))]
     pub music_player: Option<crate::music::MusicPlayer>,
@@ -226,6 +244,75 @@ impl eframe::App for HexApp {
             self.interaction.animation_t = (self.interaction.animation_t + dt * 2.0).min(1.0);
             ui.ctx().request_repaint();
         }
+
+        // Replay management: start 1 s after game ends (timer begins immediately,
+        // in parallel with the finishing animation), loop with 3 s pause between iterations.
+        let game_done = self.game.as_ref().map_or(false, |g| g.result.is_some());
+        if game_done {
+            if self.replay.is_none() {
+                let states: Vec<GameState> = self
+                    .history
+                    .undo_stack
+                    .iter()
+                    .cloned()
+                    .chain(self.game.iter().cloned())
+                    .collect();
+                if !states.is_empty() {
+                    self.replay = Some(ReplayPlayer {
+                        states,
+                        step: 0,
+                        timer: 1.0,
+                        phase: ReplayPhase::InitialWait,
+                    });
+                }
+            }
+        } else if !game_done {
+            self.replay = None;
+        }
+
+        if let Some(replay) = &mut self.replay {
+            let dt = ui.ctx().input(|i| i.stable_dt);
+            match replay.phase {
+                ReplayPhase::InitialWait => {
+                    replay.timer -= dt;
+                    if replay.timer <= 0.0 {
+                        replay.step = 0;
+                        replay.phase = ReplayPhase::Animating;
+                        self.interaction.animation_t = 0.0;
+                    }
+                }
+                ReplayPhase::Animating => {
+                    // The existing animation tick (earlier in ui()) advances animation_t to 1.0.
+                    // Once it arrives, move to the next step or end the loop.
+                    if self.interaction.animation_t >= 1.0 {
+                        if replay.step + 1 < replay.states.len() {
+                            replay.step += 1;
+                            self.interaction.animation_t = 0.0;
+                        } else {
+                            replay.phase = ReplayPhase::LoopWait;
+                            replay.timer = 3.0;
+                        }
+                    }
+                }
+                ReplayPhase::LoopWait => {
+                    replay.timer -= dt;
+                    if replay.timer <= 0.0 {
+                        replay.step = 0;
+                        replay.phase = ReplayPhase::Animating;
+                        self.interaction.animation_t = 0.0;
+                    }
+                }
+            }
+            ui.ctx().request_repaint();
+        }
+
+        // Snapshot the replay step index now (before panel closures borrow self).
+        // During InitialWait show the live game (final state); only switch to the
+        // replay snapshot once the actual playback starts.
+        let replay_step: Option<usize> = self.replay.as_ref().and_then(|r| match r.phase {
+            ReplayPhase::InitialWait => None,
+            ReplayPhase::Animating | ReplayPhase::LoopWait => Some(r.step),
+        });
 
         let total_width = ui.available_width();
         let max_side = total_width * 0.20;
@@ -360,7 +447,16 @@ impl eframe::App for HexApp {
                     }
                 });
             }
-            if let Some(game) = &mut self.game {
+            if let Some(step) = replay_step {
+                if let Some(game) = self.replay.as_ref().and_then(|r| r.states.get(step)) {
+                    crate::panels::game_board::show(
+                        ui,
+                        game,
+                        &self.rendering_data,
+                        &mut self.interaction,
+                    );
+                }
+            } else if let Some(game) = &self.game {
                 crate::panels::game_board::show(
                     ui,
                     game,
