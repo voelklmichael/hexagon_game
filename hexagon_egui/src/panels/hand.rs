@@ -5,21 +5,19 @@ use hexagon_engine::{
 use crate::app::{BoardInteraction, GameHistory, RenderingData};
 use crate::panels::color_to_egui;
 
-const PREVIEW_R: f64 = 28.0;
-
-fn preview_h() -> f64 {
-    PREVIEW_R * 3.0_f64.sqrt() / 2.0
+fn hex_h(r: f64) -> f64 {
+    r * 3.0_f64.sqrt() / 2.0
 }
 
-fn edge_sub_point(edge_sub: &EdgeSub) -> (f64, f64) {
-    let h = preview_h();
+fn edge_sub_point(r: f64, edge_sub: &EdgeSub) -> (f64, f64) {
+    let h = hex_h(r);
     let v = [
-        (PREVIEW_R, 0.0),
-        (PREVIEW_R / 2.0, h),
-        (-PREVIEW_R / 2.0, h),
-        (-PREVIEW_R, 0.0),
-        (-PREVIEW_R / 2.0, -h),
-        (PREVIEW_R / 2.0, -h),
+        (r, 0.0),
+        (r / 2.0, h),
+        (-r / 2.0, h),
+        (-r, 0.0),
+        (-r / 2.0, -h),
+        (r / 2.0, -h),
     ];
     let (a, b) = match edge_sub.edge {
         Edge::Top => (v[5], v[4]),
@@ -50,15 +48,16 @@ fn edge_inward_normal(edge: &Edge) -> (f64, f64) {
 
 fn draw_tile_preview(
     ui: &mut egui::Ui,
+    r: f64,
     connectors: &[ConnectorEdgeSub],
     selected: bool,
     hex_fill: egui::Color32,
     hex_stroke: egui::Color32,
     connector_color: egui::Color32,
 ) -> egui::Response {
-    let h = preview_h();
-    let size = egui::vec2(PREVIEW_R as f32 * 2.4, PREVIEW_R as f32 * 2.4);
-    let (rect, response) = ui.allocate_exact_size(size, egui::Sense::click());
+    let h = hex_h(r);
+    let side = r as f32 * 2.4;
+    let (rect, response) = ui.allocate_exact_size(egui::vec2(side, side), egui::Sense::click());
     let painter = ui.painter_at(rect);
     let cx = rect.center().x;
     let cy = rect.center().y;
@@ -66,12 +65,12 @@ fn draw_tile_preview(
     let to = |wx: f64, wy: f64| egui::pos2(cx + wx as f32, cy + wy as f32);
 
     let hex_verts: Vec<egui::Pos2> = [
-        (PREVIEW_R, 0.0),
-        (PREVIEW_R / 2.0, h),
-        (-PREVIEW_R / 2.0, h),
-        (-PREVIEW_R, 0.0),
-        (-PREVIEW_R / 2.0, -h),
-        (PREVIEW_R / 2.0, -h),
+        (r, 0.0),
+        (r / 2.0, h),
+        (-r / 2.0, h),
+        (-r, 0.0),
+        (-r / 2.0, -h),
+        (r / 2.0, -h),
     ]
     .iter()
     .map(|&(x, y)| to(x, y))
@@ -82,16 +81,12 @@ fn draw_tile_preview(
     } else {
         egui::Stroke::new(1.5_f32, hex_stroke)
     };
-    painter.add(egui::Shape::convex_polygon(
-        hex_verts,
-        hex_fill,
-        border_stroke,
-    ));
+    painter.add(egui::Shape::convex_polygon(hex_verts, hex_fill, border_stroke));
 
-    let ctrl = PREVIEW_R * 0.6;
+    let ctrl = r * 0.6;
     for ConnectorEdgeSub { a, b } in connectors {
-        let (ax, ay) = edge_sub_point(a);
-        let (bx, by) = edge_sub_point(b);
+        let (ax, ay) = edge_sub_point(r, a);
+        let (bx, by) = edge_sub_point(r, b);
         let (nax, nay) = edge_inward_normal(&a.edge);
         let (nbx, nby) = edge_inward_normal(&b.edge);
         painter.add(egui::Shape::CubicBezier(egui::epaint::CubicBezierShape {
@@ -112,16 +107,97 @@ fn draw_tile_preview(
 
 pub fn show(
     ui: &mut egui::Ui,
-    game: &mut GameState,
+    game: &mut Option<GameState>,
     rendering_data: &RenderingData,
     interaction: &mut BoardInteraction,
     history: &mut GameHistory,
 ) {
     ui.heading("Player Hand");
 
-    let current_id = game.current_player;
+    if game.is_none() {
+        ui.label("No game in progress.");
+        return;
+    }
 
-    let Some(player) = game.players.iter().find(|p| p.id == current_id) else {
+    // Game-over section: collect all data from a scoped borrow so the borrow
+    // is released before we write back to *game.
+    let game_over_data: Option<(String, egui::Color32, _, _, bool)> = {
+        let g = game.as_ref().unwrap();
+        g.result.as_ref().map(|result| {
+            let (text, color) = match result {
+                GameResult::Win(winners) => {
+                    let names: Vec<String> = winners
+                        .iter()
+                        .map(|p| format!("Player {}", p.0 + 1))
+                        .collect();
+                    (format!("Winner: {}", names.join(", ")), egui::Color32::GOLD)
+                }
+                GameResult::Draw(players) => {
+                    let names: Vec<String> = players
+                        .iter()
+                        .map(|p| format!("Player {}", p.0 + 1))
+                        .collect();
+                    (
+                        format!("Draw: {}", names.join(", ")),
+                        egui::Color32::from_rgb(180, 180, 180),
+                    )
+                }
+                GameResult::Loss => ("Loss".to_string(), egui::Color32::from_rgb(200, 60, 60)),
+            };
+            let opts = g.options.clone();
+            let saved = g.clone();
+            let can_undo = !history.undo_stack.is_empty();
+            (text, color, opts, saved, can_undo)
+        })
+    }; // immutable borrow of *game released here
+
+    if let Some((text, color, opts, saved, can_undo)) = game_over_data {
+        ui.label(
+            egui::RichText::new("The game is finished")
+                .strong()
+                .heading(),
+        );
+        ui.label(egui::RichText::new(text).strong().color(color).heading());
+        ui.separator();
+
+        if ui.button("Start new game").clicked() {
+            let mut new_opts = opts.clone();
+            new_opts.randomize_seed();
+            match new_opts.start_game() {
+                Ok(g) => {
+                    history.undo_stack.clear();
+                    history.redo_stack.clear();
+                    *game = Some(g);
+                }
+                Err(e) => eprintln!("New game failed: {e}"),
+            }
+        }
+        if ui.button("Restart this game").clicked() {
+            match opts.start_game() {
+                Ok(g) => {
+                    history.undo_stack.clear();
+                    history.redo_stack.clear();
+                    *game = Some(g);
+                }
+                Err(e) => eprintln!("Restart failed: {e}"),
+            }
+        }
+        if ui
+            .add_enabled(can_undo, egui::Button::new("Undo"))
+            .clicked()
+            && let Some(prev) = history.undo_stack.pop()
+        {
+            history.redo_stack.push(saved);
+            *game = Some(prev);
+        }
+        return;
+    }
+
+    // Normal hand display — borrow game mutably for the rest of the function.
+    let game_state = game.as_mut().unwrap();
+    let current_id = game_state.current_player;
+
+    let Some(player) = game_state.players.iter().find(|p| p.id == current_id) else {
         return;
     };
 
@@ -130,36 +206,6 @@ pub fn show(
         .get(&current_id)
         .copied()
         .unwrap_or(hexagon_engine::Color::Gray);
-
-    if let Some(result) = &game.result {
-        ui.label(
-            egui::RichText::new("The game is finished")
-                .strong()
-                .heading(),
-        );
-        let (text, color) = match result {
-            GameResult::Win(winners) => {
-                let names: Vec<String> = winners
-                    .iter()
-                    .map(|p| format!("Player {}", p.0 + 1))
-                    .collect();
-                (format!("Winner: {}", names.join(", ")), egui::Color32::GOLD)
-            }
-            GameResult::Draw(players) => {
-                let names: Vec<String> = players
-                    .iter()
-                    .map(|p| format!("Player {}", p.0 + 1))
-                    .collect();
-                (
-                    format!("Draw: {}", names.join(", ")),
-                    egui::Color32::from_rgb(180, 180, 180),
-                )
-            }
-            GameResult::Loss => ("Loss".to_string(), egui::Color32::from_rgb(200, 60, 60)),
-        };
-        ui.label(egui::RichText::new(text).strong().color(color).heading());
-        return;
-    }
 
     ui.horizontal(|ui| {
         let (rect, _) = ui.allocate_exact_size(egui::vec2(16.0, 16.0), egui::Sense::hover());
@@ -176,58 +222,97 @@ pub fn show(
     let hex_stroke = color_to_egui(rendering_data.hex_stroke);
     let connector_color = color_to_egui(player_color);
 
-    let connectors_per_tile: Vec<Vec<ConnectorEdgeSub>> = game
+    let connectors_per_tile: Vec<Vec<ConnectorEdgeSub>> = game_state
         .players
         .iter()
         .find(|p| p.id == current_id)
         .map(|p| p.hand.iter().map(|t| t.inner_connectors.clone()).collect())
         .unwrap_or_default();
 
+    // Compute r here, before the ScrollArea makes available_height() infinite.
+    // clip_rect() is the actual visible panel rect; cursor() tracks how much is used.
+    let r = {
+        let available_w = ui.available_width();
+        let sep_h = ui.spacing().item_spacing.y * 2.0 + 1.0;
+        let used_h = ui.cursor().top() - ui.clip_rect().top();
+        let remaining_h = (ui.clip_rect().height() - used_h).max(1.0);
+        let r_from_h = if hand_len > 0 {
+            (remaining_h - hand_len as f32 * sep_h) / (hand_len as f32 * 2.4)
+        } else {
+            f32::MAX
+        };
+        let r_from_w = available_w * 0.9 / 2.4;
+        r_from_h.min(r_from_w).max(10.0) as f64
+    };
+
     ui.add_enabled_ui(!disabled, |ui| {
-        ui.horizontal_wrapped(|ui| {
+        egui::ScrollArea::vertical().show(ui, |ui| {
             for i in 0..hand_len {
-                ui.vertical(|ui| {
-                    let connectors = connectors_per_tile.get(i).map(Vec::as_slice).unwrap_or(&[]);
+                let connectors = connectors_per_tile.get(i).map(Vec::as_slice).unwrap_or(&[]);
+                let is_selected = selected_tile == Some(i);
+
+                ui.horizontal(|ui| {
                     let resp = draw_tile_preview(
                         ui,
+                        r,
                         connectors,
-                        selected_tile == Some(i),
+                        is_selected,
                         hex_fill,
                         hex_stroke,
                         connector_color,
                     );
                     if resp.clicked() {
-                        interaction.selected_tile = if selected_tile == Some(i) {
-                            None
-                        } else {
-                            Some(i)
-                        };
+                        interaction.selected_tile = if is_selected { None } else { Some(i) };
                         interaction.animation_t = 1.0;
                     }
 
-                    ui.horizontal(|ui| {
-                        if ui.small_button("↺").clicked() {
-                            game.rotate_tile(i, TileRotationDirection::CounterClockwise);
+                    // Right-side button column, pinned to the hex geometry.
+                    // hex bottom from tile-rect top = r*1.2 + hex_h(r)
+                    let font_size = r as f32 * 0.3;
+                    let btn_h = font_size + 8.0; // font + egui button padding
+                    let hex_bottom = r as f32 * 1.2 + hex_h(r) as f32;
+
+                    ui.vertical(|ui| {
+                        if ui
+                            .button(egui::RichText::new("↺").size(font_size))
+                            .clicked()
+                        {
+                            game_state.rotate_tile(i, TileRotationDirection::CounterClockwise);
                             interaction.selected_tile = Some(i);
                             interaction.animation_t = 1.0;
                         }
-                        if ui.small_button("↻").clicked() {
-                            game.rotate_tile(i, TileRotationDirection::Clockwise);
+
+                        if is_selected {
+                            let gap = ((hex_bottom - 3.0 * btn_h) / 2.0).max(0.0);
+                            ui.add_space(gap);
+                            if ui
+                                .button(egui::RichText::new("➡").size(font_size))
+                                .clicked()
+                            {
+                                history.undo_stack.push(game_state.clone());
+                                history.redo_stack.clear();
+                                game_state.play_tile(i);
+                                interaction.selected_tile = None;
+                                interaction.animation_t = 0.0;
+                            }
+                            ui.add_space(gap);
+                        } else {
+                            ui.add_space((hex_bottom - 2.0 * btn_h).max(0.0));
+                        }
+
+                        if ui
+                            .button(egui::RichText::new("↻").size(font_size))
+                            .clicked()
+                        {
+                            game_state.rotate_tile(i, TileRotationDirection::Clockwise);
                             interaction.selected_tile = Some(i);
                             interaction.animation_t = 1.0;
                         }
                     });
                 });
+
+                ui.separator();
             }
         });
-
-        if let Some(tile_index) = interaction.selected_tile
-            && ui.button("Play selected tile").clicked() {
-                history.undo_stack.push(game.clone());
-                history.redo_stack.clear();
-                game.play_tile(tile_index);
-                interaction.selected_tile = None;
-                interaction.animation_t = 0.0;
-            }
     });
 }

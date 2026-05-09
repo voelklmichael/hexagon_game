@@ -276,17 +276,13 @@ impl eframe::App for HexApp {
                             crate::panels::predefined_games::show(ui, &mut self.game);
                         }
                         LeftTab::Hand => {
-                            if let Some(game) = &mut self.game {
-                                crate::panels::hand::show(
-                                    ui,
-                                    game,
-                                    &self.rendering_data,
-                                    &mut self.interaction,
-                                    &mut self.history,
-                                );
-                            } else {
-                                ui.label("No game in progress.");
-                            }
+                            crate::panels::hand::show(
+                                ui,
+                                &mut self.game,
+                                &self.rendering_data,
+                                &mut self.interaction,
+                                &mut self.history,
+                            );
                         }
                         LeftTab::Controls => {
                             crate::panels::controls::show(ui, &mut self.game, &mut self.history);
