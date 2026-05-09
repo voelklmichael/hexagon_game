@@ -363,11 +363,8 @@ impl eframe::App for HexApp {
                             }
                         }
                         ui.separator();
-                        if crate::panels::predefined_games::show(
-                            ui,
-                            &mut self.game,
-                            &mut self.rng,
-                        ) {
+                        if crate::panels::predefined_games::show(ui, &mut self.game, &mut self.rng)
+                        {
                             self.left_tab = LeftTab::Hand;
                         }
                     }

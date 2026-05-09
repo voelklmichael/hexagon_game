@@ -13,16 +13,29 @@ pub fn show(ui: &mut egui::Ui) {
             .spacing([12.0, 4.0])
             .show(ui, |ui| {
                 ui.strong("OnHex");
-                ui.add(egui::Label::new("A curve within a single hexagon, connecting two of its edge points.").wrap());
+                ui.add(
+                    egui::Label::new(
+                        "A curve within a single hexagon, connecting two of its edge points.",
+                    )
+                    .wrap(),
+                );
                 ui.end_row();
                 ui.strong("HexToHex");
                 ui.add(egui::Label::new("A passage between two adjacent hexagons.").wrap());
                 ui.end_row();
                 ui.strong("Outside");
-                ui.add(egui::Label::new("A passage connecting two non-adjacent outer edge points.").wrap());
+                ui.add(
+                    egui::Label::new("A passage connecting two non-adjacent outer edge points.")
+                        .wrap(),
+                );
                 ui.end_row();
                 ui.strong("DeadEnd");
-                ui.add(egui::Label::new("An outer edge point with no continuation — players stop or die here.").wrap());
+                ui.add(
+                    egui::Label::new(
+                        "An outer edge point with no continuation — players stop or die here.",
+                    )
+                    .wrap(),
+                );
                 ui.end_row();
             });
     });
@@ -36,10 +49,17 @@ pub fn show(ui: &mut egui::Ui) {
                 ui.add(egui::Label::new("The last active player wins.").wrap());
                 ui.end_row();
                 ui.strong("Longest Way");
-                ui.add(egui::Label::new("The player who travelled the greatest total path weight wins.").wrap());
+                ui.add(
+                    egui::Label::new(
+                        "The player who travelled the greatest total path weight wins.",
+                    )
+                    .wrap(),
+                );
                 ui.end_row();
                 ui.strong("Highest Velocity");
-                ui.add(egui::Label::new("The player with the greatest single-turn speed wins.").wrap());
+                ui.add(
+                    egui::Label::new("The player with the greatest single-turn speed wins.").wrap(),
+                );
                 ui.end_row();
             });
     });
@@ -62,10 +82,18 @@ pub fn show(ui: &mut egui::Ui) {
                 ui.add(egui::Label::new("Step back or forward through tile placements.").wrap());
                 ui.end_row();
                 ui.strong("Restart");
-                ui.add(egui::Label::new("Replay the current game from the start with the same seed.").wrap());
+                ui.add(
+                    egui::Label::new("Replay the current game from the start with the same seed.")
+                        .wrap(),
+                );
                 ui.end_row();
                 ui.strong("New game");
-                ui.add(egui::Label::new("Start a new game with the same options but a new random seed.").wrap());
+                ui.add(
+                    egui::Label::new(
+                        "Start a new game with the same options but a new random seed.",
+                    )
+                    .wrap(),
+                );
                 ui.end_row();
             });
     });

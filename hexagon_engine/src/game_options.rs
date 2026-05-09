@@ -155,11 +155,7 @@ impl GameOptionsDelivery {
         let has_any_target = !npc_with_target.is_empty() || !humans_with_target.is_empty();
         if has_any_target && all_npc_targets_reached && all_human_targets_reached {
             return Some(GameResult::Win(
-                players
-                    .iter()
-                    .filter(|p| !p.is_npc)
-                    .map(|p| p.id)
-                    .collect(),
+                players.iter().filter(|p| !p.is_npc).map(|p| p.id).collect(),
             ));
         }
 
