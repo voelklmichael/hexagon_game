@@ -134,37 +134,38 @@ impl GameOptionsDelivery {
         players: &[Player],
         _stats: &Statistics,
     ) -> Option<GameResult> {
-        let with_targets: Vec<_> = players
+        let npc_with_target: Vec<_> = players
+            .iter()
+            .filter(|p| p.is_npc && p.target.is_some())
+            .collect();
+        let humans_with_target: Vec<_> = players
             .iter()
             .filter(|p| !p.is_npc && p.target.is_some())
             .collect();
 
-        // A non-NPC player left the board without a target → Loss
-        if players
+        let all_npc_targets_reached = npc_with_target
             .iter()
-            .any(|p| !p.is_npc && !p.is_active && p.target.is_none())
-        {
+            .all(|p| p.target.is_some_and(|t| t == p.current_position.0));
+        let all_human_targets_reached = humans_with_target
+            .iter()
+            .all(|p| !p.is_active && p.target.is_some_and(|t| t == p.current_position.0));
+
+        // Win: all targets (NPC and human) reached — checked before loss so simultaneous
+        // arrival on the same turn counts as a win.
+        let has_any_target = !npc_with_target.is_empty() || !humans_with_target.is_empty();
+        if has_any_target && all_npc_targets_reached && all_human_targets_reached {
+            return Some(GameResult::Win(
+                players
+                    .iter()
+                    .filter(|p| !p.is_npc)
+                    .map(|p| p.id)
+                    .collect(),
+            ));
+        }
+
+        // Loss: a non-NPC player left the board and not all targets were reached
+        if players.iter().any(|p| !p.is_npc && !p.is_active) {
             return Some(GameResult::Loss);
-        }
-
-        if with_targets.is_empty() {
-            return None;
-        }
-
-        // Any player with a target became inactive without reaching it → Loss
-        if with_targets
-            .iter()
-            .any(|p| !p.is_active && !p.target.is_some_and(|t| t == p.current_position.0))
-        {
-            return Some(GameResult::Loss);
-        }
-
-        // All players with targets reached them → Win
-        if with_targets
-            .iter()
-            .all(|p| !p.is_active && p.target.is_some_and(|t| t == p.current_position.0))
-        {
-            return Some(GameResult::Win(with_targets.iter().map(|p| p.id).collect()));
         }
 
         None
