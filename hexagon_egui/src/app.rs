@@ -321,7 +321,6 @@ impl eframe::App for HexApp {
         // Left panel — always visible, burger menu tabs
         egui::Panel::left("left_panel")
             .resizable(true)
-            .max_size(max_side)
             .show_inside(ui, |ui| {
                 // Burger menu header — copy tab to local so closure doesn't hold &mut self
                 let mut left_tab = self.left_tab;
