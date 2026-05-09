@@ -2,7 +2,9 @@ pub fn show(ui: &mut egui::Ui) {
     ui.heading("Help & Tutorial");
 
     ui.collapsing("How to play", |ui| {
-        ui.label("Select a tile from your hand, rotate it if needed, then press \"Play selected tile\".");
+        ui.label(
+            "Select a tile from your hand, rotate it if needed, then press \"Play selected tile\".",
+        );
         ui.label("Players move automatically along the connected path after each tile is placed.");
         ui.label("The game ends when all active players have left the board.");
     });

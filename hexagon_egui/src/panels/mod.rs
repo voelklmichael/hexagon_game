@@ -3,9 +3,9 @@ pub mod game_board;
 pub mod game_state_json;
 pub mod hand;
 pub mod help;
-pub mod predefined_games;
 pub mod music;
 pub mod options;
+pub mod predefined_games;
 pub mod rendering;
 pub mod statistics;
 

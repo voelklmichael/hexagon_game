@@ -81,7 +81,11 @@ fn draw_tile_preview(
     } else {
         egui::Stroke::new(1.5_f32, hex_stroke)
     };
-    painter.add(egui::Shape::convex_polygon(hex_verts, hex_fill, border_stroke));
+    painter.add(egui::Shape::convex_polygon(
+        hex_verts,
+        hex_fill,
+        border_stroke,
+    ));
 
     let ctrl = r * 0.6;
     for ConnectorEdgeSub { a, b } in connectors {

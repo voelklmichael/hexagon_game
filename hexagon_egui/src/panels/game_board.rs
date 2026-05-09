@@ -253,7 +253,7 @@ pub fn show(
     };
 
     let painter = ui.painter_at(rect);
-    painter.rect_filled(rect, 0.0, egui::Color32::WHITE);
+    painter.rect_filled(rect, 0.0, color_to_egui(rendering_data.background));
 
     // Step 1: hexagons
     for hex in &render_task.hexagons {
@@ -432,7 +432,6 @@ pub fn show(
         }
     }
 
-   
     // Step 3: player positions
     for cpp in &render_task.current_player_position {
         let (px, py) = point_on_connector(&cpp.connector, cpp.step);

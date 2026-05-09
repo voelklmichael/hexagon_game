@@ -127,6 +127,7 @@ pub struct RenderingData {
     pub hex_stroke: Color,
     pub highlighted_hex_fill: Color,
     pub highlighted_hex_stroke: Color,
+    pub background: Color,
 }
 
 impl Default for RenderingData {
@@ -149,6 +150,7 @@ impl Default for RenderingData {
             hex_stroke: Color::DarkGray,
             highlighted_hex_fill: Color::Moccasin,
             highlighted_hex_stroke: Color::DarkOrange,
+            background: Color::DarkGray,
         }
     }
 }
@@ -179,7 +181,6 @@ pub struct ReplayPlayer {
     phase: ReplayPhase,
 }
 
-
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 #[derive(Default)]
@@ -199,7 +200,6 @@ pub struct HexApp {
     #[cfg(not(target_arch = "wasm32"))]
     pub music_player: Option<crate::music::MusicPlayer>,
 }
-
 
 impl HexApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
@@ -233,11 +233,12 @@ impl eframe::App for HexApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(player) = &self.music_player
-            && !self.music.paused && player.check_and_reset_finished() {
-                self.music.current_track =
-                    (self.music.current_track + 1) % crate::music::TRACKS.len();
-                player.play_track(&crate::music::track_path(self.music.current_track));
-            }
+            && !self.music.paused
+            && player.check_and_reset_finished()
+        {
+            self.music.current_track = (self.music.current_track + 1) % crate::music::TRACKS.len();
+            player.play_track(&crate::music::track_path(self.music.current_track));
+        }
 
         if self.interaction.animation_t < 1.0 {
             let dt = ui.ctx().input(|i| i.stable_dt);
@@ -342,51 +343,45 @@ impl eframe::App for HexApp {
                 self.left_tab = left_tab;
                 ui.separator();
 
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    match self.left_tab {
-                        LeftTab::Options => {
-                            if crate::panels::options::show(ui, &mut self.options) {
-                                let result = match self.options.selected {
-                                    hexagon_engine::GameOptionsDiscriminants::Standard => {
-                                        self.options.standard.clone().start_game()
-                                    }
-                                    hexagon_engine::GameOptionsDiscriminants::Delivery => {
-                                        self.options.delivery.clone().start_game()
-                                    }
-                                };
-                                match result {
-                                    Ok(game) => self.game = Some(game),
-                                    Err(e) => eprintln!("Failed to start game: {e}"),
+                egui::ScrollArea::vertical().show(ui, |ui| match self.left_tab {
+                    LeftTab::Options => {
+                        if crate::panels::options::show(ui, &mut self.options) {
+                            let result = match self.options.selected {
+                                hexagon_engine::GameOptionsDiscriminants::Standard => {
+                                    self.options.standard.clone().start_game()
                                 }
+                                hexagon_engine::GameOptionsDiscriminants::Delivery => {
+                                    self.options.delivery.clone().start_game()
+                                }
+                            };
+                            match result {
+                                Ok(game) => self.game = Some(game),
+                                Err(e) => eprintln!("Failed to start game: {e}"),
                             }
-                            ui.separator();
-                            crate::panels::predefined_games::show(ui, &mut self.game);
                         }
-                        LeftTab::Hand => {
-                            crate::panels::hand::show(
-                                ui,
-                                &mut self.game,
-                                &self.rendering_data,
-                                &mut self.interaction,
-                                &mut self.history,
-                            );
-                        }
-                        LeftTab::Controls => {
-                            crate::panels::controls::show(ui, &mut self.game, &mut self.history);
-                        }
-                        LeftTab::Music => {
-                            #[cfg(not(target_arch = "wasm32"))]
-                            crate::panels::music::show(
-                                ui,
-                                &mut self.music,
-                                self.music_player.as_ref(),
-                            );
-                            #[cfg(target_arch = "wasm32")]
-                            ui.label("Music is not available on web.");
-                        }
-                        LeftTab::Rendering => {
-                            crate::panels::rendering::show(ui, &mut self.rendering_data);
-                        }
+                        ui.separator();
+                        crate::panels::predefined_games::show(ui, &mut self.game);
+                    }
+                    LeftTab::Hand => {
+                        crate::panels::hand::show(
+                            ui,
+                            &mut self.game,
+                            &self.rendering_data,
+                            &mut self.interaction,
+                            &mut self.history,
+                        );
+                    }
+                    LeftTab::Controls => {
+                        crate::panels::controls::show(ui, &mut self.game, &mut self.history);
+                    }
+                    LeftTab::Music => {
+                        #[cfg(not(target_arch = "wasm32"))]
+                        crate::panels::music::show(ui, &mut self.music, self.music_player.as_ref());
+                        #[cfg(target_arch = "wasm32")]
+                        ui.label("Music is not available on web.");
+                    }
+                    LeftTab::Rendering => {
+                        crate::panels::rendering::show(ui, &mut self.rendering_data);
                     }
                 });
             });
@@ -418,21 +413,19 @@ impl eframe::App for HexApp {
                     self.right_tab = right_tab;
                     ui.separator();
 
-                    egui::ScrollArea::vertical().show(ui, |ui| {
-                        match self.right_tab {
-                            RightTab::Help => {
-                                crate::panels::help::show(ui);
-                            }
-                            RightTab::Statistics => {
-                                crate::panels::statistics::show(
-                                    ui,
-                                    &self.rendering_data,
-                                    self.game.as_ref().map(|g| &g.statistics),
-                                );
-                            }
-                            RightTab::GameStateJson => {
-                                crate::panels::game_state_json::show(ui, self.game.as_ref());
-                            }
+                    egui::ScrollArea::vertical().show(ui, |ui| match self.right_tab {
+                        RightTab::Help => {
+                            crate::panels::help::show(ui);
+                        }
+                        RightTab::Statistics => {
+                            crate::panels::statistics::show(
+                                ui,
+                                &self.rendering_data,
+                                self.game.as_ref().map(|g| &g.statistics),
+                            );
+                        }
+                        RightTab::GameStateJson => {
+                            crate::panels::game_state_json::show(ui, self.game.as_ref());
                         }
                     });
                 });
@@ -442,7 +435,11 @@ impl eframe::App for HexApp {
         egui::CentralPanel::default().show_inside(ui, |ui| {
             if !right_open {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::TOP), |ui| {
-                    if ui.small_button("☰").on_hover_text("Open side panel").clicked() {
+                    if ui
+                        .small_button("☰")
+                        .on_hover_text("Open side panel")
+                        .clicked()
+                    {
                         self.right_panel_open = true;
                     }
                 });

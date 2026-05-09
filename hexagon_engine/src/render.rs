@@ -258,6 +258,7 @@ pub struct CurrentPlayerPosition {
     Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize, strum::VariantArray,
 )]
 pub enum Color {
+    White,
     Gray,
     Golden,
     Beige,
@@ -276,6 +277,7 @@ pub enum Color {
 impl Color {
     pub fn to_svg_string(self) -> &'static str {
         match self {
+            Color::White => "#FFFFFF",
             Color::Gray => "#808080",
             Color::Golden => "#FFD700",
             Color::Beige => "#F5F5DC",
@@ -294,6 +296,7 @@ impl Color {
 
     fn to_rgb(self) -> (u8, u8, u8) {
         match self {
+            Color::White => (0xFF, 0xFF, 0xFF),
             Color::Gray => (0x80, 0x80, 0x80),
             Color::Golden => (0xFF, 0xD7, 0x00),
             Color::Beige => (0xF5, 0xF5, 0xDC),
@@ -712,35 +715,36 @@ impl RenderTask {
                 .unwrap_or(player_data.unused_color)
                 .to_svg_string();
             if !cpp.is_active
-                && let ConnectorKind::DeadEnd(ConnectorDeadEnd { position }) = &cpp.connector {
-                    let (nx, ny) = edge_inward_normal(&position.edge_sub.edge);
-                    let tip = (px - nx * r * 0.5, py - ny * r * 0.5);
-                    let (dx, dy) = (tip.0 - px, tip.1 - py);
-                    let len = (dx * dx + dy * dy).sqrt();
-                    let (dx, dy) = (dx / len, dy / len);
-                    let (perp_x, perp_y) = (-dy, dx);
-                    let head = r * 0.2;
-                    let data = Data::new()
-                        .move_to((px, py))
-                        .line_to(tip)
-                        .move_to((
-                            tip.0 - dx * head + perp_x * head,
-                            tip.1 - dy * head + perp_y * head,
-                        ))
-                        .line_to(tip)
-                        .line_to((
-                            tip.0 - dx * head - perp_x * head,
-                            tip.1 - dy * head - perp_y * head,
-                        ));
-                    let arrow = Path::new()
-                        .set("fill", "none")
-                        .set("stroke", color)
-                        .set("stroke-width", 3)
-                        .set("stroke-linecap", "round")
-                        .set("d", data);
-                    document = document.add(arrow);
-                    continue;
-                }
+                && let ConnectorKind::DeadEnd(ConnectorDeadEnd { position }) = &cpp.connector
+            {
+                let (nx, ny) = edge_inward_normal(&position.edge_sub.edge);
+                let tip = (px - nx * r * 0.5, py - ny * r * 0.5);
+                let (dx, dy) = (tip.0 - px, tip.1 - py);
+                let len = (dx * dx + dy * dy).sqrt();
+                let (dx, dy) = (dx / len, dy / len);
+                let (perp_x, perp_y) = (-dy, dx);
+                let head = r * 0.2;
+                let data = Data::new()
+                    .move_to((px, py))
+                    .line_to(tip)
+                    .move_to((
+                        tip.0 - dx * head + perp_x * head,
+                        tip.1 - dy * head + perp_y * head,
+                    ))
+                    .line_to(tip)
+                    .line_to((
+                        tip.0 - dx * head - perp_x * head,
+                        tip.1 - dy * head - perp_y * head,
+                    ));
+                let arrow = Path::new()
+                    .set("fill", "none")
+                    .set("stroke", color)
+                    .set("stroke-width", 3)
+                    .set("stroke-linecap", "round")
+                    .set("d", data);
+                document = document.add(arrow);
+                continue;
+            }
             let circle = Circle::new()
                 .set("cx", px)
                 .set("cy", py)
