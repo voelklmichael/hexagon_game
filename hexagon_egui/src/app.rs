@@ -360,6 +360,8 @@ impl eframe::App for HexApp {
                             match result {
                                 Ok(game) => {
                                     self.game = Some(game);
+                                    self.history.undo_stack.clear();
+                                    self.history.redo_stack.clear();
                                     self.left_tab = LeftTab::Hand;
                                 }
                                 Err(e) => eprintln!("Failed to start game: {e}"),
@@ -368,6 +370,8 @@ impl eframe::App for HexApp {
                         ui.separator();
                         if crate::panels::predefined_games::show(ui, &mut self.game, &mut self.rng)
                         {
+                            self.history.undo_stack.clear();
+                            self.history.redo_stack.clear();
                             self.left_tab = LeftTab::Hand;
                         }
                     }
