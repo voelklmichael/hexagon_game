@@ -150,7 +150,10 @@ impl Default for RenderingData {
             hex_stroke: Color::DarkGray,
             highlighted_hex_fill: Color::Moccasin,
             highlighted_hex_stroke: Color::DarkOrange,
+            #[cfg(not(target_arch = "wasm32"))]
             background: Color::Black,
+            #[cfg(target_arch = "wasm32")]
+            background: Color::White,
         }
     }
 }
