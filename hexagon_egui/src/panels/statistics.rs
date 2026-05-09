@@ -21,7 +21,8 @@ pub fn show(ui: &mut egui::Ui, rendering_data: &RenderingData, statistics: Optio
         return;
     };
 
-    let players: Vec<PlayerId> = rendering_data.player_colors.keys().copied().collect();
+    let mut players: Vec<PlayerId> = statistics.total_path_segments.keys().copied().collect();
+    players.sort_unstable_by_key(|id| id.0);
 
     let max_segments = players
         .iter()

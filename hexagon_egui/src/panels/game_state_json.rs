@@ -14,13 +14,11 @@ pub fn show(ui: &mut egui::Ui, game: Option<&GameState>) {
         }
     });
 
-    egui::ScrollArea::vertical()
-        .max_height(300.0)
-        .show(ui, |ui| {
-            ui.add(
-                egui::TextEdit::multiline(&mut json.as_str())
-                    .font(egui::TextStyle::Monospace)
-                    .desired_width(f32::INFINITY),
-            );
-        });
+    egui::ScrollArea::vertical().show(ui, |ui| {
+        ui.add(
+            egui::TextEdit::multiline(&mut json.as_str())
+                .font(egui::TextStyle::Monospace)
+                .desired_width(f32::INFINITY),
+        );
+    });
 }

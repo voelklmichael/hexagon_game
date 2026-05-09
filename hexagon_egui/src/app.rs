@@ -395,7 +395,7 @@ impl eframe::App for HexApp {
                 .show_inside(ui, |ui| {
                     let mut right_tab = self.right_tab;
                     ui.horizontal(|ui| {
-                        if ui.button("✕").clicked() {
+                        if ui.button("➡").clicked() {
                             self.right_panel_open = false;
                         }
                         egui::ComboBox::from_id_salt("right_tab_select")
