@@ -2,7 +2,7 @@ use indexmap::IndexMap;
 
 use hexagon_engine::{
     CollisionMode, Color, GameOptionsDelivery, GameOptionsDiscriminants, GameOptionsStandard,
-    GameState, OuterConnectors, PlayerId, WinningConditionStandard,
+    GameState, OuterConnectors, PlayerId, RandomNumberGenerator, WinningConditionStandard,
 };
 
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Copy, Default)]
@@ -199,6 +199,7 @@ pub struct HexApp {
     #[serde(skip)]
     #[cfg(not(target_arch = "wasm32"))]
     pub music_player: Option<crate::music::MusicPlayer>,
+    pub rng: RandomNumberGenerator,
 }
 
 impl HexApp {
@@ -359,7 +360,7 @@ impl eframe::App for HexApp {
                             }
                         }
                         ui.separator();
-                        crate::panels::predefined_games::show(ui, &mut self.game);
+                        crate::panels::predefined_games::show(ui, &mut self.game, &mut self.rng);
                     }
                     LeftTab::Hand => {
                         crate::panels::hand::show(

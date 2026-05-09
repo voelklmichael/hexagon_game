@@ -1,6 +1,6 @@
 use hexagon_engine::{
     CollisionMode, GameOptionsDelivery, GameOptionsStandard, GameState, OuterConnectors,
-    WinningConditionStandard,
+    RandomNumberGenerator, WinningConditionStandard,
 };
 
 struct Preset {
@@ -15,10 +15,16 @@ enum PresetOptions {
 }
 
 impl PresetOptions {
-    fn start_game(self) -> Result<GameState, String> {
+    fn start_game(self, seed: u32) -> Result<GameState, String> {
         match self {
-            PresetOptions::Standard(o) => o.start_game(),
-            PresetOptions::Delivery(o) => o.start_game(),
+            PresetOptions::Standard(mut o) => {
+                o.random_seed = seed;
+                o.start_game()
+            }
+            PresetOptions::Delivery(mut o) => {
+                o.random_seed = seed;
+                o.start_game()
+            }
         }
     }
 }
@@ -66,22 +72,24 @@ fn presets() -> Vec<Preset> {
     ]
 }
 
-pub fn show(ui: &mut egui::Ui, game: &mut Option<GameState>) {
+pub fn show(ui: &mut egui::Ui, game: &mut Option<GameState>, rng: &mut RandomNumberGenerator) {
     ui.heading("Predefined Games");
 
     egui::Grid::new("predefined_games")
-        .num_columns(3)
+        .num_columns(2)
         .spacing([12.0, 6.0])
         .show(ui, |ui| {
             for preset in presets() {
-                ui.strong(preset.name);
-                ui.label(preset.description);
-                if ui.button("Load").clicked() {
-                    match preset.options.start_game() {
+                if ui.button(preset.name).clicked() {
+                    match preset
+                        .options
+                        .start_game((rng.next().abs() * (u32::MAX as f64).round()) as u32)
+                    {
                         Ok(new_game) => *game = Some(new_game),
                         Err(e) => eprintln!("Failed to load preset: {e}"),
                     }
                 }
+                ui.add(egui::Label::new(preset.description).wrap());
                 ui.end_row();
             }
         });
