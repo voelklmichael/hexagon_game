@@ -215,7 +215,7 @@ impl HexApp {
             app.music.current_track = app.music.current_track.min(crate::music::TRACKS.len() - 1);
             app.music_player = crate::music::MusicPlayer::new(app.music.volume);
             if let Some(player) = &app.music_player {
-                player.play_track(&crate::music::track_path(app.music.current_track));
+                player.play_track(app.music.current_track);
                 if app.music.paused {
                     player.set_paused(true);
                 }
@@ -238,7 +238,7 @@ impl eframe::App for HexApp {
             && player.check_and_reset_finished()
         {
             self.music.current_track = (self.music.current_track + 1) % crate::music::TRACKS.len();
-            player.play_track(&crate::music::track_path(self.music.current_track));
+            player.play_track(self.music.current_track);
         }
 
         if self.interaction.animation_t < 1.0 {

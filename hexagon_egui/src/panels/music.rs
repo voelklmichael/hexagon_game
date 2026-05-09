@@ -1,5 +1,5 @@
 use crate::app::MusicState;
-use crate::music::{TRACKS, track_path};
+use crate::music::TRACKS;
 
 pub fn show(ui: &mut egui::Ui, state: &mut MusicState, player: Option<&crate::music::MusicPlayer>) {
     ui.heading("Music");
@@ -40,7 +40,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut MusicState, player: Option<&crate::mu
         state.current_track = new_track;
         state.paused = false;
         if let Some(p) = player {
-            p.play_track(&track_path(state.current_track));
+            p.play_track(state.current_track);
         }
     }
 
