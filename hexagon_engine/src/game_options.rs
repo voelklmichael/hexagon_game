@@ -126,7 +126,7 @@ impl GameOptionsDelivery {
     }
 
     fn collision_mode(&self) -> CollisionMode {
-        CollisionMode::BothDie
+        CollisionMode::PassThrough
     }
 
     pub(crate) fn check_winning_condition(
