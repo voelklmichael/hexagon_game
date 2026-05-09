@@ -224,7 +224,7 @@ pub fn show(
 
     let h = h();
 
-    // Bounding box in world coordinates
+    // Bounding box in world coordinates, padded so all edges are >= 1.5 R from the rect border
     let (mut min_x, mut min_y) = (f64::MAX, f64::MAX);
     let (mut max_x, mut max_y) = (f64::MIN, f64::MIN);
     for hex in &render_task.hexagons {
@@ -234,13 +234,17 @@ pub fn show(
         max_x = max_x.max(cx + R);
         max_y = max_y.max(cy + h);
     }
+    let pad = R * 0.6;
+    min_x -= pad;
+    min_y -= pad;
+    max_x += pad;
+    max_y += pad;
     let world_w = (max_x - min_x) as f32;
     let world_h = (max_y - min_y) as f32;
 
-    let desired_size = egui::vec2(640.0, 480.0);
-    let (rect, _response) = ui.allocate_exact_size(desired_size, egui::Sense::click());
+    let (rect, _response) = ui.allocate_exact_size(ui.available_size(), egui::Sense::click());
 
-    let scale = (rect.width() / world_w).min(rect.height() / world_h) * 0.85;
+    let scale = (rect.width() / world_w).min(rect.height() / world_h);
     let offset_x = rect.center().x - (min_x as f32 + world_w / 2.0) * scale;
     let offset_y = rect.center().y - (min_y as f32 + world_h / 2.0) * scale;
 

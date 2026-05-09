@@ -5,6 +5,48 @@ use hexagon_engine::{
     GameState, OuterConnectors, PlayerId, WinningConditionStandard,
 };
 
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Copy, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum LeftTab {
+    #[default]
+    Options,
+    Hand,
+    Controls,
+    Music,
+    Rendering,
+}
+
+impl LeftTab {
+    fn label(self) -> &'static str {
+        match self {
+            LeftTab::Options => "Options",
+            LeftTab::Hand => "Player Hand",
+            LeftTab::Controls => "Controls",
+            LeftTab::Music => "Music",
+            LeftTab::Rendering => "Rendering",
+        }
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Copy, Default)]
+#[serde(rename_all = "camelCase")]
+pub enum RightTab {
+    #[default]
+    Help,
+    Statistics,
+    GameStateJson,
+}
+
+impl RightTab {
+    fn label(self) -> &'static str {
+        match self {
+            RightTab::Help => "Help / Tutorial",
+            RightTab::Statistics => "Statistics",
+            RightTab::GameStateJson => "Game State JSON",
+        }
+    }
+}
+
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct OptionsState {
@@ -132,6 +174,9 @@ pub struct HexApp {
     pub interaction: BoardInteraction,
     pub options: OptionsState,
     pub music: MusicState,
+    pub left_tab: LeftTab,
+    pub right_panel_open: bool,
+    pub right_tab: RightTab,
     #[serde(skip)]
     #[cfg(not(target_arch = "wasm32"))]
     pub music_player: Option<crate::music::MusicPlayer>,
@@ -182,22 +227,143 @@ impl eframe::App for HexApp {
             ui.ctx().request_repaint();
         }
 
+        let total_width = ui.available_width();
+        let max_side = total_width * 0.20;
+
+        // Left panel — always visible, burger menu tabs
+        egui::Panel::left("left_panel")
+            .resizable(true)
+            .max_size(max_side)
+            .show_inside(ui, |ui| {
+                // Burger menu header — copy tab to local so closure doesn't hold &mut self
+                let mut left_tab = self.left_tab;
+                ui.horizontal(|ui| {
+                    egui::ComboBox::from_id_salt("left_tab_select")
+                        .selected_text(format!("☰  {}", left_tab.label()))
+                        .show_ui(ui, |ui| {
+                            for tab in [
+                                LeftTab::Options,
+                                LeftTab::Hand,
+                                LeftTab::Controls,
+                                LeftTab::Music,
+                                LeftTab::Rendering,
+                            ] {
+                                ui.selectable_value(&mut left_tab, tab, tab.label());
+                            }
+                        });
+                });
+                self.left_tab = left_tab;
+                ui.separator();
+
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    match self.left_tab {
+                        LeftTab::Options => {
+                            if crate::panels::options::show(ui, &mut self.options) {
+                                let result = match self.options.selected {
+                                    hexagon_engine::GameOptionsDiscriminants::Standard => {
+                                        self.options.standard.clone().start_game()
+                                    }
+                                    hexagon_engine::GameOptionsDiscriminants::Delivery => {
+                                        self.options.delivery.clone().start_game()
+                                    }
+                                };
+                                match result {
+                                    Ok(game) => self.game = Some(game),
+                                    Err(e) => eprintln!("Failed to start game: {e}"),
+                                }
+                            }
+                            ui.separator();
+                            crate::panels::predefined_games::show(ui, &mut self.game);
+                        }
+                        LeftTab::Hand => {
+                            if let Some(game) = &mut self.game {
+                                crate::panels::hand::show(
+                                    ui,
+                                    game,
+                                    &self.rendering_data,
+                                    &mut self.interaction,
+                                    &mut self.history,
+                                );
+                            } else {
+                                ui.label("No game in progress.");
+                            }
+                        }
+                        LeftTab::Controls => {
+                            crate::panels::controls::show(ui, &mut self.game, &mut self.history);
+                        }
+                        LeftTab::Music => {
+                            #[cfg(not(target_arch = "wasm32"))]
+                            crate::panels::music::show(
+                                ui,
+                                &mut self.music,
+                                self.music_player.as_ref(),
+                            );
+                            #[cfg(target_arch = "wasm32")]
+                            ui.label("Music is not available on web.");
+                        }
+                        LeftTab::Rendering => {
+                            crate::panels::rendering::show(ui, &mut self.rendering_data);
+                        }
+                    }
+                });
+            });
+
+        // Right panel — collapsible, burger menu tabs
+        let right_open = self.right_panel_open;
+        if right_open {
+            egui::Panel::right("right_panel")
+                .resizable(true)
+                .max_size(max_side)
+                .show_inside(ui, |ui| {
+                    let mut right_tab = self.right_tab;
+                    ui.horizontal(|ui| {
+                        if ui.button("✕").clicked() {
+                            self.right_panel_open = false;
+                        }
+                        egui::ComboBox::from_id_salt("right_tab_select")
+                            .selected_text(format!("☰  {}", right_tab.label()))
+                            .show_ui(ui, |ui| {
+                                for tab in [
+                                    RightTab::Help,
+                                    RightTab::Statistics,
+                                    RightTab::GameStateJson,
+                                ] {
+                                    ui.selectable_value(&mut right_tab, tab, tab.label());
+                                }
+                            });
+                    });
+                    self.right_tab = right_tab;
+                    ui.separator();
+
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        match self.right_tab {
+                            RightTab::Help => {
+                                crate::panels::help::show(ui);
+                            }
+                            RightTab::Statistics => {
+                                crate::panels::statistics::show(
+                                    ui,
+                                    &self.rendering_data,
+                                    self.game.as_ref().map(|g| &g.statistics),
+                                );
+                            }
+                            RightTab::GameStateJson => {
+                                crate::panels::game_state_json::show(ui, self.game.as_ref());
+                            }
+                        }
+                    });
+                });
+        }
+
+        // Centre — game board, fills all remaining space
         egui::CentralPanel::default().show_inside(ui, |ui| {
-            if crate::panels::options::show(ui, &mut self.options) {
-                let result = match self.options.selected {
-                    hexagon_engine::GameOptionsDiscriminants::Standard => {
-                        self.options.standard.clone().start_game()
+            if !right_open {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::TOP), |ui| {
+                    if ui.small_button("☰").on_hover_text("Open side panel").clicked() {
+                        self.right_panel_open = true;
                     }
-                    hexagon_engine::GameOptionsDiscriminants::Delivery => {
-                        self.options.delivery.clone().start_game()
-                    }
-                };
-                match result {
-                    Ok(game) => self.game = Some(game),
-                    Err(e) => eprintln!("Failed to start game: {e}"),
-                }
+                });
             }
-            ui.separator();
             if let Some(game) = &mut self.game {
                 crate::panels::game_board::show(
                     ui,
@@ -205,34 +371,7 @@ impl eframe::App for HexApp {
                     &self.rendering_data,
                     &mut self.interaction,
                 );
-                ui.separator();
-                crate::panels::hand::show(
-                    ui,
-                    game,
-                    &self.rendering_data,
-                    &mut self.interaction,
-                    &mut self.history,
-                );
-                ui.separator();
             }
-            crate::panels::predefined_games::show(ui, &mut self.game);
-            ui.separator();
-            crate::panels::controls::show(ui, &mut self.game, &mut self.history);
-            ui.separator();
-            crate::panels::game_state_json::show(ui, self.game.as_ref());
-            ui.separator();
-            crate::panels::rendering::show(ui, &mut self.rendering_data);
-            ui.separator();
-            crate::panels::statistics::show(
-                ui,
-                &self.rendering_data,
-                self.game.as_ref().map(|g| &g.statistics),
-            );
-            ui.separator();
-            #[cfg(not(target_arch = "wasm32"))]
-            crate::panels::music::show(ui, &mut self.music, self.music_player.as_ref());
-            ui.separator();
-            crate::panels::help::show(ui);
         });
     }
 }
