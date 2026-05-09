@@ -13,7 +13,7 @@ impl RandomNumberGenerator {
         RandomNumberGenerator { seed, count: 0 }
     }
 
-    pub fn next(&mut self) -> f64 {
+    pub fn next_f64(&mut self) -> f64 {
         let total = self.seed.wrapping_add(self.count);
         self.count = self.count.wrapping_add(1);
         let s = total.wrapping_add(0x6D2B79F5);
@@ -29,7 +29,7 @@ impl RandomNumberGenerator {
         }
         let length_before = list.len();
         loop {
-            let random = self.next(); // this is a number between 0 and 1
+            let random = self.next_f64(); // this is a number between 0 and 1
             let index = (random * length_before as f64) as usize;
             if index < length_before {
                 return Some(list.remove(index));
@@ -48,7 +48,7 @@ mod tests {
         let count = 1_000_000;
         let expectation = (count as f32) / bins.len() as f32;
         for _ in 0..count {
-            bins[(rng.next() * 10.) as usize] += 1;
+            bins[(rng.next_f64() * 10.) as usize] += 1;
         }
         // dbg!(bins);
         bins.iter()

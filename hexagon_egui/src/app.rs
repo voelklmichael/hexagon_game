@@ -249,7 +249,7 @@ impl eframe::App for HexApp {
 
         // Replay management: start 1 s after game ends (timer begins immediately,
         // in parallel with the finishing animation), loop with 3 s pause between iterations.
-        let game_done = self.game.as_ref().map_or(false, |g| g.result.is_some());
+        let game_done = self.game.as_ref().is_some_and(|g| g.result.is_some());
         if game_done {
             if self.replay.is_none() {
                 let states: Vec<GameState> = self

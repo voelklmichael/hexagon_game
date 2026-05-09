@@ -206,7 +206,7 @@ pub fn show(
         .flatten();
 
     let game = {
-        if let Some(_) = selected_hexagon {
+        if selected_hexagon.is_some() {
             let mut game = game.clone();
             game.play_tile(interaction.selected_tile.unwrap());
             game

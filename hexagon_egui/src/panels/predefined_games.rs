@@ -88,7 +88,7 @@ pub fn show(
                 if ui.button(preset.name).clicked() {
                     match preset
                         .options
-                        .start_game((rng.next().abs() * (u32::MAX as f64).round()) as u32)
+                        .start_game((rng.next_f64().abs() * (u32::MAX as f64).round()) as u32)
                     {
                         Ok(new_game) => {
                             *game = Some(new_game);
