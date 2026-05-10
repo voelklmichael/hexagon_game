@@ -158,7 +158,7 @@ impl GameState {
                         .connectors
                         .iter()
                         .find(|c| c.id == p.current_position.0)
-                        .map_or(false, |c| matches!(c.kind, ConnectorKind::DeadEnd(_)));
+                        .is_some_and(|c| matches!(c.kind, ConnectorKind::DeadEnd(_)));
                     let start_id = p
                         .history
                         .first()
