@@ -362,7 +362,7 @@ pub fn show(
                         head,
                         stroke,
                     );
-                } else if !uc.is_connected_to_player_target.is_empty() {
+                } else if !uc.is_player_target.is_empty() {
                     draw_arrow(
                         &painter,
                         to_screen(px, py),

@@ -133,6 +133,12 @@ fn compute_used_connectors(
             start_connector_map.entry(start.id).or_default().push(p.id);
         }
     }
+    let mut target_connector_map: HashMap<ConnectorId, Vec<PlayerId>> = HashMap::new();
+    for p in players.iter() {
+        if let Some(target) = p.target {
+            target_connector_map.entry(target).or_default().push(p.id);
+        }
+    }
     let mut used_by_map: HashMap<ConnectorId, Vec<PlayerId>> = HashMap::new();
     let mut preview_used_by_map: HashMap<ConnectorId, Vec<PlayerId>> = HashMap::new();
     for player in players.iter() {
@@ -169,6 +175,7 @@ fn compute_used_connectors(
                 is_connected_to_player_start: comp_player_start[ci].clone(),
                 is_connected_to_player_target: comp_player_target[ci].clone(),
                 is_player_start: start_connector_map.get(&c.id).cloned().unwrap_or_default(),
+                is_player_target: target_connector_map.get(&c.id).cloned().unwrap_or_default(),
             }
         })
         .collect()
@@ -243,6 +250,7 @@ pub struct UsedConnector {
     pub is_connected_to_player_start: Vec<PlayerId>,
     pub is_connected_to_player_target: Vec<PlayerId>,
     pub is_player_start: Vec<PlayerId>,
+    pub is_player_target: Vec<PlayerId>,
 }
 
 pub struct CurrentPlayerPosition {
@@ -548,6 +556,7 @@ impl RenderTask {
                     is_connected_to_player_start,
                     is_connected_to_player_target,
                     is_player_start,
+                    is_player_target: _,
                 } = connector;
 
                 let player_color = |pid: &PlayerId| -> Color {
@@ -816,6 +825,7 @@ mod tests {
             is_connected_to_player_start: is_connected_to_player_start.into_iter().collect(),
             is_connected_to_player_target: is_connected_to_player_target.into_iter().collect(),
             is_player_start: is_player_start.into_iter().collect(),
+            is_player_target: Default::default(),
         }
     }
 
@@ -1146,6 +1156,7 @@ mod tests {
                             is_connected_to_player_start: Default::default(),
                             is_connected_to_player_target: Default::default(),
                             is_player_start: Default::default(),
+                            is_player_target: Default::default(),
                         }
                     })
                     .collect();
