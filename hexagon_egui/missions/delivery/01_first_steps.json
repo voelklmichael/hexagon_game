@@ -1,4 +1,5 @@
 {
+  "mission_id": "delivery_01_first_steps",
   "name": "First Steps",
   "description": "Reach your target on a small board with no NPCs. A gentle introduction to delivery mode.",
   "board_radius": 2,

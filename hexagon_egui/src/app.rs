@@ -1,4 +1,5 @@
 use indexmap::IndexMap;
+use std::collections::HashSet;
 
 use hexagon_engine::{
     CollisionMode, Color, GameOptionsDelivery, GameOptionsDiscriminants, GameOptionsStandard,
@@ -207,7 +208,7 @@ pub struct HexApp {
     #[serde(skip)]
     pub music_player: Option<crate::music::MusicPlayer>,
     pub rng: RandomNumberGenerator,
-    pub missions_won: Vec<bool>,
+    pub missions_won: HashSet<String>,
     #[serde(skip)]
     pub current_mission: Option<usize>,
 }

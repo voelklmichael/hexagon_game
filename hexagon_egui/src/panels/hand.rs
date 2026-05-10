@@ -116,7 +116,7 @@ pub fn show(
     interaction: &mut BoardInteraction,
     history: &mut GameHistory,
     current_mission: &mut Option<usize>,
-    missions_won: &mut Vec<bool>,
+    missions_won: &mut std::collections::HashSet<String>,
 ) {
     ui.heading("Player Hand");
 
@@ -183,10 +183,9 @@ pub fn show(
             if ui.button("Start next mission").clicked() {
                 if is_win {
                     let cur = current_mission.unwrap();
-                    if missions_won.len() <= cur {
-                        missions_won.resize(cur + 1, false);
+                    if let Some(id) = crate::panels::missions::mission_id(cur) {
+                        missions_won.insert(id.to_owned());
                     }
-                    missions_won[cur] = true;
                 }
                 history.undo_stack.clear();
                 history.redo_stack.clear();

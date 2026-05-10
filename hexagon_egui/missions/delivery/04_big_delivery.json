@@ -1,4 +1,5 @@
 {
+  "mission_id": "delivery_04_big_delivery",
   "name": "Two couriers",
   "description": "A larger board with two NPC couriers.",
   "board_radius": 3,

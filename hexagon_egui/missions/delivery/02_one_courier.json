@@ -1,4 +1,5 @@
 {
+  "mission_id": "delivery_02_one_courier",
   "name": "Help another courier",
   "description": "Guide a courier to their target",
   "board_radius": 2,
