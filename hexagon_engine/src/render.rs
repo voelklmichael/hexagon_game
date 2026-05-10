@@ -558,7 +558,7 @@ impl RenderTask {
                     is_connected_to_player_start,
                     is_connected_to_player_target,
                     is_player_start,
-                    is_player_target: _,
+                    is_player_target,
                 } = connector;
 
                 let player_color = |pid: &PlayerId| -> Color {
@@ -637,7 +637,7 @@ impl RenderTask {
                         let data = if !is_player_start.is_empty() {
                             // arrow from outside pointing toward the edge — player enters here
                             make_arrow((px - nx * r * 0.5, py - ny * r * 0.5), (px, py))
-                        } else if !is_connected_to_player_target.is_empty() {
+                        } else if !is_player_target.is_empty() {
                             // arrow pointing outward (away from hex) — player exits here
                             make_arrow((px, py), (px - nx * r * 0.5, py - ny * r * 0.5))
                         } else {

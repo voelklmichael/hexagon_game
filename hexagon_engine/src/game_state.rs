@@ -150,6 +150,21 @@ impl GameState {
             let possible_paths = self
                 .players
                 .iter()
+                .filter(|p| {
+                    // Skip players who have already terminated at a non-start dead-end.
+                    let at_dead_end = self
+                        .board
+                        .connectors
+                        .iter()
+                        .find(|c| c.id == p.current_position.0)
+                        .map_or(false, |c| matches!(c.kind, ConnectorKind::DeadEnd(_)));
+                    let start_id = p
+                        .history
+                        .first()
+                        .and_then(|t| t.connectors.first())
+                        .map(|hc| hc.id);
+                    !at_dead_end || start_id == Some(p.current_position.0)
+                })
                 .map(|p| {
                     (
                         p.id,
