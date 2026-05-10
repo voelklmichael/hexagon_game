@@ -1,0 +1,10 @@
+{
+  "name": "Big Delivery",
+  "description": "A larger board with three NPC couriers. Navigate the maze and reach your target first.",
+  "board_radius": 3,
+  "outer_connectors": "ReducedDeathEnds",
+  "random_seed": 4321,
+  "npc_count": 3,
+  "player_has_target": true,
+  "hand_size": 3
+}

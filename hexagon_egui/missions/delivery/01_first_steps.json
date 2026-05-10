@@ -1,0 +1,10 @@
+{
+  "name": "First Steps",
+  "description": "Reach your target on a small board with no NPCs. A gentle introduction to delivery mode.",
+  "board_radius": 2,
+  "outer_connectors": "ReducedDeathEnds",
+  "random_seed": 1001,
+  "npc_count": 0,
+  "player_has_target": true,
+  "hand_size": 3
+}

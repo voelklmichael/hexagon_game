@@ -9,6 +9,7 @@ use hexagon_engine::{
 #[serde(rename_all = "camelCase")]
 pub enum LeftTab {
     #[default]
+    Missions,
     Options,
     Hand,
     Controls,
@@ -19,6 +20,7 @@ pub enum LeftTab {
 impl LeftTab {
     fn label(self) -> &'static str {
         match self {
+            LeftTab::Missions => "Missions",
             LeftTab::Options => "Options",
             LeftTab::Hand => "Player Hand",
             LeftTab::Controls => "Controls",
@@ -205,6 +207,9 @@ pub struct HexApp {
     #[serde(skip)]
     pub music_player: Option<crate::music::MusicPlayer>,
     pub rng: RandomNumberGenerator,
+    pub missions_won: Vec<bool>,
+    #[serde(skip)]
+    pub current_mission: Option<usize>,
 }
 
 impl HexApp {
@@ -331,6 +336,7 @@ impl eframe::App for HexApp {
                         .selected_text(format!("☰  {}", left_tab.label()))
                         .show_ui(ui, |ui| {
                             for tab in [
+                                LeftTab::Missions,
                                 LeftTab::Options,
                                 LeftTab::Hand,
                                 LeftTab::Controls,
@@ -345,6 +351,16 @@ impl eframe::App for HexApp {
                 ui.separator();
 
                 egui::ScrollArea::vertical().show(ui, |ui| match self.left_tab {
+                    LeftTab::Missions => {
+                        if let Some(idx) =
+                            crate::panels::missions::show(ui, &mut self.game, &self.missions_won)
+                        {
+                            self.history.undo_stack.clear();
+                            self.history.redo_stack.clear();
+                            self.current_mission = Some(idx);
+                            self.left_tab = LeftTab::Hand;
+                        }
+                    }
                     LeftTab::Options => {
                         if crate::panels::options::show(ui, &mut self.options) {
                             let result = match self.options.selected {
@@ -360,6 +376,7 @@ impl eframe::App for HexApp {
                                     self.game = Some(game);
                                     self.history.undo_stack.clear();
                                     self.history.redo_stack.clear();
+                                    self.current_mission = None;
                                     self.left_tab = LeftTab::Hand;
                                 }
                                 Err(e) => eprintln!("Failed to start game: {e}"),
@@ -370,6 +387,7 @@ impl eframe::App for HexApp {
                         {
                             self.history.undo_stack.clear();
                             self.history.redo_stack.clear();
+                            self.current_mission = None;
                             self.left_tab = LeftTab::Hand;
                         }
                     }
@@ -380,6 +398,8 @@ impl eframe::App for HexApp {
                             &self.rendering_data,
                             &mut self.interaction,
                             &mut self.history,
+                            &mut self.current_mission,
+                            &mut self.missions_won,
                         );
                     }
                     LeftTab::Controls => {

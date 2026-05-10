@@ -1,0 +1,10 @@
+{
+  "name": "Help another courier",
+  "description": "Guide a courier to their target",
+  "board_radius": 2,
+  "outer_connectors": "ReducedDeathEnds",
+  "random_seed": 0,
+  "npc_count": 1,
+  "player_has_target": false,
+  "hand_size": 3
+}

@@ -115,6 +115,8 @@ pub fn show(
     rendering_data: &RenderingData,
     interaction: &mut BoardInteraction,
     history: &mut GameHistory,
+    current_mission: &mut Option<usize>,
+    missions_won: &mut Vec<bool>,
 ) {
     ui.heading("Player Hand");
 
@@ -173,19 +175,45 @@ pub fn show(
         ui.label(egui::RichText::new(text).strong().color(color).heading());
         ui.separator();
 
-        if ui.button("Start new game").clicked() {
-            let mut new_opts = opts.clone();
-            new_opts.randomize_seed();
-            match new_opts.start_game() {
-                Ok(g) => {
-                    history.undo_stack.clear();
-                    history.redo_stack.clear();
-                    *game = Some(g);
+        let next_mission = current_mission
+            .map(|idx| idx + 1)
+            .filter(|&next| next < crate::panels::missions::mission_count());
+
+        if let Some(next_idx) = next_mission {
+            if ui.button("Start next mission").clicked() {
+                if is_win {
+                    let cur = current_mission.unwrap();
+                    if missions_won.len() <= cur {
+                        missions_won.resize(cur + 1, false);
+                    }
+                    missions_won[cur] = true;
                 }
-                Err(e) => eprintln!("New game failed: {e}"),
+                history.undo_stack.clear();
+                history.redo_stack.clear();
+                crate::panels::missions::start_mission(next_idx, game);
+                *current_mission = Some(next_idx);
+            }
+        } else {
+            if ui.button("Start new game").clicked() {
+                let mut new_opts = opts.clone();
+                new_opts.randomize_seed();
+                match new_opts.start_game() {
+                    Ok(g) => {
+                        history.undo_stack.clear();
+                        history.redo_stack.clear();
+                        *game = Some(g);
+                        *current_mission = None;
+                    }
+                    Err(e) => eprintln!("New game failed: {e}"),
+                }
             }
         }
-        if ui.button("Restart this game").clicked() {
+        let restart_label = if current_mission.is_some() {
+            "Restart this mission"
+        } else {
+            "Restart this game"
+        };
+        if ui.button(restart_label).clicked() {
             match opts.start_game() {
                 Ok(g) => {
                     history.undo_stack.clear();
@@ -260,11 +288,11 @@ pub fn show(
         let used_h = ui.cursor().top() - ui.clip_rect().top();
         let remaining_h = (ui.clip_rect().height() - used_h).max(1.0);
         let r_from_h = if hand_len > 0 {
-            (remaining_h - hand_len as f32 * sep_h) / (hand_len as f32 * 2.4)
+            (remaining_h - hand_len as f32 * sep_h) / (hand_len as f32 * 2.5)
         } else {
             f32::MAX
         };
-        let r_from_w = available_w * 0.9 / 2.4;
+        let r_from_w = available_w * 0.9 / 2.5;
         r_from_h.min(r_from_w).max(10.0) as f64
     };
 
@@ -273,6 +301,10 @@ pub fn show(
             for i in 0..hand_len {
                 let connectors = connectors_per_tile.get(i).map(Vec::as_slice).unwrap_or(&[]);
                 let is_selected = selected_tile == Some(i);
+
+                if i > 0 {
+                    ui.separator();
+                }
 
                 ui.horizontal(|ui| {
                     let resp = draw_tile_preview(
@@ -333,8 +365,6 @@ pub fn show(
                         }
                     });
                 });
-
-                ui.separator();
             }
         });
     });

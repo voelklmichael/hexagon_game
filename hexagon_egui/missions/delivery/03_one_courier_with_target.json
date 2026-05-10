@@ -1,0 +1,10 @@
+{
+  "name": "One Courier, Another Target",
+  "description": "Guide the courier to their target, but get to your own as well",
+  "board_radius": 2,
+  "outer_connectors": "ReducedDeathEnds",
+  "random_seed": 3,
+  "npc_count": 1,
+  "player_has_target": true,
+  "hand_size": 3
+}
