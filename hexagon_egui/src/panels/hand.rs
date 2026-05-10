@@ -134,7 +134,11 @@ pub fn show(
                         .iter()
                         .map(|p| format!("Player {}", p.0 + 1))
                         .collect();
-                    (format!("Winner: {}", names.join(", ")), egui::Color32::GOLD, true)
+                    (
+                        format!("Winner: {}", names.join(", ")),
+                        egui::Color32::GOLD,
+                        true,
+                    )
                 }
                 GameResult::Draw(players) => {
                     let names: Vec<String> = players
@@ -147,7 +151,11 @@ pub fn show(
                         false,
                     )
                 }
-                GameResult::Loss => ("Loss".to_string(), egui::Color32::from_rgb(200, 60, 60), false),
+                GameResult::Loss => (
+                    "Loss".to_string(),
+                    egui::Color32::from_rgb(200, 60, 60),
+                    false,
+                ),
             };
             let opts = g.options.clone();
             let saved = g.clone();
@@ -200,7 +208,7 @@ pub fn show(
             let rect = ui.max_rect();
             let dt = ui.ctx().input(|i| i.stable_dt).min(0.05);
             interaction.confetti.activate();
-            interaction.confetti.update_and_draw(dt, rect, &ui.painter());
+            interaction.confetti.update_and_draw(dt, rect, ui.painter());
             if interaction.confetti.is_active() {
                 ui.ctx().request_repaint();
             }

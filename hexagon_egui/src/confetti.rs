@@ -78,8 +78,7 @@ impl ConfettiState {
                 self.spawn_timer = SPAWN_INTERVAL;
                 for _ in 0..PARTICLES_PER_BURST {
                     let x = rect.left() + self.next_f32() * rect.width();
-                    let color_idx =
-                        (self.next_f32() * COLORS.len() as f32) as usize % COLORS.len();
+                    let color_idx = (self.next_f32() * COLORS.len() as f32) as usize % COLORS.len();
                     let w = 5.0 + self.next_f32() * 7.0;
                     let h = 3.0 + self.next_f32() * 5.0;
                     let vx = (self.next_f32() - 0.5) * 70.0;
@@ -119,7 +118,10 @@ impl ConfettiState {
             let hw = p.w / 2.0;
             let hh = p.h / 2.0;
             let corners: [Pos2; 4] = [
-                pos2(p.x + (-hw) * cos - (-hh) * sin, p.y + (-hw) * sin + (-hh) * cos),
+                pos2(
+                    p.x + (-hw) * cos - (-hh) * sin,
+                    p.y + (-hw) * sin + (-hh) * cos,
+                ),
                 pos2(p.x + hw * cos - (-hh) * sin, p.y + hw * sin + (-hh) * cos),
                 pos2(p.x + hw * cos - hh * sin, p.y + hw * sin + hh * cos),
                 pos2(p.x + (-hw) * cos - hh * sin, p.y + (-hw) * sin + hh * cos),
