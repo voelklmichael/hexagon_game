@@ -1,19 +1,25 @@
 [target.x86_64-unknown-linux-gnu]
 pre-build = [
     "apt-get update",
-    "apt-get install -y libasound2-dev",
+    "apt-get install -y libasound2-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev",
 ]
 
 [target.arm-unknown-linux-gnueabihf]
 pre-build = [
     "dpkg --add-architecture armhf",
     "apt-get update",
-    "apt-get install -y libasound2-dev:armhf",
+    "apt-get install -y libasound2-dev:armhf libxcb-render0-dev:armhf libxcb-shape0-dev:armhf libxcb-xfixes0-dev:armhf libxkbcommon-dev:armhf libssl-dev:armhf",
 ]
+
+[target.arm-unknown-linux-gnueabihf.env]
+set = { "PKG_CONFIG_LIBDIR_arm_unknown_linux_gnueabihf" = "/usr/lib/arm-linux-gnueabihf/pkgconfig" }
 
 [target.armv7-unknown-linux-gnueabihf]
 pre-build = [
     "dpkg --add-architecture armhf",
     "apt-get update",
-    "apt-get install -y libasound2-dev:armhf",
+    "apt-get install -y libasound2-dev:armhf libxcb-render0-dev:armhf libxcb-shape0-dev:armhf libxcb-xfixes0-dev:armhf libxkbcommon-dev:armhf libssl-dev:armhf",
 ]
+
+[target.armv7-unknown-linux-gnueabihf.env]
+set = { "PKG_CONFIG_LIBDIR_armv7_unknown_linux_gnueabihf" = "/usr/lib/arm-linux-gnueabihf/pkgconfig" }
