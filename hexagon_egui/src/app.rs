@@ -105,6 +105,8 @@ pub struct BoardInteraction {
     pub selected_tile: Option<usize>,
     #[serde(skip)]
     pub animation_t: f32,
+    #[serde(skip)]
+    pub confetti: crate::confetti::ConfettiState,
 }
 
 impl Default for BoardInteraction {
@@ -112,6 +114,7 @@ impl Default for BoardInteraction {
         Self {
             selected_tile: None,
             animation_t: 0.0,
+            confetti: crate::confetti::ConfettiState::default(),
         }
     }
 }

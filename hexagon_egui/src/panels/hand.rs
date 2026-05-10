@@ -125,16 +125,16 @@ pub fn show(
 
     // Game-over section: collect all data from a scoped borrow so the borrow
     // is released before we write back to *game.
-    let game_over_data: Option<(String, egui::Color32, _, _, bool)> = {
+    let game_over_data: Option<(String, egui::Color32, _, _, bool, bool)> = {
         let g = game.as_ref().unwrap();
         g.result.as_ref().map(|result| {
-            let (text, color) = match result {
+            let (text, color, is_win) = match result {
                 GameResult::Win(winners) => {
                     let names: Vec<String> = winners
                         .iter()
                         .map(|p| format!("Player {}", p.0 + 1))
                         .collect();
-                    (format!("Winner: {}", names.join(", ")), egui::Color32::GOLD)
+                    (format!("Winner: {}", names.join(", ")), egui::Color32::GOLD, true)
                 }
                 GameResult::Draw(players) => {
                     let names: Vec<String> = players
@@ -144,18 +144,19 @@ pub fn show(
                     (
                         format!("Draw: {}", names.join(", ")),
                         egui::Color32::from_rgb(180, 180, 180),
+                        false,
                     )
                 }
-                GameResult::Loss => ("Loss".to_string(), egui::Color32::from_rgb(200, 60, 60)),
+                GameResult::Loss => ("Loss".to_string(), egui::Color32::from_rgb(200, 60, 60), false),
             };
             let opts = g.options.clone();
             let saved = g.clone();
             let can_undo = !history.undo_stack.is_empty();
-            (text, color, opts, saved, can_undo)
+            (text, color, opts, saved, can_undo, is_win)
         })
     }; // immutable borrow of *game released here
 
-    if let Some((text, color, opts, saved, can_undo)) = game_over_data {
+    if let Some((text, color, opts, saved, can_undo, is_win)) = game_over_data {
         ui.label(
             egui::RichText::new("The game is finished")
                 .strong()
@@ -193,6 +194,16 @@ pub fn show(
         {
             history.redo_stack.push(saved);
             *game = Some(prev);
+        }
+
+        if is_win {
+            let rect = ui.max_rect();
+            let dt = ui.ctx().input(|i| i.stable_dt).min(0.05);
+            interaction.confetti.activate();
+            interaction.confetti.update_and_draw(dt, rect, &ui.painter());
+            if interaction.confetti.is_active() {
+                ui.ctx().request_repaint();
+            }
         }
         return;
     }
