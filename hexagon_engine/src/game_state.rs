@@ -150,8 +150,9 @@ impl GameState {
             let possible_paths = self
                 .players
                 .iter()
-                .filter(|p| {
-                    // Skip players who have already terminated at a non-start dead-end.
+                .map(|p| {
+                    // Players already terminated at a non-start dead-end get an empty path so
+                    // they stay put and receive an empty history entry (no animation).
                     let at_dead_end = self
                         .board
                         .connectors
@@ -163,13 +164,12 @@ impl GameState {
                         .first()
                         .and_then(|t| t.connectors.first())
                         .map(|hc| hc.id);
-                    !at_dead_end || start_id == Some(p.current_position.0)
-                })
-                .map(|p| {
-                    (
-                        p.id,
-                        self.board.compute_path_starting_from(&p.current_position),
-                    )
+                    let path = if !at_dead_end || start_id == Some(p.current_position.0) {
+                        self.board.compute_path_starting_from(&p.current_position)
+                    } else {
+                        vec![]
+                    };
+                    (p.id, path)
                 })
                 .collect::<Vec<_>>();
             // check if any two path overlap
