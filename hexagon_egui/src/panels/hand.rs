@@ -120,6 +120,31 @@ pub fn show(
 ) {
     ui.heading("Player Hand");
 
+    let can_undo = !history.undo_stack.is_empty();
+    let can_redo = !history.redo_stack.is_empty();
+    ui.horizontal(|ui| {
+        if ui
+            .add_enabled(can_undo, egui::Button::new("↩ Undo"))
+            .clicked()
+            && let Some(prev) = history.undo_stack.pop()
+        {
+            if let Some(current) = game.take() {
+                history.redo_stack.push(current);
+            }
+            *game = Some(prev);
+        }
+        if ui
+            .add_enabled(can_redo, egui::Button::new("↪ Redo"))
+            .clicked()
+            && let Some(next) = history.redo_stack.pop()
+        {
+            if let Some(current) = game.take() {
+                history.undo_stack.push(current);
+            }
+            *game = Some(next);
+        }
+    });
+
     if game.is_none() {
         ui.label("No game in progress.");
         return;
