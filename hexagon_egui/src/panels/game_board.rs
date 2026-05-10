@@ -445,6 +445,7 @@ pub fn show(
         let pos = to_screen(px, py);
 
         if !cpp.is_active
+            && !cpp.is_at_start
             && let ConnectorKind::DeadEnd(ConnectorDeadEnd { position }) = &cpp.connector
         {
             let (nx, ny) = edge_inward_normal(&position.edge_sub.edge);

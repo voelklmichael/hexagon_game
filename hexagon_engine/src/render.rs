@@ -239,6 +239,7 @@ fn compute_player_position(animation: f32, board: &Board, p: &Player) -> Current
         connector,
         step,
         is_active: p.is_active,
+        is_at_start: p.history.iter().skip(1).all(|x| x.connectors.is_empty()),
     }
 }
 
@@ -260,6 +261,7 @@ pub struct CurrentPlayerPosition {
     // it is used for animations
     pub step: f32,
     pub is_active: bool,
+    pub is_at_start: bool,
 }
 
 #[derive(
@@ -1095,6 +1097,7 @@ mod tests {
                     connector: make_connector(),
                     step: i as f32 / 9.0,
                     is_active: true,
+                    is_at_start: true,
                 })
                 .collect(),
         };
