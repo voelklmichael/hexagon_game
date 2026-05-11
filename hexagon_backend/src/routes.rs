@@ -16,6 +16,7 @@ pub struct AppState {
 
 pub fn router(state: AppState) -> Router {
     Router::new()
+        .route("/healthz", get(healthz))
         .route("/highscore", post(upsert_highscore))
         .route(
             "/highscore/overall/{mission_id}",
@@ -27,6 +28,10 @@ pub fn router(state: AppState) -> Router {
         )
         .fallback(fallback)
         .with_state(state)
+}
+
+async fn healthz() -> StatusCode {
+    StatusCode::NO_CONTENT
 }
 
 async fn upsert_highscore(
