@@ -1,5 +1,5 @@
 [workspace]
-members = ["hexagon_engine", "hexagon_egui"]
+members = ["hexagon_engine", "hexagon_egui", "hexagon_db"]
 resolver = "3"
 
 [workspace.dependencies]
@@ -10,6 +10,7 @@ strum = { version = "0.28", features = ["derive"] }
 svg = "*"
 tracing = "0.1.44"
 indexmap = { version = "2", features = ["serde"] }
+secrecy = { version = "0.10", features = ["serde"] }
 
 [profile.release]
 opt-level = 2 # fast and small wasm
