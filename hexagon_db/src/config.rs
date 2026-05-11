@@ -3,29 +3,24 @@ use sqlx::postgres::PgPoolOptions;
 
 use super::DB;
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub struct DBConfig {
-    pub host: String,
-    pub port: u16,
-    pub user: String,
-    #[serde(serialize_with = "redact")]
-    pub password: SecretString,
-    pub dbname: String,
-}
-
-fn redact<S: serde::Serializer>(_: &SecretString, s: S) -> Result<S::Ok, S::Error> {
-    s.serialize_str("[REDACTED]")
+    pub db_host: String,
+    pub db_port: u16,
+    pub db_user: String,
+    pub db_password: SecretString,
+    pub db_name: String,
 }
 
 impl DBConfig {
     pub async fn connect(&self) -> Result<DB, sqlx::Error> {
         let url = format!(
             "postgres://{}:{}@{}:{}/{}",
-            self.user,
-            self.password.expose_secret(),
-            self.host,
-            self.port,
-            self.dbname,
+            self.db_user,
+            urlencoding::encode(&self.db_password.expose_secret()),
+            self.db_host,
+            self.db_port,
+            self.db_name,
         );
         let pool = PgPoolOptions::new().connect(&url).await?;
         sqlx::migrate!("./migrations").run(&pool).await?;

@@ -4,14 +4,20 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+figment.workspace = true
 sqlx = { version = "0.8", features = [
     "runtime-tokio",
     "postgres",
     "uuid",
     "json",
     "migrate",
+    "tls-rustls",
 ] }
 uuid = { version = "1", features = ["v4", "serde"] }
 serde.workspace = true
 serde_json.workspace = true
 secrecy.workspace = true
+urlencoding.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
