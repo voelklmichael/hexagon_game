@@ -13,11 +13,11 @@ sqlx = { version = "0.8", features = [
     "migrate",
     "tls-rustls",
 ] }
-uuid = { version = "1", features = ["v4", "serde"] }
 serde.workspace = true
 serde_json.workspace = true
 secrecy.workspace = true
 urlencoding.workspace = true
+uuid.workspace = true
 
 [dev-dependencies]
 tokio.workspace = true

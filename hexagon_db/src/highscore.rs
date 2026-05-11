@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct DBHighscore {
     pub user_id: Uuid,
     pub mission_id: Uuid,
@@ -8,7 +8,7 @@ pub struct DBHighscore {
     pub total_distance: i64,
 }
 
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Debug, serde::Serialize, sqlx::FromRow)]
 pub struct DBHighscorePeak {
     pub max_velocity: i64,
     pub total_distance: i64,
