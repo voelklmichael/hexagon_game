@@ -13,6 +13,15 @@ pub struct DBConfig {
 }
 
 impl DBConfig {
+    pub fn local_docker() -> Self {
+        Self {
+            db_host: "localhost".into(),
+            db_port: 5432,
+            db_user: "postgres".into(),
+            db_password: "postgres".to_string().into(),
+            db_name: "postgres".into(),
+        }
+    }
     pub async fn connect(&self) -> Result<DB, sqlx::Error> {
         let url = format!(
             "postgres://{}:{}@{}:{}/{}",

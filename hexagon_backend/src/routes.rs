@@ -26,6 +26,7 @@ pub fn router(state: AppState) -> Router {
             "/highscore/user/{user_id}/{mission_id}",
             get(fetch_highscore_user),
         )
+        .nest("/user_login", crate::user::login_router(state.clone()))
         .fallback(fallback)
         .with_state(state)
 }

@@ -1,5 +1,10 @@
 [workspace]
-members = ["hexagon_engine", "hexagon_egui", "hexagon_db", "hexagon_backend"]
+members = [
+    "hexagon_engine",
+    "hexagon_egui",
+    "hexagon_db",
+    "hexagon_backend",
+]
 resolver = "3"
 
 [workspace.dependencies]
@@ -15,6 +20,7 @@ secrecy = { version = "0.10", features = ["serde"] }
 tokio = { version = "*", features = ["full"] }
 urlencoding = "2.1.3"
 uuid = { version = "1", features = ["v4", "serde"] }
+thiserror = "2.0.0"
 
 [profile.release]
 opt-level = 2 # fast and small wasm

@@ -1,5 +1,6 @@
 mod config;
 mod routes;
+mod user;
 
 use crate::config::{BackendConfig, ServerConfig};
 use crate::routes::AppState;
