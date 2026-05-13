@@ -1,7 +1,7 @@
 use axum::{
     Router,
     http::StatusCode,
-    response::{IntoResponse, Redirect},
+    response::IntoResponse,
     routing::{get, post},
 };
 use axum_messages::Messages;
@@ -11,12 +11,11 @@ use crate::routes::AppState;
 
 use super::{AuthSession, Credentials};
 
-pub fn login_router(state: AppState) -> Router<AppState> {
+pub fn login_router() -> Router<AppState> {
     Router::new()
         .route("/login", post(self::post::login))
         .route("/logout", get(self::get::logout))
         .route("/create", post(self::post::create))
-        .with_state(state)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -34,19 +33,14 @@ mod post {
         messages: Messages,
         Json(creds): Json<Credentials>,
     ) -> Result<Json<NextUrl>, StatusCode> {
+        tracing::info!("Logging in user: {:?}", &creds.username);
         let user = match auth_session.authenticate(creds.clone()).await {
             Ok(Some(user)) => user,
             Ok(None) => {
+                tracing::info!("Invalid credentials for user: {}", &creds.username);
                 messages.error("Invalid credentials");
 
-                let mut login_url = "/login".to_string();
-                if let Some(next) = creds.next {
-                    login_url = format!("{login_url}?next={next}");
-                };
-
-                return Ok(Json(NextUrl {
-                    next: Some(login_url),
-                }));
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
             }
             Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
         };
@@ -105,6 +99,8 @@ mod get {
     use super::*;
 
     pub async fn logout(mut auth_session: AuthSession) -> impl IntoResponse {
+        tracing::info!("Logging out");
+
         match auth_session.logout().await {
             Ok(_) => StatusCode::NO_CONTENT.into_response(), //Redirect::to("/login").into_response(),
             Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),

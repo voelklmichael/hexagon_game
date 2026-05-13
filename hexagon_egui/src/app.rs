@@ -1,3 +1,5 @@
+mod backend_reqwest;
+pub use backend_reqwest::BackendReqwest;
 use indexmap::IndexMap;
 use std::collections::HashSet;
 
@@ -213,6 +215,8 @@ pub struct HexApp {
     pub missions_won: HashSet<String>,
     pub current_mission: Option<usize>,
     pub user_login: crate::panels::user_login::UserLogin,
+    #[serde(skip)]
+    pub backend_reqwest: BackendReqwest,
 }
 
 impl HexApp {
@@ -239,6 +243,10 @@ impl HexApp {
 impl eframe::App for HexApp {
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, self);
+    }
+
+    fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        ctx.plugin_or_default::<egui_async::EguiAsyncPlugin>();
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
@@ -462,7 +470,11 @@ impl eframe::App for HexApp {
                             crate::panels::game_state_json::show(ui, self.game.as_ref());
                         }
                         RightTab::UserLogin => {
-                            crate::panels::user_login::show(ui, &mut self.user_login);
+                            crate::panels::user_login::show(
+                                ui,
+                                &mut self.user_login,
+                                &mut self.backend_reqwest,
+                            );
                         }
                     });
                 });

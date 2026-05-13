@@ -51,6 +51,7 @@ impl AuthnBackend for AppState {
         &self,
         creds: Self::Credentials,
     ) -> Result<Option<Self::User>, Self::Error> {
+        tracing::info!("User auth for username: {}", &creds.username);
         let Some(user) = self.db.fetch_user_password_by_name(&creds.username).await? else {
             return Ok(None);
         };

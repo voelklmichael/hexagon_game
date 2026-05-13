@@ -32,7 +32,7 @@ pub fn router(state: AppState) -> Router {
             "/highscore/user/{user_id}/{mission_id}",
             get(fetch_highscore_user),
         )
-        .nest("/user_login", crate::user::login_router(state.clone()))
+        .nest("/user_login", crate::user::login_router())
         .fallback(fallback)
         .layer(MessagesManagerLayer)
         .layer(auth_layer)
