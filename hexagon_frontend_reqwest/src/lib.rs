@@ -35,7 +35,9 @@ pub struct ApiClient {
 impl ApiClient {
     /// Creates a new client. `base_url` should be e.g. `"https://example.com"`.
     pub fn new(base_url: impl Into<String>) -> Result<Self, ApiError> {
-        let client = reqwest::Client::builder().build()?;
+        let https_only = !cfg!(debug_assertions);
+
+        let client = reqwest::Client::builder().https_only(https_only).build()?;
         Ok(Self {
             client,
             base_url: base_url.into(),
@@ -121,7 +123,11 @@ impl ApiClient {
         let res = self
             .client
             .post(self.url("/user_login/login"))
-            .json(&LoginRequest { username, password, next })
+            .json(&LoginRequest {
+                username,
+                password,
+                next,
+            })
             .send()
             .await?;
         if res.status().is_success() {
