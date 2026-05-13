@@ -38,6 +38,7 @@ pub enum RightTab {
     Help,
     Statistics,
     GameStateJson,
+    UserLogin,
 }
 
 impl RightTab {
@@ -46,6 +47,7 @@ impl RightTab {
             RightTab::Help => "Help / Tutorial",
             RightTab::Statistics => "Statistics",
             RightTab::GameStateJson => "Game State JSON",
+            RightTab::UserLogin => "User Login",
         }
     }
 }
@@ -209,8 +211,8 @@ pub struct HexApp {
     pub music_player: Option<crate::music::MusicPlayer>,
     pub rng: RandomNumberGenerator,
     pub missions_won: HashSet<String>,
-    #[serde(skip)]
     pub current_mission: Option<usize>,
+    pub user_login: crate::panels::user_login::UserLogin,
 }
 
 impl HexApp {
@@ -436,6 +438,7 @@ impl eframe::App for HexApp {
                                     RightTab::Help,
                                     RightTab::Statistics,
                                     RightTab::GameStateJson,
+                                    RightTab::UserLogin,
                                 ] {
                                     ui.selectable_value(&mut right_tab, tab, tab.label());
                                 }
@@ -457,6 +460,9 @@ impl eframe::App for HexApp {
                         }
                         RightTab::GameStateJson => {
                             crate::panels::game_state_json::show(ui, self.game.as_ref());
+                        }
+                        RightTab::UserLogin => {
+                            crate::panels::user_login::show(ui, &mut self.user_login);
                         }
                     });
                 });

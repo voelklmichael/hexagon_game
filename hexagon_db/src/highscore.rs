@@ -8,7 +8,7 @@ pub struct DBHighscore {
     pub total_distance: i64,
 }
 
-#[derive(Debug, serde::Serialize, sqlx::FromRow)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
 pub struct DBHighscorePeak {
     pub max_velocity: i64,
     pub total_distance: i64,

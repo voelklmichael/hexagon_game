@@ -11,11 +11,12 @@ targets = ["x86_64-unknown-linux-gnu", "wasm32-unknown-unknown"]
 egui = "0.34.2"
 eframe = { version = "0.34.2", features = ["persistence"] }
 hexagon_engine = { path = "../hexagon_engine" }
+
 indexmap.workspace = true
 strum.workspace = true
 log = "0.4.27"
 serde.workspace = true
-serde_json = "1"
+serde_json.workspace = true
 
 # native:
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

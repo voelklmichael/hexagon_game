@@ -8,11 +8,12 @@ use std::sync::Arc;
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt::init();
     let config: BackendConfig = figment::Figment::new()
         .merge(figment::providers::Env::raw())
         .extract()
         .unwrap();
-    dbg!(&config);
+    tracing::info!("Config: {config:?}");
     let BackendConfig { db, server } = config;
 
     let db = Arc::new(db.connect().await.unwrap());
@@ -25,6 +26,6 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind(format!("{server_host}:{server_port}"))
         .await
         .unwrap();
-    dbg!("Server starting");
+    tracing::info!("Server starting");
     axum::serve(listener, app).await.unwrap();
 }

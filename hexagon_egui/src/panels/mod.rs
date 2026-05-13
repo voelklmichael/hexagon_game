@@ -9,6 +9,7 @@ pub mod options;
 pub mod predefined_games;
 pub mod rendering;
 pub mod statistics;
+pub mod user_login;
 
 pub(crate) fn color_to_egui(color: hexagon_engine::Color) -> egui::Color32 {
     let hex = color.to_svg_string();

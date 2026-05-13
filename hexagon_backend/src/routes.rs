@@ -6,7 +6,10 @@ use axum::{
     http::{StatusCode, Uri},
     routing::{get, post},
 };
+use axum_login::AuthManagerLayerBuilder;
+use axum_messages::MessagesManagerLayer;
 use hexagon_db::{DB, DBHighscore, DBHighscorePeak};
+use tower_sessions::{MemoryStore, SessionManagerLayer};
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -15,6 +18,9 @@ pub struct AppState {
 }
 
 pub fn router(state: AppState) -> Router {
+    let session_layer = SessionManagerLayer::new(MemoryStore::default());
+    let auth_layer = AuthManagerLayerBuilder::new(state.clone(), session_layer).build();
+
     Router::new()
         .route("/healthz", get(healthz))
         .route("/highscore", post(upsert_highscore))
@@ -28,6 +34,8 @@ pub fn router(state: AppState) -> Router {
         )
         .nest("/user_login", crate::user::login_router(state.clone()))
         .fallback(fallback)
+        .layer(MessagesManagerLayer)
+        .layer(auth_layer)
         .with_state(state)
 }
 

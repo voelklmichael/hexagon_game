@@ -70,6 +70,7 @@ mod post {
         State(state): State<AppState>,
         Json(user): Json<UserCreation>,
     ) -> Result<Json<Uuid>, StatusCode> {
+        tracing::info!("Creating user: {}", &user.username);
         let UserCreation { username, password } = user;
         let password_hash = {
             let salt = argon2::password_hash::SaltString::generate(
@@ -105,7 +106,7 @@ mod get {
 
     pub async fn logout(mut auth_session: AuthSession) -> impl IntoResponse {
         match auth_session.logout().await {
-            Ok(_) => Redirect::to("/login").into_response(),
+            Ok(_) => StatusCode::NO_CONTENT.into_response(), //Redirect::to("/login").into_response(),
             Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         }
     }
