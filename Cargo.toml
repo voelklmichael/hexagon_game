@@ -16,7 +16,7 @@ serde_json = "1"
 derive_aliases = "0.4"
 strum = { version = "0.28", features = ["derive"] }
 svg = "*"
-tracing = "0.1.44"
+tracing = { version = "0.1.44", features = ["log"] }
 tracing-subscriber = "0.3.23"
 indexmap = { version = "2", features = ["serde"] }
 secrecy = { version = "0.10", features = ["serde"] }

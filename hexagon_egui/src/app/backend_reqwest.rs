@@ -36,6 +36,10 @@ impl BackendReqwest {
         self.me_task.request(async move { client.me().await });
     }
 
+    pub(crate) fn is_session_pending(&mut self) -> bool {
+        self.me_task.is_pending()
+    }
+
     pub(crate) fn poll_me_task(&mut self) {
         self.check_session();
 

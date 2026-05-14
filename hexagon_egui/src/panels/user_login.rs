@@ -41,9 +41,10 @@ pub fn show(ui: &mut egui::Ui, user: &mut UserLogin, client: &mut BackendReqwest
         }
     }
 
+    let checking_session = client.is_session_pending();
     let logging_in = client.login_user_task.is_pending();
     let creating = client.create_user_task.is_pending();
-    let busy = logging_in || creating;
+    let busy = checking_session || logging_in || creating;
 
     // --- Status ---
     if let Some((_id, name)) = &user.logged_in_as {
