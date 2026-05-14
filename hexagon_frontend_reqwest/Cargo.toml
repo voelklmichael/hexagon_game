@@ -10,8 +10,15 @@ thiserror.workspace = true
 hexagon_types = { path = "../hexagon_types" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+reqwest = { version = "0.12", features = [
+    "json",
+    "rustls-tls",
+    "cookies",
+], default-features = false }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 reqwest = { version = "0.12", features = ["json"], default-features = false }
 getrandom = { version = "0.2", features = ["js"] }
+
+[dev-dependencies]
+tokio.workspace = true

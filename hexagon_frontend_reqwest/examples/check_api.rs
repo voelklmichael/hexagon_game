@@ -1,5 +1,5 @@
-use hexagon_db::DBHighscore;
 use hexagon_frontend_reqwest::ApiClient;
+use hexagon_types::*;
 use uuid::Uuid;
 
 #[tokio::main]
@@ -9,22 +9,23 @@ async fn main() {
     dbg!(&base_url);
     let client = ApiClient::new(&base_url).expect("failed to build client");
 
+    let id = Uuid::new_v4();
+    let email = &format!("{id}@example.com");
+    let pw = "pw";
+
     // 1. Health check
     client.healthz().await.expect("healthz failed");
     println!("healthz: OK");
 
     // 2. Create a user
     let user_id = client
-        .create_user("test_user4", "hunter2")
+        .create_user(id, pw, email, email)
         .await
         .expect("create_user failed");
     println!("create_user: {user_id}");
 
     // 3. Login
-    let next = client
-        .login("test_user", "hunter2", None)
-        .await
-        .expect("login failed");
+    let next = client.login(email, pw, None).await.expect("login failed");
     println!("login: next={:?}", next.next);
 
     // 4. Submit a highscore
@@ -63,4 +64,27 @@ async fn main() {
     // 7. Logout
     client.logout().await.expect("logout failed");
     println!("logout: OK");
+
+    // 8. Submit a highscore
+    let mission_id = Uuid::new_v4();
+    client
+        .upsert_highscore(&DBHighscore {
+            user_id: Uuid::new_v4(),
+            mission_id,
+            max_velocity: 120,
+            total_distance: 5000,
+        })
+        .await
+        .expect("upsert_highscore failed");
+    println!("upsert_highscore: OK");
+
+    // 9. Fetch a not-logined user's highscore
+    let user_peak = client
+        .fetch_highscore_user(Uuid::new_v4(), mission_id)
+        .await
+        .expect("fetch_highscore_user failed");
+    println!(
+        "fetch_highscore_user: max_velocity={}, total_distance={}",
+        user_peak.max_velocity, user_peak.total_distance
+    );
 }
