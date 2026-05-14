@@ -2,9 +2,9 @@
 members = [
     "hexagon_backend",
     "hexagon_db",
-    "hexagon_egui",
-    "hexagon_engine",
-    "hexagon_frontend_reqwest",
+    # "hexagon_egui",
+    # "hexagon_engine",
+    # "hexagon_frontend_reqwest",
     "hexagon_types",
 ]
 resolver = "3"

@@ -33,11 +33,11 @@ mod post {
         messages: Messages,
         Json(creds): Json<Credentials>,
     ) -> Result<Json<NextUrl>, StatusCode> {
-        tracing::info!("Logging in user: {:?}", &creds.username);
+        tracing::info!("Logging in user: {:?}", &creds.email);
         let user = match auth_session.authenticate(creds.clone()).await {
             Ok(Some(user)) => user,
             Ok(None) => {
-                tracing::info!("Invalid credentials for user: {}", &creds.username);
+                tracing::info!("Invalid credentials for user: {}", &creds.email);
                 messages.error("Invalid credentials");
 
                 return Err(StatusCode::INTERNAL_SERVER_ERROR);
@@ -49,23 +49,33 @@ mod post {
             return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
 
-        messages.success(format!("Successfully logged in as {}", user.username));
+        messages.success(format!(
+            "Successfully logged in as {}, {}",
+            user.email, user.id
+        ));
 
         Ok(Json(NextUrl { next: creds.next }))
     }
 
     #[derive(Deserialize)]
     pub struct UserCreation {
-        username: String,
+        id: Uuid,
         password: String,
+        name: String,
+        email: String,
     }
 
     pub async fn create(
         State(state): State<AppState>,
         Json(user): Json<UserCreation>,
     ) -> Result<Json<Uuid>, StatusCode> {
-        tracing::info!("Creating user: {}", &user.username);
-        let UserCreation { username, password } = user;
+        tracing::info!("Creating user: {}, {}", &user.email, user.id);
+        let UserCreation {
+            id,
+            password,
+            name,
+            email,
+        } = user;
         let password_hash = {
             let salt = argon2::password_hash::SaltString::generate(
                 &mut argon2::password_hash::rand_core::OsRng,
@@ -79,16 +89,20 @@ mod post {
             match argon2.hash_password(password.as_bytes(), &salt) {
                 Ok(hash) => hash.to_string(),
                 Err(e) => {
-                    tracing::warn!("Failed to hash password for user: {username}. Error: {e}");
+                    tracing::warn!("Failed to hash password for user: {email}. Error: {e}");
                     return Err(StatusCode::INTERNAL_SERVER_ERROR);
                 }
             }
         };
 
-        match state.db.create_user(&username, &password_hash).await {
+        match state
+            .db
+            .create_user(id, &password_hash, &name, &email)
+            .await
+        {
             Ok(user_id) => Ok(Json(user_id)),
             Err(e) => {
-                tracing::warn!("Failed to create user in database {username}. Error: {e}");
+                tracing::warn!("Failed to create user in database {email}. Error: {e}");
                 Err(StatusCode::INTERNAL_SERVER_ERROR)
             }
         }
