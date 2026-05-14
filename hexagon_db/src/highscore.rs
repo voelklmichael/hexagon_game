@@ -156,6 +156,15 @@ impl crate::DB {
         .map(Into::into))
     }
 
+    pub async fn fetch_won_missions(&self, user_id: Uuid) -> Result<Vec<Uuid>, sqlx::Error> {
+        let rows: Vec<(Uuid,)> =
+            sqlx::query_as("SELECT DISTINCT mission_id FROM highscore WHERE user_id = $1")
+                .bind(user_id)
+                .fetch_all(&self.0)
+                .await?;
+        Ok(rows.into_iter().map(|(id,)| id).collect())
+    }
+
     pub async fn fetch_highscore_overall(
         &self,
         mission_id: Uuid,

@@ -16,6 +16,7 @@ pub struct BackendReqwest {
     pub create_user_task: Bind<(), ApiError>,
     pub login_user_task: Bind<(uuid::Uuid, String), ApiError>,
     pub mission_done_task: Bind<(), ApiError>,
+    pub fetch_won_missions_task: Bind<Vec<uuid::Uuid>, ApiError>,
 }
 
 impl BackendReqwest {
@@ -39,6 +40,14 @@ impl BackendReqwest {
             let resp = client.login(&email, &password, None).await?;
             Ok((resp.user_id, resp.name))
         });
+    }
+
+    pub(crate) fn fetch_won_missions(&mut self, user_id: uuid::Uuid) {
+        let Some(client) = self.get_client() else {
+            return;
+        };
+        self.fetch_won_missions_task
+            .request(async move { client.fetch_won_missions(user_id).await });
     }
 
     pub(crate) fn report_mission_done(

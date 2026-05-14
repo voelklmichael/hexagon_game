@@ -20,6 +20,7 @@ pub fn show(ui: &mut egui::Ui, user: &mut UserLogin, client: &mut BackendReqwest
     if let Some(result) = client.login_user_task.take() {
         match result {
             Ok((id, name)) => {
+                client.fetch_won_missions(id);
                 user.logged_in_as = Some((id, name));
                 user.login_error = None;
             }

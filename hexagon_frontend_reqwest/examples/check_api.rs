@@ -107,11 +107,26 @@ async fn main() {
         .expect_err("fetch_highscore_user for other user should be rejected");
     assert_status(err, 403, "fetch_highscore_user (wrong user)");
 
-    // 8. Logout
+    // 8. Fetch list of won missions for user a
+    let won = client
+        .fetch_won_missions(user_id_a)
+        .await
+        .expect("fetch_won_missions failed");
+    assert!(won.contains(&mission_id), "mission should appear in won list");
+    println!("fetch_won_missions: {:?}", won);
+
+    // 9. Fetching another user's won missions must be rejected with 403
+    let err = client
+        .fetch_won_missions(user_id_b)
+        .await
+        .expect_err("fetch_won_missions for other user should be rejected");
+    assert_status(err, 403, "fetch_won_missions (wrong user)");
+
+    // 10. Logout
     client.logout().await.expect("logout failed");
     println!("logout: OK");
 
-    // 9. Try to upsert/fetch while not logged in — must be rejected with 401
+    // 11. Try to upsert/fetch while not logged in — must be rejected with 401
     let err = client
         .upsert_highscore(&sample_score(user_id_a, mission_id))
         .await

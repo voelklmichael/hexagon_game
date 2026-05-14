@@ -328,6 +328,17 @@ impl eframe::App for HexApp {
             ui.ctx().request_repaint();
         }
 
+        // Replace local missions_won with server state when the fetch completes after login.
+        if let Some(result) = self.backend_reqwest.fetch_won_missions_task.take() {
+            match result {
+                Ok(ids) => {
+                    self.missions_won
+                        .extend(ids.into_iter().map(|id| id.to_string()));
+                }
+                Err(e) => tracing::warn!("fetch_won_missions failed: {e}"),
+            }
+        }
+
         // Report mission completion to backend once per win, if the user is logged in.
         if game_done
             && !self.mission_result_reported

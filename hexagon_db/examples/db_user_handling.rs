@@ -7,16 +7,15 @@ async fn main() {
     println!("{:?}", &config);
     let db = config.connect().await.unwrap();
 
-    let id = Uuid::new_v4();
+    let tag = Uuid::new_v4();
     let password_hash = "password";
-    let name = &id.to_string();
-    let email = &format!("{id}@example.com");
+    let name = &tag.to_string();
+    let email = &format!("{tag}@example.com");
 
     assert!(db.fetch_user_by_email(email).await.unwrap().is_none());
-    assert!(db.fetch_user_by_id(id).await.unwrap().is_none());
 
     let user_id = db
-        .create_user(id, password_hash, name, email)
+        .create_user(password_hash, name, email)
         .await
         .unwrap();
 

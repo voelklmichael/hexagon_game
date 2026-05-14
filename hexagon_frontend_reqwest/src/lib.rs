@@ -108,6 +108,20 @@ impl ApiClient {
         Err(ApiError::Status { status, body })
     }
 
+    pub async fn fetch_won_missions(&self, user_id: Uuid) -> Result<Vec<Uuid>, ApiError> {
+        let res = self
+            .client
+            .get(self.url(&format!("/highscore/user/{user_id}/missions")))
+            .send()
+            .await?;
+        if res.status().is_success() {
+            return Ok(res.json().await?);
+        }
+        let status = res.status().as_u16();
+        let body = res.text().await.unwrap_or_default();
+        Err(ApiError::Status { status, body })
+    }
+
     // --- user login ---
     pub async fn login(
         &self,
