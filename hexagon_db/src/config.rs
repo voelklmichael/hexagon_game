@@ -26,7 +26,7 @@ impl DBConfig {
         let url = format!(
             "postgres://{}:{}@{}:{}/{}",
             self.db_user,
-            urlencoding::encode(&self.db_password.expose_secret()),
+            urlencoding::encode(self.db_password.expose_secret()),
             self.db_host,
             self.db_port,
             self.db_name,
