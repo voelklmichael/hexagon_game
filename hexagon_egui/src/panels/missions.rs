@@ -4,7 +4,7 @@ use std::sync::OnceLock;
 
 #[derive(serde::Deserialize)]
 struct Mission {
-    mission_id: String,
+    mission_id: uuid::Uuid,
     name: String,
     description: String,
     #[serde(flatten)]
@@ -38,8 +38,8 @@ pub(crate) fn mission_count() -> usize {
     missions().len()
 }
 
-pub(crate) fn mission_id(index: usize) -> Option<&'static str> {
-    missions().get(index).map(|m| m.mission_id.as_str())
+pub(crate) fn mission_id(index: usize) -> Option<uuid::Uuid> {
+    missions().get(index).map(|m| m.mission_id)
 }
 
 pub(crate) fn start_mission(index: usize, game: &mut Option<GameState>) {
@@ -67,7 +67,7 @@ pub fn show(
         .spacing([12.0, 6.0])
         .show(ui, |ui| {
             for (i, mission) in missions().iter().enumerate() {
-                let won = missions_won.contains(&mission.mission_id);
+                let won = missions_won.contains(&mission.mission_id.to_string());
                 let label = if won {
                     format!("✔ {}", mission.name)
                 } else {

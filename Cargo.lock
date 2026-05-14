@@ -2014,6 +2014,7 @@ dependencies = [
  "egui-async",
  "hexagon_engine",
  "hexagon_frontend_reqwest",
+ "hexagon_types",
  "indexmap",
  "log",
  "rodio",

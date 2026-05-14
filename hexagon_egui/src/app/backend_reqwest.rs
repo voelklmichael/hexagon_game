@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use egui_async::Bind;
-
+use hexagon_engine::Statistics;
 use hexagon_frontend_reqwest::{ApiClient, ApiError};
+use hexagon_types::{DBHighscore, PlayerStats};
 
 #[cfg(debug_assertions)]
 static BASE_URL: &str = "http://localhost:3000";
@@ -14,6 +15,7 @@ pub struct BackendReqwest {
     client: Option<Arc<ApiClient>>,
     pub create_user_task: Bind<(), ApiError>,
     pub login_user_task: Bind<(uuid::Uuid, String), ApiError>,
+    pub mission_done_task: Bind<(), ApiError>,
 }
 
 impl BackendReqwest {
@@ -37,6 +39,37 @@ impl BackendReqwest {
             let resp = client.login(&email, &password, None).await?;
             Ok((resp.user_id, resp.name))
         });
+    }
+
+    pub(crate) fn report_mission_done(
+        &mut self,
+        user_id: uuid::Uuid,
+        mission_id: uuid::Uuid,
+        statistics: &Statistics,
+    ) {
+        let Some(client) = self.get_client() else {
+            return;
+        };
+        let players = statistics
+            .max_velocity
+            .keys()
+            .map(|&pid| {
+                let max_velocity = statistics
+                    .max_velocity
+                    .get(&pid)
+                    .copied()
+                    .unwrap_or(0) as i64;
+                let total_distance = statistics
+                    .total_path_weight
+                    .get(&pid)
+                    .copied()
+                    .unwrap_or(0) as i64;
+                (pid.0 as u8, PlayerStats { max_velocity, total_distance })
+            })
+            .collect();
+        let score = DBHighscore { user_id, mission_id, players };
+        self.mission_done_task
+            .request(async move { client.upsert_highscore(&score).await });
     }
 
     fn get_client(&mut self) -> Option<Arc<ApiClient>> {

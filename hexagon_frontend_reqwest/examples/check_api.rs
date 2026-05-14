@@ -11,6 +11,29 @@ fn assert_status(err: ApiError, expected: u16, label: &str) {
     }
 }
 
+fn print_peak(label: &str, peak: &DBHighscorePeak) {
+    let mut players: Vec<_> = peak.players.iter().collect();
+    players.sort_by_key(|(id, _)| *id);
+    for (id, stats) in players {
+        println!(
+            "{label}: player {id} — max_velocity={}, total_distance={}",
+            stats.max_velocity, stats.total_distance
+        );
+    }
+}
+
+fn sample_score(user_id: Uuid, mission_id: Uuid) -> DBHighscore {
+    DBHighscore {
+        user_id,
+        mission_id,
+        players: [
+            (0u8, PlayerStats { max_velocity: 120, total_distance: 5000 }),
+            (1u8, PlayerStats { max_velocity:  80, total_distance: 3200 }),
+        ]
+        .into(),
+    }
+}
+
 #[tokio::main]
 async fn main() {
     let base_url =
@@ -52,12 +75,7 @@ async fn main() {
     // 4. Submit a highscore as user a
     let mission_id = Uuid::new_v4();
     client
-        .upsert_highscore(&DBHighscore {
-            user_id: user_id_a,
-            mission_id,
-            max_velocity: 120,
-            total_distance: 5000,
-        })
+        .upsert_highscore(&sample_score(user_id_a, mission_id))
         .await
         .expect("upsert_highscore failed");
     println!("upsert_highscore: OK");
@@ -67,29 +85,18 @@ async fn main() {
         .fetch_highscore_user(user_id_a, mission_id)
         .await
         .expect("fetch_highscore_user failed");
-    println!(
-        "fetch_highscore_user: max_velocity={}, total_distance={}",
-        user_peak.max_velocity, user_peak.total_distance
-    );
+    print_peak("fetch_highscore_user", &user_peak);
 
     // 6. Fetch the overall highscore for the mission
     let overall_peak = client
         .fetch_highscore_overall(mission_id)
         .await
         .expect("fetch_highscore_overall failed");
-    println!(
-        "fetch_highscore_overall: max_velocity={}, total_distance={}",
-        overall_peak.max_velocity, overall_peak.total_distance
-    );
+    print_peak("fetch_highscore_overall", &overall_peak);
 
     // 7. Try to upsert/fetch for user b while logged in as user a — must be rejected with 403
     let err = client
-        .upsert_highscore(&DBHighscore {
-            user_id: user_id_b,
-            mission_id,
-            max_velocity: 999,
-            total_distance: 9999,
-        })
+        .upsert_highscore(&sample_score(user_id_b, mission_id))
         .await
         .expect_err("upsert_highscore for other user should be rejected");
     assert_status(err, 403, "upsert_highscore (wrong user)");
@@ -106,12 +113,7 @@ async fn main() {
 
     // 9. Try to upsert/fetch while not logged in — must be rejected with 401
     let err = client
-        .upsert_highscore(&DBHighscore {
-            user_id: user_id_a,
-            mission_id,
-            max_velocity: 120,
-            total_distance: 5000,
-        })
+        .upsert_highscore(&sample_score(user_id_a, mission_id))
         .await
         .expect_err("upsert_highscore should require login");
     assert_status(err, 401, "upsert_highscore (logged out)");

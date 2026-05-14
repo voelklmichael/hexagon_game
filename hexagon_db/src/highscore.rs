@@ -1,52 +1,153 @@
-use hexagon_types::{DBHighscore, DBHighscorePeak};
+use hexagon_types::{DBHighscore, DBHighscorePeak, PlayerStats};
 use uuid::Uuid;
 
 #[derive(sqlx::FromRow)]
-struct HighscorePeakRow {
-    max_velocity: i64,
-    total_distance: i64,
+struct HighscoreRow {
+    player_0_max_velocity: i64,
+    player_0_total_distance: i64,
+    player_1_max_velocity: i64,
+    player_1_total_distance: i64,
+    player_2_max_velocity: i64,
+    player_2_total_distance: i64,
+    player_3_max_velocity: i64,
+    player_3_total_distance: i64,
+    player_4_max_velocity: i64,
+    player_4_total_distance: i64,
+    player_5_max_velocity: i64,
+    player_5_total_distance: i64,
+    player_6_max_velocity: i64,
+    player_6_total_distance: i64,
+    player_7_max_velocity: i64,
+    player_7_total_distance: i64,
+    player_8_max_velocity: i64,
+    player_8_total_distance: i64,
+    player_9_max_velocity: i64,
+    player_9_total_distance: i64,
 }
 
-impl From<HighscorePeakRow> for DBHighscorePeak {
-    fn from(r: HighscorePeakRow) -> Self {
-        Self {
-            max_velocity: r.max_velocity,
-            total_distance: r.total_distance,
-        }
+impl From<HighscoreRow> for DBHighscorePeak {
+    fn from(r: HighscoreRow) -> Self {
+        let raw = [
+            (r.player_0_max_velocity, r.player_0_total_distance),
+            (r.player_1_max_velocity, r.player_1_total_distance),
+            (r.player_2_max_velocity, r.player_2_total_distance),
+            (r.player_3_max_velocity, r.player_3_total_distance),
+            (r.player_4_max_velocity, r.player_4_total_distance),
+            (r.player_5_max_velocity, r.player_5_total_distance),
+            (r.player_6_max_velocity, r.player_6_total_distance),
+            (r.player_7_max_velocity, r.player_7_total_distance),
+            (r.player_8_max_velocity, r.player_8_total_distance),
+            (r.player_9_max_velocity, r.player_9_total_distance),
+        ];
+        let players = raw
+            .into_iter()
+            .enumerate()
+            .filter(|(_, (mv, td))| *mv != 0 || *td != 0)
+            .map(|(i, (max_velocity, total_distance))| {
+                (i as u8, PlayerStats { max_velocity, total_distance })
+            })
+            .collect();
+        Self { players }
     }
 }
 
+fn player_cols(score: &DBHighscore, idx: u8) -> (i64, i64) {
+    score
+        .players
+        .get(&idx)
+        .map(|s| (s.max_velocity, s.total_distance))
+        .unwrap_or((0, 0))
+}
+
 impl crate::DB {
-    /// Inserts a highscore row or, on conflict, keeps the greater value for each metric.
     pub async fn upsert_highscore(&self, score: &DBHighscore) -> Result<(), sqlx::Error> {
+        let (mv0, td0) = player_cols(score, 0);
+        let (mv1, td1) = player_cols(score, 1);
+        let (mv2, td2) = player_cols(score, 2);
+        let (mv3, td3) = player_cols(score, 3);
+        let (mv4, td4) = player_cols(score, 4);
+        let (mv5, td5) = player_cols(score, 5);
+        let (mv6, td6) = player_cols(score, 6);
+        let (mv7, td7) = player_cols(score, 7);
+        let (mv8, td8) = player_cols(score, 8);
+        let (mv9, td9) = player_cols(score, 9);
+
         sqlx::query(
             r#"
-            INSERT INTO highscore (user_id, mission_id, max_velocity, total_distance)
-            VALUES ($1, $2, $3, $4)
+            INSERT INTO highscore (
+                user_id, mission_id,
+                player_0_max_velocity, player_0_total_distance,
+                player_1_max_velocity, player_1_total_distance,
+                player_2_max_velocity, player_2_total_distance,
+                player_3_max_velocity, player_3_total_distance,
+                player_4_max_velocity, player_4_total_distance,
+                player_5_max_velocity, player_5_total_distance,
+                player_6_max_velocity, player_6_total_distance,
+                player_7_max_velocity, player_7_total_distance,
+                player_8_max_velocity, player_8_total_distance,
+                player_9_max_velocity, player_9_total_distance
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+                    $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
             ON CONFLICT (user_id, mission_id) DO UPDATE SET
-                max_velocity   = GREATEST(excluded.max_velocity,   highscore.max_velocity),
-                total_distance = GREATEST(excluded.total_distance, highscore.total_distance)
+                player_0_max_velocity   = GREATEST(excluded.player_0_max_velocity,   highscore.player_0_max_velocity),
+                player_0_total_distance = GREATEST(excluded.player_0_total_distance, highscore.player_0_total_distance),
+                player_1_max_velocity   = GREATEST(excluded.player_1_max_velocity,   highscore.player_1_max_velocity),
+                player_1_total_distance = GREATEST(excluded.player_1_total_distance, highscore.player_1_total_distance),
+                player_2_max_velocity   = GREATEST(excluded.player_2_max_velocity,   highscore.player_2_max_velocity),
+                player_2_total_distance = GREATEST(excluded.player_2_total_distance, highscore.player_2_total_distance),
+                player_3_max_velocity   = GREATEST(excluded.player_3_max_velocity,   highscore.player_3_max_velocity),
+                player_3_total_distance = GREATEST(excluded.player_3_total_distance, highscore.player_3_total_distance),
+                player_4_max_velocity   = GREATEST(excluded.player_4_max_velocity,   highscore.player_4_max_velocity),
+                player_4_total_distance = GREATEST(excluded.player_4_total_distance, highscore.player_4_total_distance),
+                player_5_max_velocity   = GREATEST(excluded.player_5_max_velocity,   highscore.player_5_max_velocity),
+                player_5_total_distance = GREATEST(excluded.player_5_total_distance, highscore.player_5_total_distance),
+                player_6_max_velocity   = GREATEST(excluded.player_6_max_velocity,   highscore.player_6_max_velocity),
+                player_6_total_distance = GREATEST(excluded.player_6_total_distance, highscore.player_6_total_distance),
+                player_7_max_velocity   = GREATEST(excluded.player_7_max_velocity,   highscore.player_7_max_velocity),
+                player_7_total_distance = GREATEST(excluded.player_7_total_distance, highscore.player_7_total_distance),
+                player_8_max_velocity   = GREATEST(excluded.player_8_max_velocity,   highscore.player_8_max_velocity),
+                player_8_total_distance = GREATEST(excluded.player_8_total_distance, highscore.player_8_total_distance),
+                player_9_max_velocity   = GREATEST(excluded.player_9_max_velocity,   highscore.player_9_max_velocity),
+                player_9_total_distance = GREATEST(excluded.player_9_total_distance, highscore.player_9_total_distance)
             "#,
         )
         .bind(score.user_id)
         .bind(score.mission_id)
-        .bind(score.max_velocity)
-        .bind(score.total_distance)
+        .bind(mv0).bind(td0)
+        .bind(mv1).bind(td1)
+        .bind(mv2).bind(td2)
+        .bind(mv3).bind(td3)
+        .bind(mv4).bind(td4)
+        .bind(mv5).bind(td5)
+        .bind(mv6).bind(td6)
+        .bind(mv7).bind(td7)
+        .bind(mv8).bind(td8)
+        .bind(mv9).bind(td9)
         .execute(&self.0)
         .await?;
 
         Ok(())
     }
 
-    /// Returns the peak values for a specific (user_id, mission_id) pair.
     pub async fn fetch_highscore_user(
         &self,
         user_id: Uuid,
         mission_id: Uuid,
     ) -> Result<Option<DBHighscorePeak>, sqlx::Error> {
-        Ok(sqlx::query_as::<_, HighscorePeakRow>(
-            "SELECT max_velocity, total_distance FROM highscore \
-             WHERE user_id = $1 AND mission_id = $2",
+        Ok(sqlx::query_as::<_, HighscoreRow>(
+            "SELECT \
+                player_0_max_velocity, player_0_total_distance, \
+                player_1_max_velocity, player_1_total_distance, \
+                player_2_max_velocity, player_2_total_distance, \
+                player_3_max_velocity, player_3_total_distance, \
+                player_4_max_velocity, player_4_total_distance, \
+                player_5_max_velocity, player_5_total_distance, \
+                player_6_max_velocity, player_6_total_distance, \
+                player_7_max_velocity, player_7_total_distance, \
+                player_8_max_velocity, player_8_total_distance, \
+                player_9_max_velocity, player_9_total_distance \
+             FROM highscore WHERE user_id = $1 AND mission_id = $2",
         )
         .bind(user_id)
         .bind(mission_id)
@@ -55,14 +156,32 @@ impl crate::DB {
         .map(Into::into))
     }
 
-    /// Returns the maximum max_velocity and total_distance across all users for a single mission.
     pub async fn fetch_highscore_overall(
         &self,
         mission_id: Uuid,
     ) -> Result<DBHighscorePeak, sqlx::Error> {
-        Ok(sqlx::query_as::<_, HighscorePeakRow>(
-            "SELECT COALESCE(MAX(max_velocity), 0)   AS max_velocity, \
-                    COALESCE(MAX(total_distance), 0) AS total_distance \
+        Ok(sqlx::query_as::<_, HighscoreRow>(
+            "SELECT \
+                COALESCE(MAX(player_0_max_velocity), 0)   AS player_0_max_velocity, \
+                COALESCE(MAX(player_0_total_distance), 0) AS player_0_total_distance, \
+                COALESCE(MAX(player_1_max_velocity), 0)   AS player_1_max_velocity, \
+                COALESCE(MAX(player_1_total_distance), 0) AS player_1_total_distance, \
+                COALESCE(MAX(player_2_max_velocity), 0)   AS player_2_max_velocity, \
+                COALESCE(MAX(player_2_total_distance), 0) AS player_2_total_distance, \
+                COALESCE(MAX(player_3_max_velocity), 0)   AS player_3_max_velocity, \
+                COALESCE(MAX(player_3_total_distance), 0) AS player_3_total_distance, \
+                COALESCE(MAX(player_4_max_velocity), 0)   AS player_4_max_velocity, \
+                COALESCE(MAX(player_4_total_distance), 0) AS player_4_total_distance, \
+                COALESCE(MAX(player_5_max_velocity), 0)   AS player_5_max_velocity, \
+                COALESCE(MAX(player_5_total_distance), 0) AS player_5_total_distance, \
+                COALESCE(MAX(player_6_max_velocity), 0)   AS player_6_max_velocity, \
+                COALESCE(MAX(player_6_total_distance), 0) AS player_6_total_distance, \
+                COALESCE(MAX(player_7_max_velocity), 0)   AS player_7_max_velocity, \
+                COALESCE(MAX(player_7_total_distance), 0) AS player_7_total_distance, \
+                COALESCE(MAX(player_8_max_velocity), 0)   AS player_8_max_velocity, \
+                COALESCE(MAX(player_8_total_distance), 0) AS player_8_total_distance, \
+                COALESCE(MAX(player_9_max_velocity), 0)   AS player_9_max_velocity, \
+                COALESCE(MAX(player_9_total_distance), 0) AS player_9_total_distance \
              FROM highscore WHERE mission_id = $1",
         )
         .bind(mission_id)
