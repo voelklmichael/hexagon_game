@@ -412,6 +412,8 @@ impl eframe::App for HexApp {
                             self.history.redo_stack.clear();
                             self.current_mission = Some(idx);
                             self.left_tab = LeftTab::Hand;
+                            self.right_tab = RightTab::Statistics;
+                            self.right_panel_open = true;
                             self.mission_user_best = None;
                             self.mission_overall_best = None;
                             if let Some(mission_uuid) = crate::panels::missions::mission_id(idx) {
@@ -441,6 +443,8 @@ impl eframe::App for HexApp {
                                     self.history.redo_stack.clear();
                                     self.current_mission = None;
                                     self.left_tab = LeftTab::Hand;
+                                    self.right_tab = RightTab::Statistics;
+                                    self.right_panel_open = true;
                                 }
                                 Err(e) => eprintln!("Failed to start game: {e}"),
                             }
@@ -452,10 +456,12 @@ impl eframe::App for HexApp {
                             self.history.redo_stack.clear();
                             self.current_mission = None;
                             self.left_tab = LeftTab::Hand;
+                            self.right_tab = RightTab::Statistics;
+                            self.right_panel_open = true;
                         }
                     }
                     LeftTab::Hand => {
-                        crate::panels::hand::show(
+                        if crate::panels::hand::show(
                             ui,
                             &mut self.game,
                             &self.rendering_data,
@@ -465,11 +471,16 @@ impl eframe::App for HexApp {
                             &mut self.missions_won,
                             self.user_login.logged_in_as.as_ref().map(|(id, _)| *id),
                             &mut self.backend_reqwest,
-                        );
+                        ) {
+                            self.right_tab = RightTab::Statistics;
+                            self.right_panel_open = true;
+                        }
                     }
                     LeftTab::Controls => {
                         if crate::panels::controls::show(ui, &mut self.game, &mut self.history) {
                             self.left_tab = LeftTab::Hand;
+                            self.right_tab = RightTab::Statistics;
+                            self.right_panel_open = true;
                         }
                     }
                     LeftTab::Music => {

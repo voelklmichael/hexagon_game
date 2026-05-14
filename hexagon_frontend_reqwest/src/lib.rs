@@ -48,6 +48,20 @@ impl ApiClient {
         format!("{}{}", self.base_url, path)
     }
 
+    fn get(&self, url: String) -> reqwest::RequestBuilder {
+        let rb = self.client.get(url);
+        #[cfg(target_arch = "wasm32")]
+        let rb = rb.fetch_credentials_include();
+        rb
+    }
+
+    fn post(&self, url: String) -> reqwest::RequestBuilder {
+        let rb = self.client.post(url);
+        #[cfg(target_arch = "wasm32")]
+        let rb = rb.fetch_credentials_include();
+        rb
+    }
+
     async fn expect_no_content(res: reqwest::Response) -> Result<(), ApiError> {
         let status = res.status();
         if status.is_success() {
@@ -71,14 +85,13 @@ impl ApiClient {
 
     // --- health ---
     pub async fn healthz(&self) -> Result<(), ApiError> {
-        let res = self.client.get(self.url("/healthz")).send().await?;
+        let res = self.get(self.url("/healthz")).send().await?;
         Self::expect_no_content(res).await
     }
 
     // --- highscore ---
     pub async fn upsert_highscore(&self, score: &DBHighscore) -> Result<(), ApiError> {
         let res = self
-            .client
             .post(self.url("/highscore"))
             .json(score)
             .send()
@@ -92,7 +105,6 @@ impl ApiClient {
         mission_id: Uuid,
     ) -> Result<DBHighscorePeak, ApiError> {
         let res = self
-            .client
             .get(self.url(&format!("/highscore/user/{user_id}/{mission_id}")))
             .send()
             .await?;
@@ -104,7 +116,6 @@ impl ApiClient {
         mission_id: Uuid,
     ) -> Result<DBHighscorePeak, ApiError> {
         let res = self
-            .client
             .get(self.url(&format!("/highscore/overall/{mission_id}")))
             .send()
             .await?;
@@ -113,7 +124,6 @@ impl ApiClient {
 
     pub async fn fetch_won_missions(&self, user_id: Uuid) -> Result<Vec<Uuid>, ApiError> {
         let res = self
-            .client
             .get(self.url(&format!("/highscore/user/{user_id}/missions")))
             .send()
             .await?;
@@ -128,7 +138,6 @@ impl ApiClient {
         next: Option<&str>,
     ) -> Result<LoginResponse, ApiError> {
         let res = self
-            .client
             .post(self.url("/user_login/login"))
             .json(&LoginRequest {
                 email,
@@ -142,7 +151,6 @@ impl ApiClient {
 
     pub async fn me(&self) -> Result<Option<MeResponse>, ApiError> {
         let res = self
-            .client
             .get(self.url("/user_login/me"))
             .send()
             .await
@@ -166,7 +174,6 @@ impl ApiClient {
 
     pub async fn logout(&self) -> Result<(), ApiError> {
         let res = self
-            .client
             .get(self.url("/user_login/logout"))
             .send()
             .await?;
@@ -181,7 +188,6 @@ impl ApiClient {
         email: &str,
     ) -> Result<Uuid, ApiError> {
         let res = self
-            .client
             .post(self.url("/user_login/create"))
             .json(&UserCreation {
                 password,

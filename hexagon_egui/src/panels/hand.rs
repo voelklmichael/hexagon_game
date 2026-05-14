@@ -119,8 +119,9 @@ pub fn show(
     missions_won: &mut std::collections::HashSet<uuid::Uuid>,
     user_id: Option<uuid::Uuid>,
     backend: &mut crate::app::BackendReqwest,
-) {
+) -> bool {
     ui.heading("Player Hand");
+    let mut started = false;
 
     let can_undo = !history.undo_stack.is_empty();
     let can_redo = !history.redo_stack.is_empty();
@@ -149,7 +150,7 @@ pub fn show(
 
     if game.is_none() {
         ui.label("No game in progress.");
-        return;
+        return false;
     }
 
     // Game-over section: collect all data from a scoped borrow so the borrow
@@ -223,9 +224,9 @@ pub fn show(
             if ui.button("Start next mission").clicked() {
                 history.undo_stack.clear();
                 history.redo_stack.clear();
-
                 crate::panels::missions::start_mission(next_idx, game);
                 *current_mission = Some(next_idx);
+                started = true;
             }
         } else {
             if ui.button("Start new game").clicked() {
@@ -237,6 +238,7 @@ pub fn show(
                         history.redo_stack.clear();
                         *game = Some(g);
                         *current_mission = None;
+                        started = true;
                     }
                     Err(e) => eprintln!("New game failed: {e}"),
                 }
@@ -253,6 +255,7 @@ pub fn show(
                     history.undo_stack.clear();
                     history.redo_stack.clear();
                     *game = Some(g);
+                    started = true;
                 }
                 Err(e) => eprintln!("Restart failed: {e}"),
             }
@@ -275,7 +278,7 @@ pub fn show(
                 ui.ctx().request_repaint();
             }
         }
-        return;
+        return started;
     }
 
     // Normal hand display — borrow game mutably for the rest of the function.
@@ -283,7 +286,7 @@ pub fn show(
     let current_id = game_state.current_player;
 
     let Some(player) = game_state.players.iter().find(|p| p.id == current_id) else {
-        return;
+        return false;
     };
 
     let player_color = rendering_data
@@ -402,4 +405,5 @@ pub fn show(
             }
         });
     });
+    false
 }
