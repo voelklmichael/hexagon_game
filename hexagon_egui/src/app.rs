@@ -1,5 +1,7 @@
 mod backend_reqwest;
+mod backend_responses;
 pub use backend_reqwest::BackendReqwest;
+use hexagon_types::DBHighscorePeak;
 use indexmap::IndexMap;
 use std::collections::HashSet;
 
@@ -220,6 +222,10 @@ pub struct HexApp {
     pub backend_reqwest: BackendReqwest,
     #[serde(skip)]
     pub mission_result_reported: bool,
+    #[serde(skip)]
+    pub mission_user_best: Option<DBHighscorePeak>,
+    #[serde(skip)]
+    pub mission_overall_best: Option<DBHighscorePeak>,
 }
 
 impl HexApp {
@@ -328,16 +334,7 @@ impl eframe::App for HexApp {
             ui.ctx().request_repaint();
         }
 
-        // Replace local missions_won with server state when the fetch completes after login.
-        if let Some(result) = self.backend_reqwest.fetch_won_missions_task.take() {
-            match result {
-                Ok(ids) => {
-                    self.missions_won
-                        .extend(ids.into_iter().map(|id| id.to_string()));
-                }
-                Err(e) => tracing::warn!("fetch_won_missions failed: {e}"),
-            }
-        }
+        self.process_backend_responses();
 
         // Report mission completion to backend once per win, if the user is logged in.
         if game_done
@@ -350,8 +347,7 @@ impl eframe::App for HexApp {
                     if let (Some((user_id, _)), Some(mission_idx)) =
                         (&self.user_login.logged_in_as, self.current_mission)
                     {
-                        if let Some(mission_uuid) =
-                            crate::panels::missions::mission_id(mission_idx)
+                        if let Some(mission_uuid) = crate::panels::missions::mission_id(mission_idx)
                         {
                             self.backend_reqwest.report_mission_done(
                                 *user_id,
@@ -413,6 +409,16 @@ impl eframe::App for HexApp {
                             self.history.redo_stack.clear();
                             self.current_mission = Some(idx);
                             self.left_tab = LeftTab::Hand;
+                            self.mission_user_best = None;
+                            self.mission_overall_best = None;
+                            if let Some(mission_uuid) = crate::panels::missions::mission_id(idx) {
+                                self.backend_reqwest
+                                    .fetch_mission_overall_best(mission_uuid);
+                                if let Some((user_id, _)) = &self.user_login.logged_in_as {
+                                    self.backend_reqwest
+                                        .fetch_mission_user_best(*user_id, mission_uuid);
+                                }
+                            }
                         }
                     }
                     LeftTab::Options => {
@@ -507,6 +513,8 @@ impl eframe::App for HexApp {
                                 ui,
                                 &self.rendering_data,
                                 self.game.as_ref().map(|g| &g.statistics),
+                                self.mission_user_best.as_ref(),
+                                self.mission_overall_best.as_ref(),
                             );
                         }
                         RightTab::GameStateJson => {

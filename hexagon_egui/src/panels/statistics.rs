@@ -1,4 +1,5 @@
 use hexagon_engine::{PlayerId, Statistics};
+use hexagon_types::DBHighscorePeak;
 
 use crate::app::RenderingData;
 use crate::panels::color_to_egui;
@@ -13,7 +14,83 @@ fn highlight_label(ui: &mut egui::Ui, value: u32, max: u32) {
     ui.label(text);
 }
 
-pub fn show(ui: &mut egui::Ui, rendering_data: &RenderingData, statistics: Option<&Statistics>) {
+fn show_peak_section(
+    ui: &mut egui::Ui,
+    heading: &str,
+    peak: &DBHighscorePeak,
+    rendering_data: &RenderingData,
+) {
+    ui.add_space(6.0);
+    ui.label(egui::RichText::new(heading).strong());
+
+    if peak.players.is_empty() {
+        ui.label("No data yet.");
+        return;
+    }
+
+    let mut players: Vec<u8> = peak.players.keys().copied().collect();
+    players.sort_unstable();
+
+    let max_velocity = peak
+        .players
+        .values()
+        .map(|s| s.max_velocity)
+        .max()
+        .unwrap_or(0);
+    let max_distance = peak
+        .players
+        .values()
+        .map(|s| s.total_distance)
+        .max()
+        .unwrap_or(0);
+
+    egui::Grid::new(heading)
+        .striped(true)
+        .min_col_width(80.0)
+        .show(ui, |ui| {
+            ui.label("Player");
+            ui.label("Distance");
+            ui.label("Max Velocity");
+            ui.end_row();
+
+            for &idx in &players {
+                let Some(stats) = peak.players.get(&idx) else { continue };
+                let player_id = PlayerId(idx as u32);
+                if let Some(&color) = rendering_data.player_colors.get(&player_id) {
+                    let (rect, _) =
+                        ui.allocate_exact_size(egui::vec2(14.0, 14.0), egui::Sense::hover());
+                    ui.painter().rect_filled(rect, 2.0, color_to_egui(color));
+                } else {
+                    ui.label(format!("P{idx}"));
+                }
+                let mv = stats.max_velocity as u32;
+                let td = stats.total_distance as u32;
+                let text_td = egui::RichText::new(td.to_string());
+                let text_td = if stats.total_distance == max_distance {
+                    text_td.strong().color(egui::Color32::GOLD)
+                } else {
+                    text_td
+                };
+                ui.label(text_td);
+                let text_mv = egui::RichText::new(mv.to_string());
+                let text_mv = if stats.max_velocity == max_velocity {
+                    text_mv.strong().color(egui::Color32::GOLD)
+                } else {
+                    text_mv
+                };
+                ui.label(text_mv);
+                ui.end_row();
+            }
+        });
+}
+
+pub fn show(
+    ui: &mut egui::Ui,
+    rendering_data: &RenderingData,
+    statistics: Option<&Statistics>,
+    user_best: Option<&DBHighscorePeak>,
+    overall_best: Option<&DBHighscorePeak>,
+) {
     ui.heading("Statistics");
 
     let Some(statistics) = statistics else {
@@ -76,4 +153,11 @@ pub fn show(ui: &mut egui::Ui, rendering_data: &RenderingData, statistics: Optio
                 ui.end_row();
             }
         });
+
+    if let Some(peak) = user_best {
+        show_peak_section(ui, "Your Previous Best", peak, rendering_data);
+    }
+    if let Some(peak) = overall_best {
+        show_peak_section(ui, "Mission Record", peak, rendering_data);
+    }
 }

@@ -127,6 +127,60 @@ impl crate::DB {
         .execute(&self.0)
         .await?;
 
+        sqlx::query(
+            r#"
+            INSERT INTO highscore_peak (
+                mission_id,
+                player_0_max_velocity, player_0_total_distance,
+                player_1_max_velocity, player_1_total_distance,
+                player_2_max_velocity, player_2_total_distance,
+                player_3_max_velocity, player_3_total_distance,
+                player_4_max_velocity, player_4_total_distance,
+                player_5_max_velocity, player_5_total_distance,
+                player_6_max_velocity, player_6_total_distance,
+                player_7_max_velocity, player_7_total_distance,
+                player_8_max_velocity, player_8_total_distance,
+                player_9_max_velocity, player_9_total_distance
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
+                    $13, $14, $15, $16, $17, $18, $19, $20, $21)
+            ON CONFLICT (mission_id) DO UPDATE SET
+                player_0_max_velocity   = GREATEST(excluded.player_0_max_velocity,   highscore_peak.player_0_max_velocity),
+                player_0_total_distance = GREATEST(excluded.player_0_total_distance, highscore_peak.player_0_total_distance),
+                player_1_max_velocity   = GREATEST(excluded.player_1_max_velocity,   highscore_peak.player_1_max_velocity),
+                player_1_total_distance = GREATEST(excluded.player_1_total_distance, highscore_peak.player_1_total_distance),
+                player_2_max_velocity   = GREATEST(excluded.player_2_max_velocity,   highscore_peak.player_2_max_velocity),
+                player_2_total_distance = GREATEST(excluded.player_2_total_distance, highscore_peak.player_2_total_distance),
+                player_3_max_velocity   = GREATEST(excluded.player_3_max_velocity,   highscore_peak.player_3_max_velocity),
+                player_3_total_distance = GREATEST(excluded.player_3_total_distance, highscore_peak.player_3_total_distance),
+                player_4_max_velocity   = GREATEST(excluded.player_4_max_velocity,   highscore_peak.player_4_max_velocity),
+                player_4_total_distance = GREATEST(excluded.player_4_total_distance, highscore_peak.player_4_total_distance),
+                player_5_max_velocity   = GREATEST(excluded.player_5_max_velocity,   highscore_peak.player_5_max_velocity),
+                player_5_total_distance = GREATEST(excluded.player_5_total_distance, highscore_peak.player_5_total_distance),
+                player_6_max_velocity   = GREATEST(excluded.player_6_max_velocity,   highscore_peak.player_6_max_velocity),
+                player_6_total_distance = GREATEST(excluded.player_6_total_distance, highscore_peak.player_6_total_distance),
+                player_7_max_velocity   = GREATEST(excluded.player_7_max_velocity,   highscore_peak.player_7_max_velocity),
+                player_7_total_distance = GREATEST(excluded.player_7_total_distance, highscore_peak.player_7_total_distance),
+                player_8_max_velocity   = GREATEST(excluded.player_8_max_velocity,   highscore_peak.player_8_max_velocity),
+                player_8_total_distance = GREATEST(excluded.player_8_total_distance, highscore_peak.player_8_total_distance),
+                player_9_max_velocity   = GREATEST(excluded.player_9_max_velocity,   highscore_peak.player_9_max_velocity),
+                player_9_total_distance = GREATEST(excluded.player_9_total_distance, highscore_peak.player_9_total_distance)
+            "#,
+        )
+        .bind(score.mission_id)
+        .bind(mv0).bind(td0)
+        .bind(mv1).bind(td1)
+        .bind(mv2).bind(td2)
+        .bind(mv3).bind(td3)
+        .bind(mv4).bind(td4)
+        .bind(mv5).bind(td5)
+        .bind(mv6).bind(td6)
+        .bind(mv7).bind(td7)
+        .bind(mv8).bind(td8)
+        .bind(mv9).bind(td9)
+        .execute(&self.0)
+        .await?;
+
         Ok(())
     }
 
@@ -165,37 +219,29 @@ impl crate::DB {
         Ok(rows.into_iter().map(|(id,)| id).collect())
     }
 
+    /// Reads the pre-computed mission peak from `highscore_peak` (O(1) key lookup).
     pub async fn fetch_highscore_overall(
         &self,
         mission_id: Uuid,
     ) -> Result<DBHighscorePeak, sqlx::Error> {
         Ok(sqlx::query_as::<_, HighscoreRow>(
             "SELECT \
-                COALESCE(MAX(player_0_max_velocity), 0)   AS player_0_max_velocity, \
-                COALESCE(MAX(player_0_total_distance), 0) AS player_0_total_distance, \
-                COALESCE(MAX(player_1_max_velocity), 0)   AS player_1_max_velocity, \
-                COALESCE(MAX(player_1_total_distance), 0) AS player_1_total_distance, \
-                COALESCE(MAX(player_2_max_velocity), 0)   AS player_2_max_velocity, \
-                COALESCE(MAX(player_2_total_distance), 0) AS player_2_total_distance, \
-                COALESCE(MAX(player_3_max_velocity), 0)   AS player_3_max_velocity, \
-                COALESCE(MAX(player_3_total_distance), 0) AS player_3_total_distance, \
-                COALESCE(MAX(player_4_max_velocity), 0)   AS player_4_max_velocity, \
-                COALESCE(MAX(player_4_total_distance), 0) AS player_4_total_distance, \
-                COALESCE(MAX(player_5_max_velocity), 0)   AS player_5_max_velocity, \
-                COALESCE(MAX(player_5_total_distance), 0) AS player_5_total_distance, \
-                COALESCE(MAX(player_6_max_velocity), 0)   AS player_6_max_velocity, \
-                COALESCE(MAX(player_6_total_distance), 0) AS player_6_total_distance, \
-                COALESCE(MAX(player_7_max_velocity), 0)   AS player_7_max_velocity, \
-                COALESCE(MAX(player_7_total_distance), 0) AS player_7_total_distance, \
-                COALESCE(MAX(player_8_max_velocity), 0)   AS player_8_max_velocity, \
-                COALESCE(MAX(player_8_total_distance), 0) AS player_8_total_distance, \
-                COALESCE(MAX(player_9_max_velocity), 0)   AS player_9_max_velocity, \
-                COALESCE(MAX(player_9_total_distance), 0) AS player_9_total_distance \
-             FROM highscore WHERE mission_id = $1",
+                player_0_max_velocity, player_0_total_distance, \
+                player_1_max_velocity, player_1_total_distance, \
+                player_2_max_velocity, player_2_total_distance, \
+                player_3_max_velocity, player_3_total_distance, \
+                player_4_max_velocity, player_4_total_distance, \
+                player_5_max_velocity, player_5_total_distance, \
+                player_6_max_velocity, player_6_total_distance, \
+                player_7_max_velocity, player_7_total_distance, \
+                player_8_max_velocity, player_8_total_distance, \
+                player_9_max_velocity, player_9_total_distance \
+             FROM highscore_peak WHERE mission_id = $1",
         )
         .bind(mission_id)
-        .fetch_one(&self.0)
+        .fetch_optional(&self.0)
         .await?
-        .into())
+        .map(Into::into)
+        .unwrap_or_default())
     }
 }

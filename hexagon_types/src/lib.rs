@@ -25,7 +25,7 @@ pub struct DBHighscore {
 
 /// Best recorded values per player for a given (user, mission) or across all users.
 /// Keys are player indices (0–9); only players with at least one non-zero stat are included.
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct DBHighscorePeak {
     pub players: HashMap<u8, PlayerStats>,
 }
