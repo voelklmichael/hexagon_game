@@ -25,7 +25,7 @@ pub fn router(state: AppState) -> Router {
     let cors = CorsLayer::new()
         .allow_origin([
             "http://localhost:8080".parse::<HeaderValue>().unwrap(),
-            "https://hexagon-game-a0w8.onrender.com"
+            "https://voelklmichael.github.io"
                 .parse::<HeaderValue>()
                 .unwrap(),
         ])
