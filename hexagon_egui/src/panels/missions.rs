@@ -1,6 +1,7 @@
 use hexagon_engine::GameState;
 use std::collections::HashSet;
 use std::sync::OnceLock;
+use uuid::Uuid;
 
 #[derive(serde::Deserialize)]
 struct Mission {
@@ -54,7 +55,7 @@ pub(crate) fn start_mission(index: usize, game: &mut Option<GameState>) {
 pub fn show(
     ui: &mut egui::Ui,
     game: &mut Option<GameState>,
-    missions_won: &HashSet<String>,
+    missions_won: &HashSet<Uuid>,
 ) -> Option<usize> {
     ui.heading("Missions");
     ui.label("Select a delivery mission to play.");
@@ -67,7 +68,7 @@ pub fn show(
         .spacing([12.0, 6.0])
         .show(ui, |ui| {
             for (i, mission) in missions().iter().enumerate() {
-                let won = missions_won.contains(&mission.mission_id.to_string());
+                let won = missions_won.contains(&mission.mission_id);
                 let label = if won {
                     format!("✔ {}", mission.name)
                 } else {

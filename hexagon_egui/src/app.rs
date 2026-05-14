@@ -4,6 +4,7 @@ pub use backend_reqwest::BackendReqwest;
 use hexagon_types::DBHighscorePeak;
 use indexmap::IndexMap;
 use std::collections::HashSet;
+use uuid::Uuid;
 
 use hexagon_engine::{
     CollisionMode, Color, GameOptionsDelivery, GameOptionsDiscriminants, GameOptionsStandard,
@@ -215,7 +216,7 @@ pub struct HexApp {
     #[serde(skip)]
     pub music_player: Option<crate::music::MusicPlayer>,
     pub rng: RandomNumberGenerator,
-    pub missions_won: HashSet<String>,
+    pub missions_won: HashSet<Uuid>,
     pub current_mission: Option<usize>,
     pub user_login: crate::panels::user_login::UserLogin,
     #[serde(skip)]
@@ -460,6 +461,8 @@ impl eframe::App for HexApp {
                             &mut self.history,
                             &mut self.current_mission,
                             &mut self.missions_won,
+                            self.user_login.logged_in_as.as_ref().map(|(id, _)| *id),
+                            &mut self.backend_reqwest,
                         );
                     }
                     LeftTab::Controls => {

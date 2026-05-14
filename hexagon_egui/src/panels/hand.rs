@@ -116,7 +116,9 @@ pub fn show(
     interaction: &mut BoardInteraction,
     history: &mut GameHistory,
     current_mission: &mut Option<usize>,
-    missions_won: &mut std::collections::HashSet<String>,
+    missions_won: &mut std::collections::HashSet<uuid::Uuid>,
+    user_id: Option<uuid::Uuid>,
+    backend: &mut crate::app::BackendReqwest,
 ) {
     ui.heading("Player Hand");
 
@@ -192,6 +194,19 @@ pub fn show(
     }; // immutable borrow of *game released here
 
     if let Some((text, color, opts, saved, can_undo, is_win)) = game_over_data {
+        if is_win {
+            if let Some(cur) = *current_mission {
+                if let Some(mission_id) = crate::panels::missions::mission_id(cur) {
+                    let is_new = missions_won.insert(mission_id);
+                    if is_new {
+                        if let Some(uid) = user_id {
+                            backend.report_mission_done(uid, mission_id, &saved.statistics);
+                        }
+                    }
+                }
+            }
+        }
+
         ui.label(
             egui::RichText::new("The game is finished")
                 .strong()
@@ -206,14 +221,9 @@ pub fn show(
 
         if let Some(next_idx) = next_mission {
             if ui.button("Start next mission").clicked() {
-                if is_win {
-                    let cur = current_mission.unwrap();
-                    if let Some(id) = crate::panels::missions::mission_id(cur) {
-                        missions_won.insert(id.to_string());
-                    }
-                }
                 history.undo_stack.clear();
                 history.redo_stack.clear();
+
                 crate::panels::missions::start_mission(next_idx, game);
                 *current_mission = Some(next_idx);
             }

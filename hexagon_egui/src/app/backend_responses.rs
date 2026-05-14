@@ -6,7 +6,7 @@ pub(super)        fn process_backend_responses(&mut self) {
             match result {
                 Ok(ids) => {
                     self.missions_won
-                        .extend(ids.into_iter().map(|id| id.to_string()));
+                        .extend(ids);
                 }
                 Err(e) => tracing::warn!("fetch_won_missions failed: {e}"),
             }

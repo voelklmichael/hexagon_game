@@ -3,7 +3,9 @@
     "allow": [
       "Bash(cargo b *)",
       "Bash(trunk serve *)",
-      "Bash(trunk build *)"
+      "Bash(trunk build *)",
+      "Bash(uuidgen)",
+      "Bash(grep -E \"\\(env|toml\\)$\")"
     ]
   }
 }
