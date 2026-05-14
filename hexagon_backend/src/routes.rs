@@ -6,7 +6,7 @@ use axum::{
     http::{HeaderValue, StatusCode, Uri},
     routing::{get, post},
 };
-use axum_login::AuthManagerLayerBuilder;
+use axum_login::{AuthManagerLayerBuilder, AuthUser};
 use axum_messages::MessagesManagerLayer;
 use hexagon_db::{DB, DBHighscore, DBHighscorePeak};
 use tower_http::cors::CorsLayer;
@@ -52,6 +52,10 @@ pub fn router(state: AppState) -> Router {
             "/highscore/user/{user_id}/{mission_id}",
             get(fetch_highscore_user),
         )
+        .route(
+            "/highscore/user/{user_id}/missions",
+            get(fetch_won_missions),
+        )
         .nest("/user_login", crate::user::login_router())
         .fallback(fallback)
         .layer(MessagesManagerLayer)
@@ -60,24 +64,43 @@ pub fn router(state: AppState) -> Router {
         .with_state(state)
 }
 
+/// Checks that a session is active and belongs to `user_id`.
+/// Returns `UNAUTHORIZED` if not logged in, `FORBIDDEN` if the IDs don't match.
+fn require_own_user(
+    auth_session: &crate::user::AuthSession,
+    user_id: Uuid,
+) -> Result<(), StatusCode> {
+    let Some(user) = &auth_session.user else {
+        return Err(StatusCode::UNAUTHORIZED);
+    };
+    if user.id() != user_id {
+        return Err(StatusCode::FORBIDDEN);
+    }
+    Ok(())
+}
+
 async fn healthz() -> StatusCode {
     StatusCode::NO_CONTENT
 }
 
 async fn upsert_highscore(
+    auth_session: crate::user::AuthSession,
     State(state): State<AppState>,
     Json(score): Json<DBHighscore>,
-) -> StatusCode {
+) -> Result<StatusCode, StatusCode> {
+    require_own_user(&auth_session, score.user_id)?;
     match state.db.upsert_highscore(&score).await {
-        Ok(()) => StatusCode::NO_CONTENT,
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        Ok(()) => Ok(StatusCode::NO_CONTENT),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
 
 async fn fetch_highscore_user(
+    auth_session: crate::user::AuthSession,
     State(state): State<AppState>,
     Path((user_id, mission_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<DBHighscorePeak>, StatusCode> {
+    require_own_user(&auth_session, user_id)?;
     match state.db.fetch_highscore_user(user_id, mission_id).await {
         Ok(Some(peak)) => Ok(Json(peak)),
         Ok(None) => Err(StatusCode::NOT_FOUND),
@@ -91,6 +114,18 @@ async fn fetch_highscore_overall(
 ) -> Result<Json<DBHighscorePeak>, StatusCode> {
     match state.db.fetch_highscore_overall(mission_id).await {
         Ok(peak) => Ok(Json(peak)),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+async fn fetch_won_missions(
+    auth_session: crate::user::AuthSession,
+    State(state): State<AppState>,
+    Path(user_id): Path<Uuid>,
+) -> Result<Json<Vec<Uuid>>, StatusCode> {
+    require_own_user(&auth_session, user_id)?;
+    match state.db.fetch_won_missions(user_id).await {
+        Ok(ids) => Ok(Json(ids)),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }

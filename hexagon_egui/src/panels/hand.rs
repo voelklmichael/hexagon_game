@@ -209,7 +209,7 @@ pub fn show(
                 if is_win {
                     let cur = current_mission.unwrap();
                     if let Some(id) = crate::panels::missions::mission_id(cur) {
-                        missions_won.insert(id.to_owned());
+                        missions_won.insert(id.to_string());
                     }
                 }
                 history.undo_stack.clear();

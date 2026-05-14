@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 hexagon_db = { path = "../hexagon_db" }
+hexagon_types = { path = "../hexagon_types" }
 figment.workspace = true
 serde.workspace = true
 serde_json.workspace = true

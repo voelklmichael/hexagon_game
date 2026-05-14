@@ -1,4 +1,5 @@
 use hexagon_db::{DBConfig, DBHighscore};
+use hexagon_types::PlayerStats;
 
 #[tokio::main]
 async fn main() {
@@ -18,12 +19,16 @@ async fn main() {
     db.upsert_highscore(&DBHighscore {
         user_id,
         mission_id,
-        max_velocity: 1,
-        total_distance: 1,
+        players: [
+            (0u8, PlayerStats { max_velocity: 5, total_distance: 20 }),
+            (1u8, PlayerStats { max_velocity: 3, total_distance: 15 }),
+        ]
+        .into(),
     })
     .await
     .unwrap();
+
     dbg!(db.fetch_highscore_user(user_id, mission_id).await.unwrap());
-    let previous_peak = db.fetch_highscore_overall(mission_id).await.unwrap();
-    println!("{previous_peak:?}");
+    let peak = db.fetch_highscore_overall(mission_id).await.unwrap();
+    println!("{peak:?}");
 }
