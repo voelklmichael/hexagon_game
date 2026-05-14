@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 #[derive(serde::Deserialize)]
 struct Mission {
-    mission_id: Uuid,
+    mission_id: uuid::Uuid,
     name: String,
     description: String,
     #[serde(flatten)]
@@ -39,7 +39,7 @@ pub(crate) fn mission_count() -> usize {
     missions().len()
 }
 
-pub(crate) fn mission_id(index: usize) -> Option<Uuid> {
+pub(crate) fn mission_id(index: usize) -> Option<uuid::Uuid> {
     missions().get(index).map(|m| m.mission_id)
 }
 

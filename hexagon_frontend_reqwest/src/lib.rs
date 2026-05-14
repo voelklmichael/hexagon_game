@@ -1,5 +1,4 @@
-pub use hexagon_types::DBHighscore;
-use hexagon_types::DBHighscorePeak;
+use hexagon_types::{DBHighscore, DBHighscorePeak, LoginResponse};
 use uuid::Uuid;
 
 #[derive(Debug, thiserror::Error)]
@@ -12,20 +11,16 @@ pub enum ApiError {
 
 #[derive(Debug, serde::Serialize)]
 struct LoginRequest<'a> {
-    username: &'a str,
+    email: &'a str,
     password: &'a str,
     next: Option<&'a str>,
 }
 
-#[derive(Debug, serde::Deserialize)]
-pub struct NextUrl {
-    pub next: Option<String>,
-}
-
 #[derive(Debug, serde::Serialize)]
 struct UserCreation<'a> {
-    username: &'a str,
     password: &'a str,
+    name: &'a str,
+    email: &'a str,
 }
 
 pub struct ApiClient {
@@ -39,6 +34,7 @@ impl ApiClient {
         #[cfg(not(target_arch = "wasm32"))]
         let client = reqwest::Client::builder()
             .https_only(!cfg!(debug_assertions))
+            .cookie_store(true)
             .build()?;
         #[cfg(target_arch = "wasm32")]
         let client = reqwest::Client::new();
@@ -63,14 +59,12 @@ impl ApiClient {
     }
 
     // --- health ---
-
     pub async fn healthz(&self) -> Result<(), ApiError> {
         let res = self.client.get(self.url("/healthz")).send().await?;
         Self::expect_no_content(res).await
     }
 
     // --- highscore ---
-
     pub async fn upsert_highscore(&self, score: &DBHighscore) -> Result<(), ApiError> {
         let res = self
             .client
@@ -80,7 +74,6 @@ impl ApiClient {
             .await?;
         Self::expect_no_content(res).await
     }
-
     pub async fn fetch_highscore_user(
         &self,
         user_id: Uuid,
@@ -98,7 +91,6 @@ impl ApiClient {
         let body = res.text().await.unwrap_or_default();
         Err(ApiError::Status { status, body })
     }
-
     pub async fn fetch_highscore_overall(
         &self,
         mission_id: Uuid,
@@ -116,12 +108,10 @@ impl ApiClient {
         Err(ApiError::Status { status, body })
     }
 
-    // --- user login ---
-
-    pub async fn fetch_me(&self) -> Result<Uuid, ApiError> {
+    pub async fn fetch_won_missions(&self, user_id: Uuid) -> Result<Vec<Uuid>, ApiError> {
         let res = self
             .client
-            .get(self.url("/user_login/me"))
+            .get(self.url(&format!("/highscore/user/{user_id}/missions")))
             .send()
             .await?;
         if res.status().is_success() {
@@ -132,17 +122,18 @@ impl ApiClient {
         Err(ApiError::Status { status, body })
     }
 
+    // --- user login ---
     pub async fn login(
         &self,
-        username: &str,
+        email: &str,
         password: &str,
         next: Option<&str>,
-    ) -> Result<NextUrl, ApiError> {
+    ) -> Result<LoginResponse, ApiError> {
         let res = self
             .client
             .post(self.url("/user_login/login"))
             .json(&LoginRequest {
-                username,
+                email,
                 password,
                 next,
             })
@@ -155,7 +146,6 @@ impl ApiClient {
         let body = res.text().await.unwrap_or_default();
         Err(ApiError::Status { status, body })
     }
-
     pub async fn logout(&self) -> Result<(), ApiError> {
         let res = self
             .client
@@ -166,11 +156,20 @@ impl ApiClient {
     }
 
     /// Creates a new user account and returns the new user's UUID.
-    pub async fn create_user(&self, username: &str, password: &str) -> Result<Uuid, ApiError> {
+    pub async fn create_user(
+        &self,
+        password: &str,
+        name: &str,
+        email: &str,
+    ) -> Result<Uuid, ApiError> {
         let res = self
             .client
             .post(self.url("/user_login/create"))
-            .json(&UserCreation { username, password })
+            .json(&UserCreation {
+                password,
+                name,
+                email,
+            })
             .send()
             .await?;
         if res.status().is_success() {

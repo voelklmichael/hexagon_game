@@ -7,39 +7,27 @@ async fn main() {
     println!("{:?}", &config);
     let db = config.connect().await.unwrap();
 
-    let user_name = Uuid::new_v4().to_string();
+    let tag = Uuid::new_v4();
     let password_hash = "password";
-    assert!(
-        db.fetch_user_password_by_name(&user_name)
-            .await
-            .unwrap()
-            .is_none()
-    );
-    assert!(
-        db.fetch_user_password_by_id(Uuid::new_v4())
-            .await
-            .unwrap()
-            .is_none()
-    );
-    let user_id = db.create_user(&user_name, password_hash).await.unwrap();
+    let name = &tag.to_string();
+    let email = &format!("{tag}@example.com");
 
-    let returned = db
-        .fetch_user_password_by_id(user_id)
-        .await
-        .unwrap()
-        .unwrap();
-    assert_eq!(returned.id, user_id);
-    assert_eq!(returned.user_name, user_name);
-    assert_eq!(returned.password_hash, password_hash);
+    assert!(db.fetch_user_by_email(email).await.unwrap().is_none());
 
-    let returned = db
-        .fetch_user_password_by_name(&user_name)
+    let user_id = db
+        .create_user(password_hash, name, email)
         .await
-        .unwrap()
         .unwrap();
+
+    let returned = db.fetch_user_by_id(user_id).await.unwrap().unwrap();
     assert_eq!(returned.id, user_id);
-    assert_eq!(returned.user_name, user_name);
     assert_eq!(returned.password_hash, password_hash);
+    assert_eq!(&returned.email, email);
+
+    let returned = db.fetch_user_by_email(email).await.unwrap().unwrap();
+    assert_eq!(returned.id, user_id);
+    assert_eq!(returned.password_hash, password_hash);
+    assert_eq!(&returned.email, email);
 
     println!("Success!");
 }

@@ -13,6 +13,7 @@ eframe = { version = "0.34.2", features = ["persistence"] }
 egui-async = "0.4"
 hexagon_engine = { path = "../hexagon_engine" }
 hexagon_frontend_reqwest = { path = "../hexagon_frontend_reqwest" }
+hexagon_types = { path = "../hexagon_types" }
 
 
 uuid.workspace = true

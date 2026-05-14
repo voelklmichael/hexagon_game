@@ -1,5 +1,5 @@
 use hexagon_engine::{
-    ConnectorEdgeSub, Edge, EdgeSub, GameResult, GameState, PlayerId, Sub, TileRotationDirection,
+    ConnectorEdgeSub, Edge, EdgeSub, GameResult, GameState, Sub, TileRotationDirection,
 };
 
 use crate::app::{BoardInteraction, GameHistory, RenderingData};
@@ -200,19 +200,7 @@ pub fn show(
                     let is_new = missions_won.insert(mission_id);
                     if is_new {
                         if let Some(uid) = user_id {
-                            let max_velocity = saved
-                                .statistics
-                                .max_velocity
-                                .get(&PlayerId(0))
-                                .copied()
-                                .unwrap_or(0) as i64;
-                            let total_distance = saved
-                                .statistics
-                                .total_path_weight
-                                .get(&PlayerId(0))
-                                .copied()
-                                .unwrap_or(0) as i64;
-                            backend.upsert_highscore(uid, mission_id, max_velocity, total_distance);
+                            backend.report_mission_done(uid, mission_id, &saved.statistics);
                         }
                     }
                 }

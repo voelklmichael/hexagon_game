@@ -1,12 +1,15 @@
 mod backend_reqwest;
+mod backend_responses;
 pub use backend_reqwest::BackendReqwest;
+use hexagon_types::DBHighscorePeak;
 use indexmap::IndexMap;
 use std::collections::HashSet;
 use uuid::Uuid;
 
 use hexagon_engine::{
     CollisionMode, Color, GameOptionsDelivery, GameOptionsDiscriminants, GameOptionsStandard,
-    GameState, OuterConnectors, PlayerId, RandomNumberGenerator, WinningConditionStandard,
+    GameResult, GameState, OuterConnectors, PlayerId, RandomNumberGenerator,
+    WinningConditionStandard,
 };
 
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Copy, Default)]
@@ -218,6 +221,12 @@ pub struct HexApp {
     pub user_login: crate::panels::user_login::UserLogin,
     #[serde(skip)]
     pub backend_reqwest: BackendReqwest,
+    #[serde(skip)]
+    pub mission_result_reported: bool,
+    #[serde(skip)]
+    pub mission_user_best: Option<DBHighscorePeak>,
+    #[serde(skip)]
+    pub mission_overall_best: Option<DBHighscorePeak>,
 }
 
 impl HexApp {
@@ -326,6 +335,36 @@ impl eframe::App for HexApp {
             ui.ctx().request_repaint();
         }
 
+        self.process_backend_responses();
+
+        // Report mission completion to backend once per win, if the user is logged in.
+        if game_done
+            && !self.mission_result_reported
+            && self.current_mission.is_some()
+            && self.user_login.logged_in_as.is_some()
+        {
+            if let Some(game) = &self.game {
+                if matches!(&game.result, Some(GameResult::Win(_))) {
+                    if let (Some((user_id, _)), Some(mission_idx)) =
+                        (&self.user_login.logged_in_as, self.current_mission)
+                    {
+                        if let Some(mission_uuid) = crate::panels::missions::mission_id(mission_idx)
+                        {
+                            self.backend_reqwest.report_mission_done(
+                                *user_id,
+                                mission_uuid,
+                                &game.statistics,
+                            );
+                            self.mission_result_reported = true;
+                        }
+                    }
+                }
+            }
+        }
+        if !game_done {
+            self.mission_result_reported = false;
+        }
+
         // Snapshot the replay step index now (before panel closures borrow self).
         // During InitialWait show the live game (final state); only switch to the
         // replay snapshot once the actual playback starts.
@@ -371,8 +410,16 @@ impl eframe::App for HexApp {
                             self.history.redo_stack.clear();
                             self.current_mission = Some(idx);
                             self.left_tab = LeftTab::Hand;
-                            self.right_panel_open = true;
-                            self.right_tab = RightTab::Statistics;
+                            self.mission_user_best = None;
+                            self.mission_overall_best = None;
+                            if let Some(mission_uuid) = crate::panels::missions::mission_id(idx) {
+                                self.backend_reqwest
+                                    .fetch_mission_overall_best(mission_uuid);
+                                if let Some((user_id, _)) = &self.user_login.logged_in_as {
+                                    self.backend_reqwest
+                                        .fetch_mission_user_best(*user_id, mission_uuid);
+                                }
+                            }
                         }
                     }
                     LeftTab::Options => {
@@ -414,7 +461,7 @@ impl eframe::App for HexApp {
                             &mut self.history,
                             &mut self.current_mission,
                             &mut self.missions_won,
-                            self.user_login.user_id,
+                            self.user_login.logged_in_as.as_ref().map(|(id, _)| *id),
                             &mut self.backend_reqwest,
                         );
                     }
@@ -469,6 +516,8 @@ impl eframe::App for HexApp {
                                 ui,
                                 &self.rendering_data,
                                 self.game.as_ref().map(|g| &g.statistics),
+                                self.mission_user_best.as_ref(),
+                                self.mission_overall_best.as_ref(),
                             );
                         }
                         RightTab::GameStateJson => {
