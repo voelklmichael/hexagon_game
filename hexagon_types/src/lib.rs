@@ -1,6 +1,13 @@
 use uuid::Uuid;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct LoginResponse {
+    pub next: Option<String>,
+    pub user_id: Uuid,
+    pub name: String,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct DBHighscore {
     pub user_id: Uuid,
     pub mission_id: Uuid,

@@ -13,29 +13,29 @@ static BASE_URL: &str = "https://hexagon-game-a0w8.onrender.com";
 pub struct BackendReqwest {
     client: Option<Arc<ApiClient>>,
     pub create_user_task: Bind<(), ApiError>,
-    pub login_user_task: Bind<String, ApiError>,
+    pub login_user_task: Bind<(uuid::Uuid, String), ApiError>,
 }
 
 impl BackendReqwest {
-    pub(crate) fn create_user(&mut self, user_name: String, password: String) {
+    pub(crate) fn create_user(&mut self, name: String, email: String, password: String) {
         let Some(client) = self.get_client() else {
             return;
         };
         self.create_user_task.request(async move {
-            client.create_user(&user_name, &password).await?;
-            Ok(())
+            client
+                .create_user(&password, &name, &email)
+                .await
+                .map(|_| ())
         });
     }
 
-    pub(crate) fn log_in(&mut self, user_name: String, password: String) {
+    pub(crate) fn log_in(&mut self, email: String, password: String) {
         let Some(client) = self.get_client() else {
             return;
         };
         self.login_user_task.request(async move {
-            client
-                .login(&user_name, &password, None)
-                .await
-                .map(|_| user_name)
+            let resp = client.login(&email, &password, None).await?;
+            Ok((resp.user_id, resp.name))
         });
     }
 

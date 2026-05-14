@@ -12,6 +12,7 @@ use crate::routes::AppState;
 pub struct User {
     id: Uuid,
     password_hash: SecretString,
+    pub name: String,
     email: String,
 }
 
@@ -58,19 +59,16 @@ impl AuthnBackend for AppState {
         let DBUser {
             id,
             password_hash,
-            name: _,
+            name,
             email,
         } = user;
 
-        // Verifying the password is blocking and potentially slow, so we'll do so via
-        // `spawn_blocking`.
         task::spawn_blocking(move || {
-            // We're using password-based authentication--this works by comparing our form
-            // input with an argon2 password hash.
             let is_verified = verify_password(creds.password, &password_hash).is_ok();
             Ok(is_verified.then(|| User {
                 id,
                 password_hash: password_hash.into(),
+                name,
                 email,
             }))
         })
@@ -84,13 +82,14 @@ impl AuthnBackend for AppState {
         let DBUser {
             id,
             password_hash,
-            name: _,
+            name,
             email,
         } = user;
 
         Ok(Some(User {
             id,
             password_hash: password_hash.into(),
+            name,
             email,
         }))
     }

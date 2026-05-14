@@ -27,27 +27,17 @@ impl crate::DB {
         .await
     }
 
-    /// Creates a new user. If the given id is already taken, a new one is generated automatically and returned.
-    /// Never use the input id again, always use the returned one! (They might be different!)
-    #[must_use]
-    pub async fn create_user(
+      pub async fn create_user(
         &self,
-        id: Uuid,
         password_hash: &str,
         name: &str,
         email: &str,
     ) -> Result<Uuid, sqlx::Error> {
         let row: (Uuid,) = sqlx::query_as(
-            "INSERT INTO users (id, password_hash, name, email)
-             VALUES ($1, $2, $3, $4)
-             ON CONFLICT (id) DO UPDATE
-                 SET id            = gen_random_uuid(),
-                     password_hash = EXCLUDED.password_hash,
-                     name          = EXCLUDED.name,
-                     email         = EXCLUDED.email
+            "INSERT INTO users (password_hash, name, email)
+             VALUES ($1, $2, $3)
              RETURNING id",
         )
-        .bind(id)
         .bind(password_hash)
         .bind(name)
         .bind(email)

@@ -31,13 +31,13 @@ async fn main() {
 
     // 2. Create two users
     let user_id_a = client
-        .create_user(id_a, pw, &email_a, &email_a)
+        .create_user(pw, &email_a, &email_a)
         .await
         .expect("create_user a failed");
     println!("create_user a: {user_id_a}");
 
     let user_id_b = client
-        .create_user(id_b, pw, &email_b, &email_b)
+        .create_user(pw, &email_b, &email_b)
         .await
         .expect("create_user b failed");
     println!("create_user b: {user_id_b}");

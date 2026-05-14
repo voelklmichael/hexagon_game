@@ -1,4 +1,4 @@
-use hexagon_types::{DBHighscore, DBHighscorePeak};
+use hexagon_types::{DBHighscore, DBHighscorePeak, LoginResponse};
 use uuid::Uuid;
 
 #[derive(Debug, thiserror::Error)]
@@ -16,14 +16,8 @@ struct LoginRequest<'a> {
     next: Option<&'a str>,
 }
 
-#[derive(Debug, serde::Deserialize)]
-pub struct NextUrl {
-    pub next: Option<String>,
-}
-
 #[derive(Debug, serde::Serialize)]
 struct UserCreation<'a> {
-    id: Uuid,
     password: &'a str,
     name: &'a str,
     email: &'a str,
@@ -120,7 +114,7 @@ impl ApiClient {
         email: &str,
         password: &str,
         next: Option<&str>,
-    ) -> Result<NextUrl, ApiError> {
+    ) -> Result<LoginResponse, ApiError> {
         let res = self
             .client
             .post(self.url("/user_login/login"))
@@ -150,7 +144,6 @@ impl ApiClient {
     /// Creates a new user account and returns the new user's UUID.
     pub async fn create_user(
         &self,
-        id: Uuid,
         password: &str,
         name: &str,
         email: &str,
@@ -159,7 +152,6 @@ impl ApiClient {
             .client
             .post(self.url("/user_login/create"))
             .json(&UserCreation {
-                id,
                 password,
                 name,
                 email,
