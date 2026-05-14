@@ -4,9 +4,14 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-reqwest.workspace = true
 serde.workspace = true
 uuid.workspace = true
 thiserror.workspace = true
-tokio.workspace = true
-hexagon_db = { path = "../hexagon_db" }
+hexagon_types = { path = "../hexagon_types" }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+reqwest = { version = "0.12", features = ["json"], default-features = false }
+getrandom = { version = "0.2", features = ["js"] }

@@ -1,17 +1,19 @@
+use hexagon_types::{DBHighscore, DBHighscorePeak};
 use uuid::Uuid;
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct DBHighscore {
-    pub user_id: Uuid,
-    pub mission_id: Uuid,
-    pub max_velocity: i64,
-    pub total_distance: i64,
+#[derive(sqlx::FromRow)]
+struct HighscorePeakRow {
+    max_velocity: i64,
+    total_distance: i64,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
-pub struct DBHighscorePeak {
-    pub max_velocity: i64,
-    pub total_distance: i64,
+impl From<HighscorePeakRow> for DBHighscorePeak {
+    fn from(r: HighscorePeakRow) -> Self {
+        Self {
+            max_velocity: r.max_velocity,
+            total_distance: r.total_distance,
+        }
+    }
 }
 
 impl crate::DB {
@@ -42,14 +44,15 @@ impl crate::DB {
         user_id: Uuid,
         mission_id: Uuid,
     ) -> Result<Option<DBHighscorePeak>, sqlx::Error> {
-        sqlx::query_as::<_, DBHighscorePeak>(
+        Ok(sqlx::query_as::<_, HighscorePeakRow>(
             "SELECT max_velocity, total_distance FROM highscore \
              WHERE user_id = $1 AND mission_id = $2",
         )
         .bind(user_id)
         .bind(mission_id)
         .fetch_optional(&self.0)
-        .await
+        .await?
+        .map(Into::into))
     }
 
     /// Returns the maximum max_velocity and total_distance across all users for a single mission.
@@ -57,13 +60,14 @@ impl crate::DB {
         &self,
         mission_id: Uuid,
     ) -> Result<DBHighscorePeak, sqlx::Error> {
-        sqlx::query_as::<_, DBHighscorePeak>(
+        Ok(sqlx::query_as::<_, HighscorePeakRow>(
             "SELECT COALESCE(MAX(max_velocity), 0)   AS max_velocity, \
                     COALESCE(MAX(total_distance), 0) AS total_distance \
              FROM highscore WHERE mission_id = $1",
         )
         .bind(mission_id)
         .fetch_one(&self.0)
-        .await
+        .await?
+        .into())
     }
 }

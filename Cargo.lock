@@ -1965,6 +1965,7 @@ name = "hexagon_db"
 version = "0.1.0"
 dependencies = [
  "figment",
+ "hexagon_types",
  "secrecy",
  "serde",
  "serde_json",
@@ -1984,6 +1985,7 @@ dependencies = [
  "hexagon_engine",
  "hexagon_frontend_reqwest",
  "indexmap",
+ "log",
  "rodio",
  "serde",
  "serde_json",
@@ -2012,11 +2014,19 @@ dependencies = [
 name = "hexagon_frontend_reqwest"
 version = "0.1.0"
 dependencies = [
- "hexagon_db",
+ "getrandom 0.2.17",
+ "hexagon_types",
  "reqwest",
  "serde",
  "thiserror 2.0.18",
- "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "hexagon_types"
+version = "0.1.0"
+dependencies = [
+ "serde",
  "uuid",
 ]
 

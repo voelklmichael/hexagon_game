@@ -32,3 +32,4 @@ tokio.workspace = true
 wasm-bindgen = "0.2.121"
 wasm-bindgen-futures = "0.4.71"
 web-sys = "0.3.70"              # to access the DOM (to hide the loading text)
+log = "0.4"

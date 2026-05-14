@@ -1,4 +1,4 @@
-use hexagon_db::{DBHighscore, DBHighscorePeak};
+use hexagon_types::{DBHighscore, DBHighscorePeak};
 use uuid::Uuid;
 
 #[derive(Debug, thiserror::Error)]
@@ -35,9 +35,12 @@ pub struct ApiClient {
 impl ApiClient {
     /// Creates a new client. `base_url` should be e.g. `"https://example.com"`.
     pub fn new(base_url: impl Into<String>) -> Result<Self, ApiError> {
-        let https_only = !cfg!(debug_assertions);
-
-        let client = reqwest::Client::builder().https_only(https_only).build()?;
+        #[cfg(not(target_arch = "wasm32"))]
+        let client = reqwest::Client::builder()
+            .https_only(!cfg!(debug_assertions))
+            .build()?;
+        #[cfg(target_arch = "wasm32")]
+        let client = reqwest::Client::new();
         Ok(Self {
             client,
             base_url: base_url.into(),

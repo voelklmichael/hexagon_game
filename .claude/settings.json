@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo b *)",
+      "Bash(trunk serve *)",
+      "Bash(trunk build *)"
+    ]
+  }
+}
