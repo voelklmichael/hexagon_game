@@ -7,7 +7,9 @@ edition = "2024"
 serde.workspace = true
 uuid.workspace = true
 thiserror.workspace = true
+tracing.workspace = true
 hexagon_types = { path = "../hexagon_types" }
+
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 reqwest = { version = "0.12", features = [

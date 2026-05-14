@@ -130,18 +130,38 @@ impl ApiClient {
         let res = self
             .client
             .post(self.url("/user_login/login"))
-            .json(&LoginRequest { email, password, next })
+            .json(&LoginRequest {
+                email,
+                password,
+                next,
+            })
             .send()
             .await?;
         Self::expect_json(res).await
     }
 
     pub async fn me(&self) -> Result<Option<MeResponse>, ApiError> {
-        let res = self.client.get(self.url("/user_login/me")).send().await?;
+        let res = self
+            .client
+            .get(self.url("/user_login/me"))
+            .send()
+            .await
+            .inspect_err(|e| tracing::warn!("Failed to call /user_login/me: {e}"))?;
         if res.status() == reqwest::StatusCode::UNAUTHORIZED {
+            tracing::info!("Not logged in: UNAUTHORIZED");
             return Ok(None);
         }
-        Ok(Some(Self::expect_json(res).await?))
+
+        match Self::expect_json::<MeResponse>(res).await {
+            Ok(me) => {
+                tracing::info!("Logged in as {}", me.name);
+                Ok(Some(me))
+            }
+            Err(e) => {
+                tracing::warn!("Failed to call /user_login/me: {e}");
+                Err(e.into())
+            }
+        }
     }
 
     pub async fn logout(&self) -> Result<(), ApiError> {
@@ -163,7 +183,11 @@ impl ApiClient {
         let res = self
             .client
             .post(self.url("/user_login/create"))
-            .json(&UserCreation { password, name, email })
+            .json(&UserCreation {
+                password,
+                name,
+                email,
+            })
             .send()
             .await?;
         Self::expect_json(res).await
