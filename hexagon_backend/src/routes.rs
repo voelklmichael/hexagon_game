@@ -3,12 +3,13 @@ use std::sync::Arc;
 use axum::{
     Json, Router,
     extract::{Path, State},
-    http::{StatusCode, Uri},
+    http::{HeaderValue, StatusCode, Uri},
     routing::{get, post},
 };
 use axum_login::AuthManagerLayerBuilder;
 use axum_messages::MessagesManagerLayer;
 use hexagon_db::{DB, DBHighscore, DBHighscorePeak};
+use tower_http::cors::CorsLayer;
 use tower_sessions::{MemoryStore, SessionManagerLayer};
 use uuid::Uuid;
 
@@ -20,6 +21,23 @@ pub struct AppState {
 pub fn router(state: AppState) -> Router {
     let session_layer = SessionManagerLayer::new(MemoryStore::default());
     let auth_layer = AuthManagerLayerBuilder::new(state.clone(), session_layer).build();
+
+    let cors = CorsLayer::new()
+        .allow_origin([
+            "http://localhost:8080".parse::<HeaderValue>().unwrap(),
+            "https://hexagon-game-a0w8.onrender.com".parse::<HeaderValue>().unwrap(),
+        ])
+        .allow_methods([
+            axum::http::Method::GET,
+            axum::http::Method::POST,
+            axum::http::Method::PUT,
+            axum::http::Method::DELETE,
+        ])
+        .allow_headers([
+            axum::http::header::CONTENT_TYPE,
+            axum::http::header::AUTHORIZATION,
+        ])
+        .allow_credentials(true);
 
     Router::new()
         .route("/healthz", get(healthz))
@@ -36,6 +54,7 @@ pub fn router(state: AppState) -> Router {
         .fallback(fallback)
         .layer(MessagesManagerLayer)
         .layer(auth_layer)
+        .layer(cors)
         .with_state(state)
 }
 
