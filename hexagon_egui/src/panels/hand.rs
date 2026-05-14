@@ -1,5 +1,5 @@
 use hexagon_engine::{
-    ConnectorEdgeSub, Edge, EdgeSub, GameResult, GameState, Sub, TileRotationDirection,
+    ConnectorEdgeSub, Edge, EdgeSub, GameResult, GameState, PlayerId, Sub, TileRotationDirection,
 };
 
 use crate::app::{BoardInteraction, GameHistory, RenderingData};
@@ -116,7 +116,9 @@ pub fn show(
     interaction: &mut BoardInteraction,
     history: &mut GameHistory,
     current_mission: &mut Option<usize>,
-    missions_won: &mut std::collections::HashSet<String>,
+    missions_won: &mut std::collections::HashSet<uuid::Uuid>,
+    user_id: Option<uuid::Uuid>,
+    backend: &mut crate::app::BackendReqwest,
 ) {
     ui.heading("Player Hand");
 
@@ -192,6 +194,31 @@ pub fn show(
     }; // immutable borrow of *game released here
 
     if let Some((text, color, opts, saved, can_undo, is_win)) = game_over_data {
+        if is_win {
+            if let Some(cur) = *current_mission {
+                if let Some(mission_id) = crate::panels::missions::mission_id(cur) {
+                    let is_new = missions_won.insert(mission_id);
+                    if is_new {
+                        if let Some(uid) = user_id {
+                            let max_velocity = saved
+                                .statistics
+                                .max_velocity
+                                .get(&PlayerId(0))
+                                .copied()
+                                .unwrap_or(0) as i64;
+                            let total_distance = saved
+                                .statistics
+                                .total_path_weight
+                                .get(&PlayerId(0))
+                                .copied()
+                                .unwrap_or(0) as i64;
+                            backend.upsert_highscore(uid, mission_id, max_velocity, total_distance);
+                        }
+                    }
+                }
+            }
+        }
+
         ui.label(
             egui::RichText::new("The game is finished")
                 .strong()
@@ -206,14 +233,9 @@ pub fn show(
 
         if let Some(next_idx) = next_mission {
             if ui.button("Start next mission").clicked() {
-                if is_win {
-                    let cur = current_mission.unwrap();
-                    if let Some(id) = crate::panels::missions::mission_id(cur) {
-                        missions_won.insert(id.to_owned());
-                    }
-                }
                 history.undo_stack.clear();
                 history.redo_stack.clear();
+
                 crate::panels::missions::start_mission(next_idx, game);
                 *current_mission = Some(next_idx);
             }

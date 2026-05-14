@@ -1,4 +1,5 @@
-use hexagon_types::{DBHighscore, DBHighscorePeak};
+pub use hexagon_types::DBHighscore;
+use hexagon_types::DBHighscorePeak;
 use uuid::Uuid;
 
 #[derive(Debug, thiserror::Error)]
@@ -116,6 +117,20 @@ impl ApiClient {
     }
 
     // --- user login ---
+
+    pub async fn fetch_me(&self) -> Result<Uuid, ApiError> {
+        let res = self
+            .client
+            .get(self.url("/user_login/me"))
+            .send()
+            .await?;
+        if res.status().is_success() {
+            return Ok(res.json().await?);
+        }
+        let status = res.status().as_u16();
+        let body = res.text().await.unwrap_or_default();
+        Err(ApiError::Status { status, body })
+    }
 
     pub async fn login(
         &self,

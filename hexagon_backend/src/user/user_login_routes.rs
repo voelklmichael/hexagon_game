@@ -16,6 +16,7 @@ pub fn login_router() -> Router<AppState> {
         .route("/login", post(self::post::login))
         .route("/logout", get(self::get::logout))
         .route("/create", post(self::post::create))
+        .route("/me", get(self::get::me))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -96,14 +97,25 @@ mod post {
 }
 
 mod get {
+    use axum::Json;
+    use axum_login::AuthUser;
+    use uuid::Uuid;
+
     use super::*;
 
     pub async fn logout(mut auth_session: AuthSession) -> impl IntoResponse {
         tracing::info!("Logging out");
 
         match auth_session.logout().await {
-            Ok(_) => StatusCode::NO_CONTENT.into_response(), //Redirect::to("/login").into_response(),
+            Ok(_) => StatusCode::NO_CONTENT.into_response(),
             Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        }
+    }
+
+    pub async fn me(auth_session: AuthSession) -> Result<Json<Uuid>, StatusCode> {
+        match auth_session.user {
+            Some(user) => Ok(Json(user.id())),
+            None => Err(StatusCode::UNAUTHORIZED),
         }
     }
 }

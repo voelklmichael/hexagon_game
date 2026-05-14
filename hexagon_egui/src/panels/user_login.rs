@@ -9,6 +9,7 @@ pub struct UserLogin {
     password_textbox: String,
     #[serde(skip)]
     pub logged_in_as: Option<String>,
+    pub user_id: Option<uuid::Uuid>,
 }
 
 pub fn show(ui: &mut egui::Ui, user: &mut UserLogin, client: &mut BackendReqwest) {
@@ -16,14 +17,24 @@ pub fn show(ui: &mut egui::Ui, user: &mut UserLogin, client: &mut BackendReqwest
         match result {
             Ok(name) => {
                 user.user_name_textbox = name.clone();
-                user.logged_in_as = Some(name)
+                user.logged_in_as = Some(name);
+                client.fetch_me();
             }
             Err(e) => tracing::info!("Failed to log-in user: {e}"),
         }
     }
+    if let Some(result) = client.fetch_me_task.take() {
+        match result {
+            Ok(id) => user.user_id = Some(id),
+            Err(e) => tracing::info!("Failed to fetch user id: {e}"),
+        }
+    }
     if let Some(result) = client.create_user_task.take() {
         match result {
-            Ok(()) => tracing::info!("User successfully created"),
+            Ok(id) => {
+                tracing::info!("User successfully created");
+                user.user_id = Some(id);
+            }
             Err(e) => tracing::info!("Failed to create user: {e}"),
         }
     }
