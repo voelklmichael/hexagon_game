@@ -260,6 +260,8 @@ impl eframe::App for HexApp {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        self.backend_reqwest.poll_me_task();
+
         if let Some(player) = &self.music_player
             && !self.music.paused
             && player.check_and_reset_finished()

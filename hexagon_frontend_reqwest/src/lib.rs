@@ -1,4 +1,4 @@
-use hexagon_types::{DBHighscore, DBHighscorePeak, LoginResponse};
+use hexagon_types::{DBHighscore, DBHighscorePeak, LoginResponse, MeResponse};
 use uuid::Uuid;
 
 #[derive(Debug, thiserror::Error)]
@@ -58,6 +58,17 @@ impl ApiClient {
         Err(ApiError::Status { status: code, body })
     }
 
+    async fn expect_json<T: serde::de::DeserializeOwned>(
+        res: reqwest::Response,
+    ) -> Result<T, ApiError> {
+        if res.status().is_success() {
+            return Ok(res.json().await?);
+        }
+        let code = res.status().as_u16();
+        let body = res.text().await.unwrap_or_default();
+        Err(ApiError::Status { status: code, body })
+    }
+
     // --- health ---
     pub async fn healthz(&self) -> Result<(), ApiError> {
         let res = self.client.get(self.url("/healthz")).send().await?;
@@ -74,6 +85,7 @@ impl ApiClient {
             .await?;
         Self::expect_no_content(res).await
     }
+
     pub async fn fetch_highscore_user(
         &self,
         user_id: Uuid,
@@ -84,13 +96,9 @@ impl ApiClient {
             .get(self.url(&format!("/highscore/user/{user_id}/{mission_id}")))
             .send()
             .await?;
-        if res.status().is_success() {
-            return Ok(res.json().await?);
-        }
-        let status = res.status().as_u16();
-        let body = res.text().await.unwrap_or_default();
-        Err(ApiError::Status { status, body })
+        Self::expect_json(res).await
     }
+
     pub async fn fetch_highscore_overall(
         &self,
         mission_id: Uuid,
@@ -100,12 +108,7 @@ impl ApiClient {
             .get(self.url(&format!("/highscore/overall/{mission_id}")))
             .send()
             .await?;
-        if res.status().is_success() {
-            return Ok(res.json().await?);
-        }
-        let status = res.status().as_u16();
-        let body = res.text().await.unwrap_or_default();
-        Err(ApiError::Status { status, body })
+        Self::expect_json(res).await
     }
 
     pub async fn fetch_won_missions(&self, user_id: Uuid) -> Result<Vec<Uuid>, ApiError> {
@@ -114,12 +117,7 @@ impl ApiClient {
             .get(self.url(&format!("/highscore/user/{user_id}/missions")))
             .send()
             .await?;
-        if res.status().is_success() {
-            return Ok(res.json().await?);
-        }
-        let status = res.status().as_u16();
-        let body = res.text().await.unwrap_or_default();
-        Err(ApiError::Status { status, body })
+        Self::expect_json(res).await
     }
 
     // --- user login ---
@@ -132,20 +130,20 @@ impl ApiClient {
         let res = self
             .client
             .post(self.url("/user_login/login"))
-            .json(&LoginRequest {
-                email,
-                password,
-                next,
-            })
+            .json(&LoginRequest { email, password, next })
             .send()
             .await?;
-        if res.status().is_success() {
-            return Ok(res.json().await?);
-        }
-        let status = res.status().as_u16();
-        let body = res.text().await.unwrap_or_default();
-        Err(ApiError::Status { status, body })
+        Self::expect_json(res).await
     }
+
+    pub async fn me(&self) -> Result<Option<MeResponse>, ApiError> {
+        let res = self.client.get(self.url("/user_login/me")).send().await?;
+        if res.status() == reqwest::StatusCode::UNAUTHORIZED {
+            return Ok(None);
+        }
+        Ok(Some(Self::expect_json(res).await?))
+    }
+
     pub async fn logout(&self) -> Result<(), ApiError> {
         let res = self
             .client
@@ -165,18 +163,9 @@ impl ApiClient {
         let res = self
             .client
             .post(self.url("/user_login/create"))
-            .json(&UserCreation {
-                password,
-                name,
-                email,
-            })
+            .json(&UserCreation { password, name, email })
             .send()
             .await?;
-        if res.status().is_success() {
-            return Ok(res.json().await?);
-        }
-        let status = res.status().as_u16();
-        let body = res.text().await.unwrap_or_default();
-        Err(ApiError::Status { status, body })
+        Self::expect_json(res).await
     }
 }

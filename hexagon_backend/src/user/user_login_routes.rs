@@ -112,7 +112,7 @@ mod post {
 mod get {
     use axum::Json;
     use axum_login::AuthUser;
-    use uuid::Uuid;
+    use hexagon_types::MeResponse;
 
     use super::*;
 
@@ -125,10 +125,10 @@ mod get {
         }
     }
 
-    pub async fn me(auth_session: AuthSession) -> Result<Json<Uuid>, StatusCode> {
+    pub async fn me(auth_session: AuthSession) -> Result<Json<MeResponse>, StatusCode> {
         tracing::info!("GET /user_login/me");
         match auth_session.user {
-            Some(user) => Ok(Json(user.id())),
+            Some(user) => Ok(Json(MeResponse { user_id: user.id(), name: user.name.clone() })),
             None => Err(StatusCode::UNAUTHORIZED),
         }
     }

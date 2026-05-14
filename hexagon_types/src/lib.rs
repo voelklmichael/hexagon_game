@@ -8,6 +8,12 @@ pub struct LoginResponse {
     pub name: String,
 }
 
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct MeResponse {
+    pub user_id: Uuid,
+    pub name: String,
+}
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct PlayerStats {
     pub max_velocity: i64,

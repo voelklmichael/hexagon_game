@@ -17,6 +17,10 @@ pub struct UserLogin {
 }
 
 pub fn show(ui: &mut egui::Ui, user: &mut UserLogin, client: &mut BackendReqwest) {
+    if let Some((id, name)) = client.session_user.take() {
+        user.logged_in_as = Some((id, name));
+    }
+
     if let Some(result) = client.login_user_task.take() {
         match result {
             Ok((id, name)) => {
