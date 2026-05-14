@@ -6,7 +6,7 @@ use axum::{
     http::{HeaderValue, StatusCode, Uri},
     routing::{get, post},
 };
-use axum_login::AuthManagerLayerBuilder;
+use axum_login::{AuthManagerLayerBuilder, AuthUser};
 use axum_messages::MessagesManagerLayer;
 use hexagon_db::{DB, DBHighscore, DBHighscorePeak};
 use tower_http::cors::CorsLayer;
@@ -65,9 +65,16 @@ async fn healthz() -> StatusCode {
 }
 
 async fn upsert_highscore(
+    auth_session: crate::user::AuthSession,
     State(state): State<AppState>,
     Json(score): Json<DBHighscore>,
 ) -> StatusCode {
+    let Some(user) = auth_session.user else {
+        return StatusCode::UNAUTHORIZED;
+    };
+    if user.id() != score.user_id {
+        return StatusCode::FORBIDDEN;
+    }
     match state.db.upsert_highscore(&score).await {
         Ok(()) => StatusCode::NO_CONTENT,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -75,9 +82,16 @@ async fn upsert_highscore(
 }
 
 async fn fetch_highscore_user(
+    auth_session: crate::user::AuthSession,
     State(state): State<AppState>,
     Path((user_id, mission_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<DBHighscorePeak>, StatusCode> {
+    let Some(user) = auth_session.user else {
+        return Err(StatusCode::UNAUTHORIZED);
+    };
+    if user.id() != user_id {
+        return Err(StatusCode::FORBIDDEN);
+    }
     match state.db.fetch_highscore_user(user_id, mission_id).await {
         Ok(Some(peak)) => Ok(Json(peak)),
         Ok(None) => Err(StatusCode::NOT_FOUND),
