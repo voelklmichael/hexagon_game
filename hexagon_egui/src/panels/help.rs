@@ -1,6 +1,4 @@
 pub fn show(ui: &mut egui::Ui) {
-    ui.heading("Help & Tutorial");
-
     ui.collapsing("How to play", |ui| {
         ui.add(egui::Label::new("Select a tile from your hand, rotate it if needed, then press \"Play selected tile\".").wrap());
         ui.add(egui::Label::new("Players move automatically along the connected path after each tile is placed.").wrap());

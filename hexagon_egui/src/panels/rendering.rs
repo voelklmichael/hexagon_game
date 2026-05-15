@@ -19,8 +19,6 @@ fn color_selector(ui: &mut egui::Ui, label: &str, color: &mut Color) {
 }
 
 pub fn show(ui: &mut egui::Ui, data: &mut RenderingData) {
-    ui.heading("Rendering");
-
     ui.separator();
     ui.label("Board Colors");
     color_selector(ui, "Background", &mut data.background);

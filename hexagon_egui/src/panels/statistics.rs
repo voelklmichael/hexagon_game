@@ -93,8 +93,6 @@ pub fn show(
     user_best: Option<&DBHighscorePeak>,
     overall_best: Option<&DBHighscorePeak>,
 ) {
-    ui.heading("Statistics");
-
     let Some(statistics) = statistics else {
         ui.label("No game in progress.");
         return;

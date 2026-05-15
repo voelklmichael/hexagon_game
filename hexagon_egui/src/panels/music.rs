@@ -2,8 +2,6 @@ use crate::app::MusicState;
 use crate::music::TRACKS;
 
 pub fn show(ui: &mut egui::Ui, state: &mut MusicState, player: Option<&crate::music::MusicPlayer>) {
-    ui.heading("Music");
-
     let mut new_track = state.current_track;
 
     ui.horizontal(|ui| {

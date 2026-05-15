@@ -3,8 +3,6 @@ use hexagon_engine::GameState;
 use crate::app::GameHistory;
 
 pub fn show(ui: &mut egui::Ui, game: &mut Option<GameState>, history: &mut GameHistory) -> bool {
-    ui.heading("Controls");
-
     let has_game = game.is_some();
     let can_undo = !history.undo_stack.is_empty();
     let can_redo = !history.redo_stack.is_empty();

@@ -1,8 +1,6 @@
 use hexagon_engine::GameState;
 
 pub fn show(ui: &mut egui::Ui, game: Option<&GameState>) {
-    ui.heading("Game State JSON");
-
     let json = match game {
         Some(g) => serde_json::to_string_pretty(g).unwrap_or_else(|e| e.to_string()),
         None => String::from("No game in progress."),

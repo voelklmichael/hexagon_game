@@ -122,7 +122,6 @@ pub fn show(
     user_id: Option<uuid::Uuid>,
     backend: &mut crate::app::BackendReqwest,
 ) -> bool {
-    ui.heading("Player Hand");
     let mut started = false;
 
     let can_undo = !history.undo_stack.is_empty();

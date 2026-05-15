@@ -48,8 +48,6 @@ pub fn show(
     game: &mut Option<GameState>,
     missions_won: &HashSet<Uuid>,
 ) -> Option<usize> {
-    ui.heading("Missions");
-
     if !missions_loaded {
         ui.add_space(8.0);
         ui.horizontal(|ui| {

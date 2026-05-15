@@ -4,8 +4,6 @@ use hexagon_types::WinningConditionHighscore;
 use crate::app::OptionsState;
 
 pub fn show(ui: &mut egui::Ui, options: &mut OptionsState) -> bool {
-    ui.heading("Game Options");
-
     ui.horizontal(|ui| {
         ui.selectable_value(
             &mut options.selected,
