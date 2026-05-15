@@ -1,4 +1,6 @@
-use hexagon_types::{DBHighscore, DBHighscorePeak, LoginResponse, MeResponse, MissionEntry, MissionKind};
+use hexagon_types::{
+    DBHighscore, DBHighscorePeak, LoginResponse, MeResponse, MissionEntry, MissionKind,
+};
 use uuid::Uuid;
 
 #[derive(Debug, thiserror::Error)]

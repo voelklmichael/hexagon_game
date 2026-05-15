@@ -5,8 +5,8 @@ pub mod board_types;
 pub use board_types::*;
 pub mod game_options;
 pub mod rng;
-pub use rng::RandomNumberGenerator;
 pub use game_options::*;
+pub use rng::RandomNumberGenerator;
 pub mod missions;
 pub use missions::*;
 

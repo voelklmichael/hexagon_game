@@ -8,8 +8,7 @@ use uuid::Uuid;
 
 use hexagon_engine::{
     CollisionMode, Color, GameOptionsDelivery, GameOptionsDiscriminants, GameOptionsStandard,
-    GameResult, GameState, OuterConnectors, PlayerId, RandomNumberGenerator,
-    WinningCondition,
+    GameResult, GameState, OuterConnectors, PlayerId, RandomNumberGenerator, WinningCondition,
 };
 
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Copy, Default)]
@@ -345,18 +344,15 @@ impl eframe::App for HexApp {
             && self.current_mission.is_some()
             && self.user_login.logged_in_as.is_some()
             && let Some(game) = &self.game
-                && matches!(&game.result, Some(GameResult::Win(_)))
-                    && let (Some((user_id, _)), Some(mission_idx)) =
-                        (&self.user_login.logged_in_as, self.current_mission)
-                        && let Some(mission_uuid) = crate::panels::missions::mission_id(mission_idx)
-                        {
-                            self.backend_reqwest.report_mission_done(
-                                *user_id,
-                                mission_uuid,
-                                &game.statistics,
-                            );
-                            self.mission_result_reported = true;
-                        }
+            && matches!(&game.result, Some(GameResult::Win(_)))
+            && let (Some((user_id, _)), Some(mission_idx)) =
+                (&self.user_login.logged_in_as, self.current_mission)
+            && let Some(mission_uuid) = crate::panels::missions::mission_id(mission_idx)
+        {
+            self.backend_reqwest
+                .report_mission_done(*user_id, mission_uuid, &game.statistics);
+            self.mission_result_reported = true;
+        }
         if !game_done {
             self.mission_result_reported = false;
         }

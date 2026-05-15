@@ -1,6 +1,4 @@
-use hexagon_engine::{
-    CollisionMode, GameOptionsDiscriminants, OuterConnectors, WinningCondition,
-};
+use hexagon_engine::{CollisionMode, GameOptionsDiscriminants, OuterConnectors, WinningCondition};
 
 use crate::app::OptionsState;
 

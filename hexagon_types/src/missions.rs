@@ -40,10 +40,7 @@ pub enum MissionHighscore {
 // --- unified ---
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, strum::EnumDiscriminants)]
-#[strum_discriminants(
-    name(MissionKind),
-    derive(serde::Serialize, serde::Deserialize)
-)]
+#[strum_discriminants(name(MissionKind), derive(serde::Serialize, serde::Deserialize))]
 pub enum Mission {
     HighScore(MissionHighscore),
     Delivery(MissionDelivery),

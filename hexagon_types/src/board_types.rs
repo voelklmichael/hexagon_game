@@ -168,8 +168,18 @@ impl Board {
             .iter()
             .flat_map(|(a, b)| {
                 [
-                    (a.hexagon.x, a.hexagon.y, edge_idx(a.edge_sub.edge), sub_idx(a.edge_sub.sub)),
-                    (b.hexagon.x, b.hexagon.y, edge_idx(b.edge_sub.edge), sub_idx(b.edge_sub.sub)),
+                    (
+                        a.hexagon.x,
+                        a.hexagon.y,
+                        edge_idx(a.edge_sub.edge),
+                        sub_idx(a.edge_sub.sub),
+                    ),
+                    (
+                        b.hexagon.x,
+                        b.hexagon.y,
+                        edge_idx(b.edge_sub.edge),
+                        sub_idx(b.edge_sub.sub),
+                    ),
                 ]
             })
             .collect();
@@ -226,11 +236,17 @@ impl Board {
                         kind: ConnectorKind::HexToHex(ConnectorOutside {
                             connector_a: ConnectorPosition {
                                 hexagon: *hex_a,
-                                edge_sub: EdgeSub { edge: edge_e, sub: sub_a },
+                                edge_sub: EdgeSub {
+                                    edge: edge_e,
+                                    sub: sub_a,
+                                },
                             },
                             connector_b: ConnectorPosition {
                                 hexagon: hex_b,
-                                edge_sub: EdgeSub { edge: opp, sub: sub_b },
+                                edge_sub: EdgeSub {
+                                    edge: opp,
+                                    sub: sub_b,
+                                },
                             },
                         }),
                         weight: 1,
@@ -240,7 +256,10 @@ impl Board {
             }
         }
 
-        Ok(Board { hexagons, connectors })
+        Ok(Board {
+            hexagons,
+            connectors,
+        })
     }
 
     pub fn get_dead_ends(&self) -> Vec<ConnectorId> {
@@ -411,8 +430,20 @@ impl Board {
                     && !hex_set.contains(&Self::neighbor_dir(pb, start_b))
                 {
                     pairs.push((
-                        ConnectorPosition { hexagon: *hex_a, edge_sub: EdgeSub { edge: prev_a, sub: Sub::Right } },
-                        ConnectorPosition { hexagon: hex_b,  edge_sub: EdgeSub { edge: start_b, sub: Sub::Left } },
+                        ConnectorPosition {
+                            hexagon: *hex_a,
+                            edge_sub: EdgeSub {
+                                edge: prev_a,
+                                sub: Sub::Right,
+                            },
+                        },
+                        ConnectorPosition {
+                            hexagon: hex_b,
+                            edge_sub: EdgeSub {
+                                edge: start_b,
+                                sub: Sub::Left,
+                            },
+                        },
                     ));
                 }
                 let (next_a, end_b) = Self::adjacent_at_end(edge_e);
@@ -420,8 +451,20 @@ impl Board {
                     && !hex_set.contains(&Self::neighbor_dir(pb, end_b))
                 {
                     pairs.push((
-                        ConnectorPosition { hexagon: *hex_a, edge_sub: EdgeSub { edge: next_a, sub: Sub::Left } },
-                        ConnectorPosition { hexagon: hex_b,  edge_sub: EdgeSub { edge: end_b,  sub: Sub::Right } },
+                        ConnectorPosition {
+                            hexagon: *hex_a,
+                            edge_sub: EdgeSub {
+                                edge: next_a,
+                                sub: Sub::Left,
+                            },
+                        },
+                        ConnectorPosition {
+                            hexagon: hex_b,
+                            edge_sub: EdgeSub {
+                                edge: end_b,
+                                sub: Sub::Right,
+                            },
+                        },
                     ));
                 }
             }
@@ -477,12 +520,12 @@ impl Board {
     fn neighbors(pos: &HexagonPosition) -> [(Edge, HexagonPosition); 6] {
         let (q, r) = (pos.x, pos.y);
         [
-            (Edge::Top,         HexagonPosition { x: q,     y: r - 1 }),
-            (Edge::TopLeft,     HexagonPosition { x: q - 1, y: r     }),
-            (Edge::BottomLeft,  HexagonPosition { x: q - 1, y: r + 1 }),
-            (Edge::Bottom,      HexagonPosition { x: q,     y: r + 1 }),
-            (Edge::BottomRight, HexagonPosition { x: q + 1, y: r     }),
-            (Edge::TopRight,    HexagonPosition { x: q + 1, y: r - 1 }),
+            (Edge::Top, HexagonPosition { x: q, y: r - 1 }),
+            (Edge::TopLeft, HexagonPosition { x: q - 1, y: r }),
+            (Edge::BottomLeft, HexagonPosition { x: q - 1, y: r + 1 }),
+            (Edge::Bottom, HexagonPosition { x: q, y: r + 1 }),
+            (Edge::BottomRight, HexagonPosition { x: q + 1, y: r }),
+            (Edge::TopRight, HexagonPosition { x: q + 1, y: r - 1 }),
         ]
     }
 }
