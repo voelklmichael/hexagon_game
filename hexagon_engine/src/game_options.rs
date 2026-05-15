@@ -287,13 +287,13 @@ impl GameOptionsStandard {
                     .iter()
                     .filter(|p| !p.is_npc)
                     .filter(|p| {
-                        let vel_ok = min_velocity.map_or(true, |v| {
+                        let vel_ok = min_velocity.is_none_or(|v| {
                             stats.max_velocity.get(&p.id).copied().unwrap_or(0) >= v
                         });
-                        let dist_ok = min_distance.map_or(true, |d| {
+                        let dist_ok = min_distance.is_none_or(|d| {
                             stats.total_path_weight.get(&p.id).copied().unwrap_or(0) >= d
                         });
-                        let target_ok = target.map_or(true, |t| p.current_position.0 == t);
+                        let target_ok = target.is_none_or(|t| p.current_position.0 == t);
                         vel_ok && dist_ok && target_ok
                     })
                     .map(|p| p.id)

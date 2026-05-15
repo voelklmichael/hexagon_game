@@ -351,7 +351,8 @@ impl eframe::App for HexApp {
             && matches!(&game.result, Some(GameResult::Win(_)))
             && let (Some((user_id, _)), Some(mission_idx)) =
                 (&self.user_login.logged_in_as, self.current_mission)
-            && let Some(mission_uuid) = crate::panels::missions::mission_id(&self.missions, mission_idx)
+            && let Some(mission_uuid) =
+                crate::panels::missions::mission_id(&self.missions, mission_idx)
         {
             self.backend_reqwest
                 .report_mission_done(*user_id, mission_uuid, &game.statistics);
@@ -414,7 +415,9 @@ impl eframe::App for HexApp {
                             self.right_panel_open = true;
                             self.mission_user_best = None;
                             self.mission_overall_best = None;
-                            if let Some(mission_uuid) = crate::panels::missions::mission_id(&self.missions, idx) {
+                            if let Some(mission_uuid) =
+                                crate::panels::missions::mission_id(&self.missions, idx)
+                            {
                                 self.backend_reqwest
                                     .fetch_mission_overall_best(mission_uuid);
                                 if let Some((user_id, _)) = &self.user_login.logged_in_as {
@@ -433,9 +436,10 @@ impl eframe::App for HexApp {
                                 hexagon_engine::GameOptionsDiscriminants::Delivery => {
                                     self.options.delivery.clone().start_game()
                                 }
-                                hexagon_engine::GameOptionsDiscriminants::Highscore => {
-                                    Err("Highscore missions must be started from the Missions panel".to_string())
-                                }
+                                hexagon_engine::GameOptionsDiscriminants::Highscore => Err(
+                                    "Highscore missions must be started from the Missions panel"
+                                        .to_string(),
+                                ),
                             };
                             match result {
                                 Ok(game) => {

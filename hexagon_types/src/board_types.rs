@@ -34,7 +34,7 @@ impl Edge {
         use strum::IntoEnumIterator;
         Self::iter()
             .enumerate()
-            .map(|(i, edge)| (edge, Self::iter().cycle().skip(i + 3).next().unwrap()))
+            .map(|(i, edge)| (edge, Self::iter().cycle().nth(i + 3).unwrap()))
             .collect()
     }
 }
