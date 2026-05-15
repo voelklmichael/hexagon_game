@@ -433,6 +433,9 @@ impl eframe::App for HexApp {
                                 hexagon_engine::GameOptionsDiscriminants::Delivery => {
                                     self.options.delivery.clone().start_game()
                                 }
+                                hexagon_engine::GameOptionsDiscriminants::Highscore => {
+                                    Err("Highscore missions must be started from the Missions panel".to_string())
+                                }
                             };
                             match result {
                                 Ok(game) => {

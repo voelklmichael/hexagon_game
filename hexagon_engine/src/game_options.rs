@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub use hexagon_types::game_options::{CollisionMode, OuterConnectors, WinningCondition};
+pub use hexagon_types::missions::MissionHighscoreV1;
 
 use crate::{
     board_types::{Board, ConnectorEnd, Tile},
@@ -36,6 +37,7 @@ pub struct GameOptionsDelivery {
 pub enum GameOptions {
     Delivery(GameOptionsDelivery),
     Standard(GameOptionsStandard),
+    Highscore(MissionHighscoreV1),
 }
 
 impl GameOptionsDelivery {
@@ -208,7 +210,15 @@ impl GameOptionsStandard {
         players: &[Player],
         stats: &Statistics,
     ) -> Option<GameResult> {
-        match self.winning_condition {
+        Self::check_winning_condition_for(&self.winning_condition, players, stats)
+    }
+
+    pub(crate) fn check_winning_condition_for(
+        winning_condition: &WinningCondition,
+        players: &[Player],
+        stats: &Statistics,
+    ) -> Option<GameResult> {
+        match winning_condition {
             WinningCondition::LastManStanding => {
                 let active: Vec<_> = players
                     .iter()
@@ -306,11 +316,39 @@ fn hash_seed(seed: u32) -> u32 {
     t ^ (t >> 14)
 }
 
+pub fn start_highscore_game(mission: MissionHighscoreV1) -> Result<GameState, String> {
+    let start_id = mission.starting_point;
+    let target = match &mission.winning_condition {
+        WinningCondition::Highscore { target, .. } => *target,
+        _ => None,
+    };
+    let rng = RandomNumberGenerator::new(mission.random_seed);
+    let player = Player {
+        id: PlayerId(0),
+        current_position: (start_id, ConnectorEnd::StartedAtA),
+        target,
+        history: PlayerHistorySingleTurn::new_from_start(&start_id),
+        is_npc: false,
+        is_active: true,
+        hand: mission.starting_hand.clone(),
+    };
+    Ok(GameState {
+        statistics: Statistics::compute(std::slice::from_ref(&player)),
+        current_player: player.id,
+        board: mission.board.clone(),
+        result: None,
+        players: vec![player],
+        rng,
+        options: GameOptions::Highscore(mission),
+    })
+}
+
 impl GameOptions {
     pub fn start_game(self) -> Result<GameState, String> {
         match self {
             GameOptions::Delivery(game) => game.start_game(),
             GameOptions::Standard(game) => game.start_game(),
+            GameOptions::Highscore(mission) => start_highscore_game(mission),
         }
     }
 
@@ -318,6 +356,7 @@ impl GameOptions {
         match self {
             GameOptions::Delivery(o) => o.random_seed = hash_seed(o.random_seed),
             GameOptions::Standard(o) => o.random_seed = hash_seed(o.random_seed),
+            GameOptions::Highscore(o) => o.random_seed = hash_seed(o.random_seed),//TODO: this should not be possible!
         }
     }
 
@@ -325,6 +364,7 @@ impl GameOptions {
         match self {
             GameOptions::Delivery(o) => o.collision_mode(),
             GameOptions::Standard(o) => o.collision_mode(),
+            GameOptions::Highscore(_) => CollisionMode::PassThrough,
         }
     }
 }
