@@ -16,6 +16,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut MusicState, player: Option<&crate::mu
         let pause_label = if state.paused { "▶" } else { "⏸" };
         if ui.button(pause_label).clicked() {
             state.paused = !state.paused;
+            state.started = true;
             if let Some(p) = player {
                 p.set_paused(state.paused);
             }
@@ -37,6 +38,7 @@ pub fn show(ui: &mut egui::Ui, state: &mut MusicState, player: Option<&crate::mu
     if new_track != state.current_track {
         state.current_track = new_track;
         state.paused = false;
+        state.started = true;
         if let Some(p) = player {
             p.play_track(state.current_track);
         }

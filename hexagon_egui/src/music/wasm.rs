@@ -22,10 +22,8 @@ extern "C" {
     fn set_volume(this: &Audio, volume: f64);
 }
 
-// play() returns a Promise that must have a rejection handler, otherwise the
-// browser emits "Unhandled Promise Rejection" when autoplay is blocked.
 #[wasm_bindgen(inline_js = "
-export function audio_play(audio) { audio.play().catch(function() {}); }
+export function audio_play(audio) { audio.play(); }
 ")]
 extern "C" {
     fn audio_play(audio: &JsValue);
