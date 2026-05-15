@@ -293,12 +293,14 @@ pub fn show(
         .copied()
         .unwrap_or(hexagon_engine::Color::Gray);
 
-    ui.horizontal(|ui| {
-        let (rect, _) = ui.allocate_exact_size(egui::vec2(16.0, 16.0), egui::Sense::hover());
-        ui.painter()
-            .rect_filled(rect, 2.0, color_to_egui(player_color));
-        ui.label(format!("Player {}", current_id.0 + 1));
-    });
+    if game_state.players.iter().filter(|x| !x.is_npc).count() > 1 {
+        ui.horizontal(|ui| {
+            let (rect, _) = ui.allocate_exact_size(egui::vec2(16.0, 16.0), egui::Sense::hover());
+            ui.painter()
+                .rect_filled(rect, 2.0, color_to_egui(player_color));
+            ui.label(format!("Player {}", current_id.0 + 1));
+        });
+    }
 
     let disabled = player.is_npc;
 
