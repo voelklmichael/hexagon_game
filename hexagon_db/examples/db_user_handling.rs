@@ -14,10 +14,7 @@ async fn main() {
 
     assert!(db.fetch_user_by_email(email).await.unwrap().is_none());
 
-    let user_id = db
-        .create_user(password_hash, name, email)
-        .await
-        .unwrap();
+    let user_id = db.create_user(password_hash, name, email).await.unwrap();
 
     let returned = db.fetch_user_by_id(user_id).await.unwrap().unwrap();
     assert_eq!(returned.id, user_id);

@@ -89,7 +89,11 @@ async fn upsert_highscore(
     State(state): State<AppState>,
     Json(score): Json<DBHighscore>,
 ) -> Result<StatusCode, StatusCode> {
-    tracing::info!("POST /highscore user_id={} mission_id={}", score.user_id, score.mission_id);
+    tracing::info!(
+        "POST /highscore user_id={} mission_id={}",
+        score.user_id,
+        score.mission_id
+    );
     require_own_user(&auth_session, score.user_id)?;
     match state.db.upsert_highscore(&score).await {
         Ok(()) => Ok(StatusCode::NO_CONTENT),

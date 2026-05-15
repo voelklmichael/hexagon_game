@@ -44,7 +44,13 @@ impl From<HighscoreRow> for DBHighscorePeak {
             .enumerate()
             .filter(|(_, (mv, td))| *mv != 0 || *td != 0)
             .map(|(i, (max_velocity, total_distance))| {
-                (i as u8, PlayerStats { max_velocity, total_distance })
+                (
+                    i as u8,
+                    PlayerStats {
+                        max_velocity,
+                        total_distance,
+                    },
+                )
             })
             .collect();
         Self { players }

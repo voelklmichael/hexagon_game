@@ -344,13 +344,11 @@ impl eframe::App for HexApp {
             && !self.mission_result_reported
             && self.current_mission.is_some()
             && self.user_login.logged_in_as.is_some()
-        {
-            if let Some(game) = &self.game {
-                if matches!(&game.result, Some(GameResult::Win(_))) {
-                    if let (Some((user_id, _)), Some(mission_idx)) =
+            && let Some(game) = &self.game
+                && matches!(&game.result, Some(GameResult::Win(_)))
+                    && let (Some((user_id, _)), Some(mission_idx)) =
                         (&self.user_login.logged_in_as, self.current_mission)
-                    {
-                        if let Some(mission_uuid) = crate::panels::missions::mission_id(mission_idx)
+                        && let Some(mission_uuid) = crate::panels::missions::mission_id(mission_idx)
                         {
                             self.backend_reqwest.report_mission_done(
                                 *user_id,
@@ -359,10 +357,6 @@ impl eframe::App for HexApp {
                             );
                             self.mission_result_reported = true;
                         }
-                    }
-                }
-            }
-        }
         if !game_done {
             self.mission_result_reported = false;
         }

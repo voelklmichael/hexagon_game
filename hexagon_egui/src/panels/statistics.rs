@@ -54,7 +54,9 @@ fn show_peak_section(
             ui.end_row();
 
             for &idx in &players {
-                let Some(stats) = peak.players.get(&idx) else { continue };
+                let Some(stats) = peak.players.get(&idx) else {
+                    continue;
+                };
                 let player_id = PlayerId(idx as u32);
                 if let Some(&color) = rendering_data.player_colors.get(&player_id) {
                     let (rect, _) =

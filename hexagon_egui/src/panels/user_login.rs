@@ -64,7 +64,11 @@ pub fn show(ui: &mut egui::Ui, user: &mut UserLogin, client: &mut BackendReqwest
     ui.add(egui::TextEdit::singleline(&mut user.password_textbox).password(true));
     ui.add_space(8.0);
     ui.add_enabled_ui(!busy, |ui| {
-        let label = if logging_in { "Logging in…" } else { "Log in" };
+        let label = if logging_in {
+            "Logging in…"
+        } else {
+            "Log in"
+        };
         if ui.button(label).clicked() {
             user.login_error = None;
             client.log_in(user.email_textbox.clone(), user.password_textbox.clone());
@@ -91,7 +95,11 @@ pub fn show(ui: &mut egui::Ui, user: &mut UserLogin, client: &mut BackendReqwest
     ui.add(egui::TextEdit::singleline(&mut user.password_textbox).password(true));
     ui.add_space(8.0);
     ui.add_enabled_ui(!busy, |ui| {
-        let label = if creating { "Creating…" } else { "Create User" };
+        let label = if creating {
+            "Creating…"
+        } else {
+            "Create User"
+        };
         if ui.button(label).clicked() {
             user.create_error = None;
             client.create_user(

@@ -42,7 +42,10 @@ mod post {
         };
 
         if auth_session.login(&user).await.is_err() {
-            return Err((StatusCode::INTERNAL_SERVER_ERROR, "Failed to create session"));
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Failed to create session",
+            ));
         }
 
         messages.success(format!(
@@ -50,7 +53,11 @@ mod post {
             user.email, user.id
         ));
 
-        Ok(Json(LoginResponse { next: creds.next, user_id: user.id, name: user.name }))
+        Ok(Json(LoginResponse {
+            next: creds.next,
+            user_id: user.id,
+            name: user.name,
+        }))
     }
 
     #[derive(Deserialize)]
@@ -128,7 +135,10 @@ mod get {
     pub async fn me(auth_session: AuthSession) -> Result<Json<MeResponse>, StatusCode> {
         tracing::info!("GET /user_login/me");
         match auth_session.user {
-            Some(user) => Ok(Json(MeResponse { user_id: user.id(), name: user.name.clone() })),
+            Some(user) => Ok(Json(MeResponse {
+                user_id: user.id(),
+                name: user.name.clone(),
+            })),
             None => Err(StatusCode::UNAUTHORIZED),
         }
     }

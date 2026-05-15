@@ -109,6 +109,7 @@ fn draw_tile_preview(
     response
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn show(
     ui: &mut egui::Ui,
     game: &mut Option<GameState>,
@@ -195,16 +196,13 @@ pub fn show(
     }; // immutable borrow of *game released here
 
     if let Some((text, color, opts, saved, can_undo, is_win)) = game_over_data {
-        if is_win {
-            if let Some(cur) = *current_mission {
-                if let Some(mission_id) = crate::panels::missions::mission_id(cur) {
-                    let is_new = missions_won.insert(mission_id);
-                    if is_new {
-                        if let Some(uid) = user_id {
-                            backend.report_mission_done(uid, mission_id, &saved.statistics);
-                        }
-                    }
-                }
+        if is_win
+            && let Some(cur) = *current_mission
+            && let Some(mission_id) = crate::panels::missions::mission_id(cur)
+        {
+            let is_new = missions_won.insert(mission_id);
+            if is_new && let Some(uid) = user_id {
+                backend.report_mission_done(uid, mission_id, &saved.statistics);
             }
         }
 

@@ -20,8 +20,20 @@ async fn main() {
         user_id,
         mission_id,
         players: [
-            (0u8, PlayerStats { max_velocity: 5, total_distance: 20 }),
-            (1u8, PlayerStats { max_velocity: 3, total_distance: 15 }),
+            (
+                0u8,
+                PlayerStats {
+                    max_velocity: 5,
+                    total_distance: 20,
+                },
+            ),
+            (
+                1u8,
+                PlayerStats {
+                    max_velocity: 3,
+                    total_distance: 15,
+                },
+            ),
         ]
         .into(),
     })

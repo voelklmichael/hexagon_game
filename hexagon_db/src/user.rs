@@ -27,7 +27,7 @@ impl crate::DB {
         .await
     }
 
-      pub async fn create_user(
+    pub async fn create_user(
         &self,
         password_hash: &str,
         name: &str,

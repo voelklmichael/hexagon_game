@@ -91,11 +91,7 @@ impl ApiClient {
 
     // --- highscore ---
     pub async fn upsert_highscore(&self, score: &DBHighscore) -> Result<(), ApiError> {
-        let res = self
-            .post(self.url("/highscore"))
-            .json(score)
-            .send()
-            .await?;
+        let res = self.post(self.url("/highscore")).json(score).send().await?;
         Self::expect_no_content(res).await
     }
 
@@ -167,16 +163,13 @@ impl ApiClient {
             }
             Err(e) => {
                 tracing::warn!("Failed to call /user_login/me: {e}");
-                Err(e.into())
+                Err(e)
             }
         }
     }
 
     pub async fn logout(&self) -> Result<(), ApiError> {
-        let res = self
-            .get(self.url("/user_login/logout"))
-            .send()
-            .await?;
+        let res = self.get(self.url("/user_login/logout")).send().await?;
         Self::expect_no_content(res).await
     }
 

@@ -27,8 +27,20 @@ fn sample_score(user_id: Uuid, mission_id: Uuid) -> DBHighscore {
         user_id,
         mission_id,
         players: [
-            (0u8, PlayerStats { max_velocity: 120, total_distance: 5000 }),
-            (1u8, PlayerStats { max_velocity:  80, total_distance: 3200 }),
+            (
+                0u8,
+                PlayerStats {
+                    max_velocity: 120,
+                    total_distance: 5000,
+                },
+            ),
+            (
+                1u8,
+                PlayerStats {
+                    max_velocity: 80,
+                    total_distance: 3200,
+                },
+            ),
         ]
         .into(),
     }
@@ -112,7 +124,10 @@ async fn main() {
         .fetch_won_missions(user_id_a)
         .await
         .expect("fetch_won_missions failed");
-    assert!(won.contains(&mission_id), "mission should appear in won list");
+    assert!(
+        won.contains(&mission_id),
+        "mission should appear in won list"
+    );
     println!("fetch_won_missions: {:?}", won);
 
     // 9. Fetching another user's won missions must be rejected with 403
