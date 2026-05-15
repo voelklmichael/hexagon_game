@@ -19,7 +19,12 @@ pub struct AppState {
 }
 
 pub fn router(state: AppState) -> Router {
+    #[cfg(debug_assertions)]
     let session_layer = SessionManagerLayer::new(MemoryStore::default());
+    #[cfg(not(debug_assertions))]
+    let session_layer = SessionManagerLayer::new(MemoryStore::default())
+        .with_same_site(tower_sessions::cookie::SameSite::None)
+        .with_secure(true);
     let auth_layer = AuthManagerLayerBuilder::new(state.clone(), session_layer).build();
 
     let cors = CorsLayer::new()
@@ -56,6 +61,7 @@ pub fn router(state: AppState) -> Router {
             "/highscore/user/{user_id}/missions",
             get(fetch_won_missions),
         )
+        .route("/missions", get(fetch_all_missions))
         .route("/missions/{kind}", get(fetch_missions))
         .nest("/user_login", crate::user::login_router())
         .fallback(fallback)
@@ -147,6 +153,19 @@ async fn fetch_won_missions(
         Ok(ids) => Ok(Json(ids)),
         Err(e) => {
             tracing::warn!("fetch_won_missions failed: {e}");
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn fetch_all_missions(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<MissionEntry>>, StatusCode> {
+    tracing::info!("GET /missions");
+    match state.db.fetch_all_missions().await {
+        Ok(missions) => Ok(Json(missions)),
+        Err(e) => {
+            tracing::warn!("fetch_all_missions failed: {e}");
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
