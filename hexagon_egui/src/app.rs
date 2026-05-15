@@ -96,6 +96,11 @@ pub struct MusicState {
     pub volume: f32,
     pub paused: bool,
     pub current_track: usize,
+    /// On WASM, browsers block autoplay before a user gesture. This flag
+    /// is false until the user clicks something, at which point we start
+    /// the player. On desktop it is set to true immediately on startup.
+    #[serde(skip)]
+    pub started: bool,
 }
 
 impl Default for MusicState {
@@ -104,6 +109,7 @@ impl Default for MusicState {
             volume: 1.0,
             paused: false,
             current_track: 0,
+            started: false,
         }
     }
 }
@@ -242,11 +248,15 @@ impl HexApp {
 
         app.music.current_track = app.music.current_track.min(crate::music::TRACKS.len() - 1);
         app.music_player = crate::music::MusicPlayer::new(app.music.volume);
+        // On desktop, autoplay works; on WASM the browser blocks it until a user
+        // gesture, so we defer the first play_track call to the hand buttons.
+        #[cfg(not(target_arch = "wasm32"))]
         if let Some(player) = &app.music_player {
             player.play_track(app.music.current_track);
             if app.music.paused {
                 player.set_paused(true);
             }
+            app.music.started = true;
         }
 
         app
@@ -477,6 +487,8 @@ impl eframe::App for HexApp {
                             &mut self.missions_won,
                             self.user_login.logged_in_as.as_ref().map(|(id, _)| *id),
                             &mut self.backend_reqwest,
+                            &mut self.music,
+                            self.music_player.as_ref(),
                         ) {
                             self.right_tab = RightTab::Statistics;
                             self.right_panel_open = true;

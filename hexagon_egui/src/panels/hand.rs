@@ -2,8 +2,19 @@ use hexagon_engine::{
     ConnectorEdgeSub, Edge, EdgeSub, GameOptions, GameResult, GameState, Sub, TileRotationDirection,
 };
 
-use crate::app::{BoardInteraction, GameHistory, RenderingData};
+use crate::app::{BoardInteraction, GameHistory, MusicState, RenderingData};
 use crate::panels::color_to_egui;
+
+fn try_start_music(music: &mut MusicState, player: Option<&crate::music::MusicPlayer>) {
+    if !music.started {
+        music.started = true;
+        if !music.paused {
+            if let Some(p) = player {
+                p.play_track(music.current_track);
+            }
+        }
+    }
+}
 
 fn hex_h(r: f64) -> f64 {
     r * 3.0_f64.sqrt() / 2.0
@@ -121,6 +132,8 @@ pub fn show(
     missions_won: &mut std::collections::HashSet<uuid::Uuid>,
     user_id: Option<uuid::Uuid>,
     backend: &mut crate::app::BackendReqwest,
+    music: &mut MusicState,
+    music_player: Option<&crate::music::MusicPlayer>,
 ) -> bool {
     let mut started = false;
 
@@ -402,6 +415,7 @@ pub fn show(
                             .button(egui::RichText::new("↺").size(font_size))
                             .clicked()
                         {
+                            try_start_music(music, music_player);
                             game_state.rotate_tile(i, TileRotationDirection::CounterClockwise);
                             interaction.selected_tile = Some(i);
                             interaction.animation_t = 1.0;
@@ -414,6 +428,7 @@ pub fn show(
                                 .button(egui::RichText::new("➡").size(font_size))
                                 .clicked()
                             {
+                                try_start_music(music, music_player);
                                 history.undo_stack.push(game_state.clone());
                                 history.redo_stack.clear();
                                 game_state.play_tile(i);
@@ -429,6 +444,7 @@ pub fn show(
                             .button(egui::RichText::new("↻").size(font_size))
                             .clicked()
                         {
+                            try_start_music(music, music_player);
                             game_state.rotate_tile(i, TileRotationDirection::Clockwise);
                             interaction.selected_tile = Some(i);
                             interaction.animation_t = 1.0;
