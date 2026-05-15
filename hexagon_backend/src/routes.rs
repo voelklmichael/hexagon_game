@@ -3,13 +3,13 @@ use std::sync::Arc;
 use axum::{
     Json, Router,
     extract::{Path, State},
-    http::{HeaderValue, StatusCode, Uri},
+    http::{StatusCode, Uri},
     routing::{get, post},
 };
 use axum_login::{AuthManagerLayerBuilder, AuthUser};
 use axum_messages::MessagesManagerLayer;
 use hexagon_db::{DB, DBHighscore, DBHighscorePeak, MissionEntry, MissionKind};
-use tower_http::cors::CorsLayer;
+use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_sessions::{MemoryStore, SessionManagerLayer};
 use uuid::Uuid;
 
@@ -27,13 +27,18 @@ pub fn router(state: AppState) -> Router {
         .with_secure(true);
     let auth_layer = AuthManagerLayerBuilder::new(state.clone(), session_layer).build();
 
+    #[cfg(debug_assertions)]
+    let allow_origin = AllowOrigin::predicate(|origin, _| {
+        let s = origin.to_str().unwrap_or("");
+        s.starts_with("http://localhost:") || s.starts_with("http://127.0.0.1:")
+    });
+    #[cfg(not(debug_assertions))]
+    let allow_origin = AllowOrigin::list(["https://voelklmichael.github.io"
+        .parse::<HeaderValue>()
+        .unwrap()]);
+
     let cors = CorsLayer::new()
-        .allow_origin([
-            "http://localhost:8080".parse::<HeaderValue>().unwrap(),
-            "https://voelklmichael.github.io"
-                .parse::<HeaderValue>()
-                .unwrap(),
-        ])
+        .allow_origin(allow_origin)
         .allow_methods([
             axum::http::Method::GET,
             axum::http::Method::POST,
