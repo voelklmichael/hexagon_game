@@ -1,5 +1,5 @@
 use hexagon_engine::{
-    ConnectorEdgeSub, Edge, EdgeSub, GameResult, GameState, Sub, TileRotationDirection,
+    ConnectorEdgeSub, Edge, EdgeSub, GameOptions, GameResult, GameState, Sub, TileRotationDirection,
 };
 
 use crate::app::{BoardInteraction, GameHistory, RenderingData};
@@ -300,6 +300,36 @@ pub fn show(
                 .rect_filled(rect, 2.0, color_to_egui(player_color));
             ui.label(format!("Player {}", current_id.0 + 1));
         });
+    }
+
+    if let GameOptions::Highscore(mission) = &game_state.options {
+        let wc = &mission.winning_condition;
+        if let Some(target_dist) = wc.min_distance {
+            let current_dist = game_state
+                .statistics
+                .total_path_weight
+                .get(&current_id)
+                .copied()
+                .unwrap_or(0);
+            ui.label(format!(
+                "Target Distance: {:.1}/{:.1}",
+                current_dist as f32 / 1000.0,
+                target_dist as f32 / 1000.0,
+            ));
+        }
+        if let Some(target_vel) = wc.min_velocity {
+            let current_vel = game_state
+                .statistics
+                .max_velocity
+                .get(&current_id)
+                .copied()
+                .unwrap_or(0);
+            ui.label(format!(
+                "Target Velocity: {:.1}/{:.1}",
+                current_vel as f32 / 1000.0,
+                target_vel as f32 / 1000.0,
+            ));
+        }
     }
 
     let disabled = player.is_npc;

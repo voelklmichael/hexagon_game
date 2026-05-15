@@ -1,12 +1,13 @@
-use hexagon_engine::{PlayerId, Statistics};
+use hexagon_engine::{GameOptions, PlayerId, Statistics};
 use hexagon_types::DBHighscorePeak;
 
 use crate::app::RenderingData;
 use crate::panels::color_to_egui;
 
-fn highlight_label(ui: &mut egui::Ui, value: u32, max: u32) {
-    let text = egui::RichText::new(value.to_string());
-    let text = if value == max {
+fn highlight_label(ui: &mut egui::Ui, value: u32, max: u32, highlight: bool) {
+    let display = value as f32 / 1000.0;
+    let text = egui::RichText::new(format!("{display:.1}"));
+    let text = if highlight && value == max {
         text.strong().color(egui::Color32::GOLD)
     } else {
         text
@@ -90,6 +91,7 @@ pub fn show(
     ui: &mut egui::Ui,
     rendering_data: &RenderingData,
     statistics: Option<&Statistics>,
+    game_options: Option<&GameOptions>,
     user_best: Option<&DBHighscorePeak>,
     overall_best: Option<&DBHighscorePeak>,
 ) {
@@ -97,6 +99,8 @@ pub fn show(
         ui.label("No game in progress.");
         return;
     };
+
+    let highlight = !matches!(game_options, Some(GameOptions::Highscore(_)));
 
     let mut players: Vec<PlayerId> = statistics.total_path_segments.keys().copied().collect();
     players.sort_unstable_by_key(|id| id.0);
@@ -118,9 +122,9 @@ pub fn show(
         .striped(true)
         .min_col_width(80.0)
         .show(ui, |ui| {
-            ui.label("Player");
-            ui.label("Total Weight");
-            ui.label("Max Velocity");
+            ui.label("");
+            ui.label("⟷").on_hover_text("Total traveled distance");
+            ui.label("⚡").on_hover_text("Maximum velocity");
             ui.end_row();
 
             for player_id in &players {
@@ -135,8 +139,8 @@ pub fn show(
                     .copied()
                     .unwrap_or(0);
                 let velocity = statistics.max_velocity.get(player_id).copied().unwrap_or(0);
-                highlight_label(ui, weight, max_weight);
-                highlight_label(ui, velocity, max_velocity);
+                highlight_label(ui, weight, max_weight, highlight);
+                highlight_label(ui, velocity, max_velocity, highlight);
                 ui.end_row();
             }
         });

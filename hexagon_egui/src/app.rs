@@ -535,6 +535,7 @@ impl eframe::App for HexApp {
                                 ui,
                                 &self.rendering_data,
                                 self.game.as_ref().map(|g| &g.statistics),
+                                self.game.as_ref().map(|g| &g.options),
                                 self.mission_user_best.as_ref(),
                                 self.mission_overall_best.as_ref(),
                             );
