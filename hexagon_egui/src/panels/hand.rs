@@ -117,6 +117,7 @@ pub fn show(
     interaction: &mut BoardInteraction,
     history: &mut GameHistory,
     current_mission: &mut Option<usize>,
+    missions: &[hexagon_types::MissionEntry],
     missions_won: &mut std::collections::HashSet<uuid::Uuid>,
     user_id: Option<uuid::Uuid>,
     backend: &mut crate::app::BackendReqwest,
@@ -198,7 +199,7 @@ pub fn show(
     if let Some((text, color, opts, saved, can_undo, is_win)) = game_over_data {
         if is_win
             && let Some(cur) = *current_mission
-            && let Some(mission_id) = crate::panels::missions::mission_id(cur)
+            && let Some(mission_id) = crate::panels::missions::mission_id(missions, cur)
         {
             let is_new = missions_won.insert(mission_id);
             if is_new && let Some(uid) = user_id {
@@ -216,13 +217,13 @@ pub fn show(
 
         let next_mission = current_mission
             .map(|idx| idx + 1)
-            .filter(|&next| next < crate::panels::missions::mission_count());
+            .filter(|&next| next < crate::panels::missions::mission_count(missions));
 
         if let Some(next_idx) = next_mission {
             if ui.button("Start next mission").clicked() {
                 history.undo_stack.clear();
                 history.redo_stack.clear();
-                crate::panels::missions::start_mission(next_idx, game);
+                crate::panels::missions::start_mission(missions, next_idx, game);
                 *current_mission = Some(next_idx);
                 started = true;
             }

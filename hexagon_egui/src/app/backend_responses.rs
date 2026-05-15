@@ -3,6 +3,7 @@ use crate::HexApp;
 impl HexApp {
     pub(super) fn process_backend_responses(&mut self) {
         if let Some(result) = self.backend_reqwest.fetch_all_missions_task.take() {
+            self.missions_loaded = true;
             match result {
                 Ok(missions) => self.missions = missions,
                 Err(e) => tracing::warn!("fetch_all_missions failed: {e}"),
@@ -20,7 +21,7 @@ impl HexApp {
 
         let active_mission_uuid = self
             .current_mission
-            .and_then(crate::panels::missions::mission_id);
+            .and_then(|idx| crate::panels::missions::mission_id(&self.missions, idx));
         if let Some(result) = self.backend_reqwest.fetch_mission_user_best_task.take() {
             match result {
                 Ok((id, best)) if Some(id) == active_mission_uuid => {

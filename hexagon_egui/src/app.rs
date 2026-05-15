@@ -217,6 +217,8 @@ pub struct HexApp {
     pub rng: RandomNumberGenerator,
     #[serde(skip)]
     pub missions: Vec<MissionEntry>,
+    #[serde(skip)]
+    pub missions_loaded: bool,
     pub missions_won: HashSet<Uuid>,
     pub current_mission: Option<usize>,
     pub user_login: crate::panels::user_login::UserLogin,
@@ -349,7 +351,7 @@ impl eframe::App for HexApp {
             && matches!(&game.result, Some(GameResult::Win(_)))
             && let (Some((user_id, _)), Some(mission_idx)) =
                 (&self.user_login.logged_in_as, self.current_mission)
-            && let Some(mission_uuid) = crate::panels::missions::mission_id(mission_idx)
+            && let Some(mission_uuid) = crate::panels::missions::mission_id(&self.missions, mission_idx)
         {
             self.backend_reqwest
                 .report_mission_done(*user_id, mission_uuid, &game.statistics);
@@ -397,9 +399,13 @@ impl eframe::App for HexApp {
 
                 egui::ScrollArea::vertical().show(ui, |ui| match self.left_tab {
                     LeftTab::Missions => {
-                        if let Some(idx) =
-                            crate::panels::missions::show(ui, &mut self.game, &self.missions_won)
-                        {
+                        if let Some(idx) = crate::panels::missions::show(
+                            ui,
+                            &self.missions,
+                            self.missions_loaded,
+                            &mut self.game,
+                            &self.missions_won,
+                        ) {
                             self.history.undo_stack.clear();
                             self.history.redo_stack.clear();
                             self.current_mission = Some(idx);
@@ -408,7 +414,7 @@ impl eframe::App for HexApp {
                             self.right_panel_open = true;
                             self.mission_user_best = None;
                             self.mission_overall_best = None;
-                            if let Some(mission_uuid) = crate::panels::missions::mission_id(idx) {
+                            if let Some(mission_uuid) = crate::panels::missions::mission_id(&self.missions, idx) {
                                 self.backend_reqwest
                                     .fetch_mission_overall_best(mission_uuid);
                                 if let Some((user_id, _)) = &self.user_login.logged_in_as {
@@ -460,6 +466,7 @@ impl eframe::App for HexApp {
                             &mut self.interaction,
                             &mut self.history,
                             &mut self.current_mission,
+                            &self.missions,
                             &mut self.missions_won,
                             self.user_login.logged_in_as.as_ref().map(|(id, _)| *id),
                             &mut self.backend_reqwest,
