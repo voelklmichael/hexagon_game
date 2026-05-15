@@ -329,7 +329,10 @@ pub fn show(
         } else {
             f32::MAX
         };
-        let r_from_w = available_w * 0.9 / 2.5;
+        // tile width = r*2.4, btn column ≈ r*0.3 + button_padding*2, plus item_spacing between
+        let spacing = ui.spacing();
+        let btn_overhead = spacing.item_spacing.x + spacing.button_padding.x * 2.0;
+        let r_from_w = (available_w - btn_overhead) / 2.7;
         r_from_h.min(r_from_w).max(10.0) as f64
     };
 
