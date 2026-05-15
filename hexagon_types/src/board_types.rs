@@ -5,7 +5,18 @@ use serde::{Deserialize, Serialize};
 use crate::game_options::OuterConnectors;
 use crate::rng::RandomNumberGenerator;
 
-#[derive(Clone, Copy, Debug, strum::EnumIter, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    strum::EnumIter,
+    PartialEq,
+    Eq,
+    Hash,
+    Serialize,
+    Deserialize,
+    strum::VariantArray,
+)]
 pub enum Edge {
     Top,
     TopLeft,
@@ -13,6 +24,19 @@ pub enum Edge {
     Bottom,
     BottomRight,
     TopRight,
+}
+impl Edge {
+    pub fn variants() -> &'static [Self] {
+        use strum::VariantArray;
+        Self::VARIANTS
+    }
+    pub fn opposites() -> Vec<(Self, Self)> {
+        use strum::IntoEnumIterator;
+        Self::iter()
+            .enumerate()
+            .map(|(i, edge)| (edge, Self::iter().cycle().skip(i + 3).next().unwrap()))
+            .collect()
+    }
 }
 
 #[derive(Clone, Copy, Debug, strum::EnumIter, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -266,6 +290,28 @@ impl Board {
             hexagons,
             connectors,
         })
+    }
+
+    pub fn play_tile(&mut self, hexagon: HexagonPosition, tile: Tile) -> bool {
+        if self
+            .connectors
+            .iter()
+            .any(|c| matches!(&c.kind, ConnectorKind::OnHex(h) if h.hexagon == hexagon))
+        {
+            return false;
+        }
+        let offset = self.connectors.iter().map(|c| c.id.0).max().unwrap_or(0) + 1;
+        for (i, connector) in tile.inner_connectors.into_iter().enumerate() {
+            self.connectors.push(Connector {
+                id: ConnectorId(offset + i as u32),
+                kind: ConnectorKind::OnHex(ConnectorOnHex {
+                    hexagon,
+                    edge_sub: connector,
+                }),
+                weight: 1_000,
+            });
+        }
+        true
     }
 
     pub fn get_dead_ends(&self) -> Vec<ConnectorId> {
