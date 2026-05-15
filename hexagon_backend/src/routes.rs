@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::{
     Json, Router,
     extract::{Path, State},
-    http::{StatusCode, Uri},
+    http::{HeaderValue, StatusCode, Uri},
     routing::{get, post},
 };
 use axum_login::{AuthManagerLayerBuilder, AuthUser};
@@ -27,16 +27,15 @@ pub fn router(state: AppState) -> Router {
         .with_secure(true);
     let auth_layer = AuthManagerLayerBuilder::new(state.clone(), session_layer).build();
 
-    #[cfg(debug_assertions)]
-    let allow_origin = AllowOrigin::predicate(|origin, _| {
-        let s = origin.to_str().unwrap_or("");
-        s.starts_with("http://localhost:") || s.starts_with("http://127.0.0.1:")
-    });
-    #[cfg(not(debug_assertions))]
-    let allow_origin = AllowOrigin::list(["https://voelklmichael.github.io"
-        .parse::<HeaderValue>()
-        .unwrap()]);
-
+    fn predicate(origin: &HeaderValue) -> bool {
+        if cfg!(debug_assertions) {
+            let s = origin.to_str().unwrap_or("");
+            s.starts_with("http://localhost:") || s.starts_with("http://127.0.0.1:")
+        } else {
+            origin.as_bytes() == b"https://voelklmichael.github.io"
+        }
+    }
+    let allow_origin = AllowOrigin::predicate(|origin, _| predicate(origin));
     let cors = CorsLayer::new()
         .allow_origin(allow_origin)
         .allow_methods([
