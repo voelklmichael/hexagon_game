@@ -5,7 +5,7 @@ use crate::board_types::{
     Connector, ConnectorEnd, ConnectorId, ConnectorKind, ConnectorOnHex, ConnectorPosition,
     HexagonPosition, Tile, TileRotationDirection,
 };
-use crate::game_options::{GameOptions, WinningConditionStandard};
+use crate::game_options::{GameOptions, WinningCondition};
 use crate::player_types::{HistoryConnector, PlayerHistorySingleTurn};
 use crate::random_number_generator::RandomNumberGenerator;
 use crate::statistics::Statistics;
@@ -81,65 +81,14 @@ impl GameState {
                 tracing::error!("No tile found");
                 return;
             }
-            let (connector, end) = player.current_position;
-            let connector_kind = &self
-                .board
-                .connectors
-                .iter()
-                .find(|x| x.id == connector)
-                .expect("No connector found")
-                .kind;
-            let position = match connector_kind {
-                ConnectorKind::DeadEnd(c) => c.position.clone(),
-                ConnectorKind::HexToHex(c) | ConnectorKind::Outside(c) => match end {
-                    ConnectorEnd::StartedAtA => c.connector_a.clone(),
-                    ConnectorEnd::StartedAtB => c.connector_b.clone(),
-                },
-                ConnectorKind::OnHex(c) => {
-                    let edge_sub = match end {
-                        ConnectorEnd::StartedAtA => c.edge_sub.a.clone(),
-                        ConnectorEnd::StartedAtB => c.edge_sub.b.clone(),
-                    };
-                    ConnectorPosition {
-                        hexagon: c.hexagon,
-                        edge_sub,
-                    }
-                }
-            };
-
-            if let Some(connector) = self.board.connectors.iter().find_map(|x| match &x.kind {
-                ConnectorKind::OnHex(connector_on_hex) => {
-                    (connector_on_hex.hexagon == position.hexagon).then_some(&x.id)
-                }
-                _ => None,
-            }) {
-                tracing::error!("There is already a connector at this spot.");
-                return;
-            };
+            let (connector_id, end) = player.current_position;
+            let hexagon = self.board.position_of(connector_id, end).hexagon;
 
             let tile = player.hand.remove(tile);
-            let mut offset = self
-                .board
-                .connectors
-                .iter()
-                .map(|x| x.id.0)
-                .max()
-                .unwrap_or(0)
-                + 1;
-            tile.inner_connectors
-                .into_iter()
-                .enumerate()
-                .for_each(|(i, connector)| {
-                    self.board.connectors.push(Connector {
-                        id: ConnectorId(offset + i as u32),
-                        kind: ConnectorKind::OnHex(ConnectorOnHex {
-                            hexagon: position.hexagon,
-                            edge_sub: connector,
-                        }),
-                        weight: 1_000,
-                    });
-                });
-
+            if !self.board.play_tile(hexagon, tile) {
+                tracing::error!("There is already a connector at this spot.");
+                return;
+            }
             player
                 .hand
                 .push(Tile::create_fully_connected(&mut self.rng)); //TODO: this should depend on the game options
@@ -265,6 +214,13 @@ impl GameState {
         let result = match &self.options {
             GameOptions::Delivery(d) => d.check_winning_condition(&self.players, &self.statistics),
             GameOptions::Standard(s) => s.check_winning_condition(&self.players, &self.statistics),
+            GameOptions::Highscore(m) => {
+                crate::game_options::GameOptionsStandard::check_winning_condition_for(
+                    &WinningCondition::Highscore(m.winning_condition.clone()),
+                    &self.players,
+                    &self.statistics,
+                )
+            }
         };
         self.result = result;
     }
@@ -273,7 +229,7 @@ impl GameState {
 #[cfg(test)]
 mod tests {
     use crate::game_options::{
-        CollisionMode, GameOptionsStandard, OuterConnectors, WinningConditionStandard,
+        CollisionMode, GameOptionsStandard, OuterConnectors, WinningCondition,
     };
 
     use super::*;
@@ -286,7 +242,7 @@ mod tests {
             random_seed: 0,
             player_count: 2,
             collision_mode: CollisionMode::PassThrough,
-            winning_condition: WinningConditionStandard::HighestVelocity,
+            winning_condition: WinningCondition::HighestVelocity,
             hand_size: 3,
         };
         let game = options.start_game().unwrap();

@@ -1,6 +1,6 @@
 use hexagon_engine::{
     CollisionMode, GameOptionsDelivery, GameOptionsStandard, GameState, OuterConnectors,
-    RandomNumberGenerator, WinningConditionStandard,
+    RandomNumberGenerator, WinningCondition,
 };
 
 struct Preset {
@@ -40,7 +40,7 @@ fn presets() -> Vec<Preset> {
                 random_seed: 0,
                 player_count: 2,
                 collision_mode: CollisionMode::PassThrough,
-                winning_condition: WinningConditionStandard::HighestVelocity,
+                winning_condition: WinningCondition::HighestVelocity,
                 hand_size: 3,
             }),
         },
@@ -65,7 +65,7 @@ fn presets() -> Vec<Preset> {
                 random_seed: 0,
                 player_count: 4,
                 collision_mode: CollisionMode::BothDie,
-                winning_condition: WinningConditionStandard::LastManStanding,
+                winning_condition: WinningCondition::LastManStanding,
                 hand_size: 3,
             }),
         },

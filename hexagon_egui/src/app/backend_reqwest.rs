@@ -3,7 +3,7 @@ use std::sync::Arc;
 use egui_async::Bind;
 use hexagon_engine::Statistics;
 use hexagon_frontend_reqwest::{ApiClient, ApiError};
-use hexagon_types::{DBHighscore, DBHighscorePeak, MeResponse, PlayerStats};
+use hexagon_types::{DBHighscore, DBHighscorePeak, MeResponse, MissionEntry, PlayerStats};
 
 #[cfg(debug_assertions)]
 static BASE_URL: &str = "http://localhost:3000";
@@ -21,7 +21,9 @@ pub struct BackendReqwest {
     pub fetch_won_missions_task: Bind<Vec<uuid::Uuid>, ApiError>,
     pub fetch_mission_user_best_task: Bind<(uuid::Uuid, Option<DBHighscorePeak>), ApiError>,
     pub fetch_mission_overall_best_task: Bind<(uuid::Uuid, DBHighscorePeak), ApiError>,
+    pub fetch_all_missions_task: Bind<Vec<MissionEntry>, ApiError>,
     session_checked: bool,
+    missions_fetched: bool,
 }
 
 impl BackendReqwest {
@@ -36,12 +38,25 @@ impl BackendReqwest {
         self.me_task.request(async move { client.me().await });
     }
 
+    pub(crate) fn fetch_all_missions(&mut self) {
+        if self.missions_fetched {
+            return;
+        }
+        self.missions_fetched = true;
+        let Some(client) = self.get_client() else {
+            return;
+        };
+        self.fetch_all_missions_task
+            .request(async move { client.fetch_all_missions().await });
+    }
+
     pub(crate) fn is_session_pending(&mut self) -> bool {
         self.me_task.is_pending()
     }
 
     pub(crate) fn poll_me_task(&mut self) {
         self.check_session();
+        self.fetch_all_missions();
 
         if let Some(result) = self.me_task.take() {
             match result {

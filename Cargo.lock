@@ -2001,6 +2001,8 @@ dependencies = [
  "serde_json",
  "sqlx",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
  "urlencoding",
  "uuid",
 ]
@@ -2035,6 +2037,7 @@ name = "hexagon_engine"
 version = "0.1.0"
 dependencies = [
  "derive_aliases",
+ "hexagon_types",
  "serde",
  "serde_json",
  "strum",
@@ -2061,6 +2064,7 @@ name = "hexagon_types"
 version = "0.1.0"
 dependencies = [
  "serde",
+ "strum",
  "uuid",
 ]
 

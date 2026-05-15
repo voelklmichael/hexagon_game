@@ -20,7 +20,7 @@ pub use board_types::{
 };
 pub use game_options::{
     CollisionMode, GameOptions, GameOptionsDelivery, GameOptionsDiscriminants, GameOptionsStandard,
-    OuterConnectors, WinningConditionStandard,
+    OuterConnectors, WinningCondition, start_highscore_game,
 };
 pub use game_state::{GameResult, GameState};
 pub use player_types::PlayerId;

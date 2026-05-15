@@ -1,6 +1,5 @@
-use hexagon_engine::{
-    CollisionMode, GameOptionsDiscriminants, OuterConnectors, WinningConditionStandard,
-};
+use hexagon_engine::{CollisionMode, GameOptionsDiscriminants, OuterConnectors, WinningCondition};
+use hexagon_types::WinningConditionHighscore;
 
 use crate::app::OptionsState;
 
@@ -25,6 +24,7 @@ pub fn show(ui: &mut egui::Ui, options: &mut OptionsState) -> bool {
     match options.selected {
         GameOptionsDiscriminants::Standard => show_standard(ui, options),
         GameOptionsDiscriminants::Delivery => show_delivery(ui, options),
+        GameOptionsDiscriminants::Highscore => {}
     }
 
     ui.separator();
@@ -102,24 +102,25 @@ fn show_standard(ui: &mut egui::Ui, options: &mut OptionsState) {
             ui.label("Winning condition");
             egui::ComboBox::from_id_salt("winning_condition")
                 .selected_text(match s.winning_condition {
-                    WinningConditionStandard::LastManStanding => "Last man standing",
-                    WinningConditionStandard::LongestWay => "Longest way",
-                    WinningConditionStandard::HighestVelocity => "Highest velocity",
+                    WinningCondition::LastManStanding => "Last man standing",
+                    WinningCondition::LongestWay => "Longest way",
+                    WinningCondition::HighestVelocity => "Highest velocity",
+                    WinningCondition::Highscore(WinningConditionHighscore { .. }) => "Highscore",
                 })
                 .show_ui(ui, |ui| {
                     ui.selectable_value(
                         &mut s.winning_condition,
-                        WinningConditionStandard::LastManStanding,
+                        WinningCondition::LastManStanding,
                         "Last man standing",
                     );
                     ui.selectable_value(
                         &mut s.winning_condition,
-                        WinningConditionStandard::LongestWay,
+                        WinningCondition::LongestWay,
                         "Longest way",
                     );
                     ui.selectable_value(
                         &mut s.winning_condition,
-                        WinningConditionStandard::HighestVelocity,
+                        WinningCondition::HighestVelocity,
                         "Highest velocity",
                     );
                 });

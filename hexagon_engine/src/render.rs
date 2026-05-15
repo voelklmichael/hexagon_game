@@ -1200,7 +1200,7 @@ mod tests {
             random_seed: 0,
             player_count: 2,
             collision_mode: game_options::CollisionMode::PassThrough,
-            winning_condition: game_options::WinningConditionStandard::HighestVelocity,
+            winning_condition: game_options::WinningCondition::HighestVelocity,
             hand_size: 3,
         };
         let mut game = options.start_game().unwrap();

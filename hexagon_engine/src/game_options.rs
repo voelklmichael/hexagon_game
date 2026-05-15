@@ -1,4 +1,8 @@
+use hexagon_types::WinningConditionHighscore;
 use serde::{Deserialize, Serialize};
+
+pub use hexagon_types::game_options::{CollisionMode, OuterConnectors, WinningCondition};
+pub use hexagon_types::missions::MissionHighscoreV1;
 
 use crate::{
     board_types::{Board, ConnectorEnd, Tile},
@@ -15,28 +19,10 @@ pub struct GameOptionsStandard {
     pub random_seed: u32,
     pub player_count: usize,
     pub collision_mode: CollisionMode,
-    pub winning_condition: WinningConditionStandard,
+    pub winning_condition: WinningCondition,
     pub hand_size: usize,
 }
 
-#[derive(strum::EnumIter, Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub enum OuterConnectors {
-    OnlyDeathEnds,
-    ReducedDeathEnds,
-}
-
-#[derive(Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub enum CollisionMode {
-    PassThrough,
-    BothDie,
-}
-
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
-pub enum WinningConditionStandard {
-    LastManStanding,
-    LongestWay,
-    HighestVelocity,
-}
 #[derive(Clone, Serialize, Deserialize)]
 pub struct GameOptionsDelivery {
     pub board_radius: usize,
@@ -52,6 +38,7 @@ pub struct GameOptionsDelivery {
 pub enum GameOptions {
     Delivery(GameOptionsDelivery),
     Standard(GameOptionsStandard),
+    Highscore(MissionHighscoreV1),
 }
 
 impl GameOptionsDelivery {
@@ -224,8 +211,16 @@ impl GameOptionsStandard {
         players: &[Player],
         stats: &Statistics,
     ) -> Option<GameResult> {
-        match self.winning_condition {
-            WinningConditionStandard::LastManStanding => {
+        Self::check_winning_condition_for(&self.winning_condition, players, stats)
+    }
+
+    pub(crate) fn check_winning_condition_for(
+        winning_condition: &WinningCondition,
+        players: &[Player],
+        stats: &Statistics,
+    ) -> Option<GameResult> {
+        match winning_condition {
+            WinningCondition::LastManStanding => {
                 let active: Vec<_> = players
                     .iter()
                     .filter(|p| p.is_active && !p.is_npc)
@@ -242,7 +237,7 @@ impl GameOptionsStandard {
                     _ => None,
                 }
             }
-            WinningConditionStandard::LongestWay => {
+            WinningCondition::LongestWay => {
                 let all_done = players.iter().filter(|p| !p.is_npc).all(|p| !p.is_active);
                 if !all_done {
                     return None;
@@ -260,7 +255,7 @@ impl GameOptionsStandard {
                     Some(GameResult::Draw(top))
                 }
             }
-            WinningConditionStandard::HighestVelocity => {
+            WinningCondition::HighestVelocity => {
                 let all_done = players.iter().filter(|p| !p.is_npc).all(|p| !p.is_active);
                 if !all_done {
                     return None;
@@ -278,6 +273,39 @@ impl GameOptionsStandard {
                     Some(GameResult::Draw(top))
                 }
             }
+            WinningCondition::Highscore(WinningConditionHighscore {
+                min_velocity,
+                min_distance,
+                target,
+            }) => {
+                let all_done = players.iter().filter(|p| !p.is_npc).all(|p| !p.is_active);
+                if !all_done {
+                    return None;
+                }
+                assert_eq!(players.len(), 1);
+                let winners: Vec<PlayerId> = players
+                    .iter()
+                    .filter(|p| !p.is_npc)
+                    .filter(|p| {
+                        let vel_ok = min_velocity.map_or(true, |v| {
+                            stats.max_velocity.get(&p.id).copied().unwrap_or(0) >= v
+                        });
+                        let dist_ok = min_distance.map_or(true, |d| {
+                            stats.total_path_weight.get(&p.id).copied().unwrap_or(0) >= d
+                        });
+                        let target_ok = target.map_or(true, |t| p.current_position.0 == t);
+                        vel_ok && dist_ok && target_ok
+                    })
+                    .map(|p| p.id)
+                    .collect();
+                if winners.is_empty() {
+                    Some(GameResult::Loss)
+                } else if winners.len() == 1 {
+                    Some(GameResult::Win(winners))
+                } else {
+                    Some(GameResult::Draw(winners))
+                }
+            }
         }
     }
 }
@@ -289,11 +317,38 @@ fn hash_seed(seed: u32) -> u32 {
     t ^ (t >> 14)
 }
 
+pub fn start_highscore_game(mission: MissionHighscoreV1) -> Result<GameState, String> {
+    let start_id = mission.starting_point;
+    let target = match &mission.winning_condition {
+        WinningConditionHighscore { target, .. } => *target,
+        _ => None,
+    };
+    let player = Player {
+        id: PlayerId(0),
+        current_position: (start_id, ConnectorEnd::StartedAtA),
+        target,
+        history: PlayerHistorySingleTurn::new_from_start(&start_id),
+        is_npc: false,
+        is_active: true,
+        hand: mission.starting_hand.clone(),
+    };
+    Ok(GameState {
+        statistics: Statistics::compute(std::slice::from_ref(&player)),
+        current_player: player.id,
+        board: mission.board.clone(),
+        result: None,
+        players: vec![player],
+        rng: RandomNumberGenerator::new(mission.random_seed),
+        options: GameOptions::Highscore(mission),
+    })
+}
+
 impl GameOptions {
     pub fn start_game(self) -> Result<GameState, String> {
         match self {
             GameOptions::Delivery(game) => game.start_game(),
             GameOptions::Standard(game) => game.start_game(),
+            GameOptions::Highscore(mission) => start_highscore_game(mission),
         }
     }
 
@@ -301,6 +356,7 @@ impl GameOptions {
         match self {
             GameOptions::Delivery(o) => o.random_seed = hash_seed(o.random_seed),
             GameOptions::Standard(o) => o.random_seed = hash_seed(o.random_seed),
+            GameOptions::Highscore(o) => o.random_seed = hash_seed(o.random_seed), //TODO: this should not be possible!
         }
     }
 
@@ -308,6 +364,7 @@ impl GameOptions {
         match self {
             GameOptions::Delivery(o) => o.collision_mode(),
             GameOptions::Standard(o) => o.collision_mode(),
+            GameOptions::Highscore(_) => CollisionMode::PassThrough,
         }
     }
 }
