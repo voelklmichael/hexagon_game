@@ -103,6 +103,7 @@ fn show_standard(ui: &mut egui::Ui, options: &mut OptionsState) {
                     WinningCondition::LastManStanding => "Last man standing",
                     WinningCondition::LongestWay => "Longest way",
                     WinningCondition::HighestVelocity => "Highest velocity",
+                    WinningCondition::Highscore { .. } => "Highscore",
                 })
                 .show_ui(ui, |ui| {
                     ui.selectable_value(

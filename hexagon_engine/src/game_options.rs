@@ -262,6 +262,39 @@ impl GameOptionsStandard {
                     Some(GameResult::Draw(top))
                 }
             }
+            WinningCondition::Highscore {
+                min_velocity,
+                min_distance,
+                target,
+            } => {
+                let all_done = players.iter().filter(|p| !p.is_npc).all(|p| !p.is_active);
+                if !all_done {
+                    return None;
+                }
+                assert_eq!(players.len(), 1);
+                let winners: Vec<PlayerId> = players
+                    .iter()
+                    .filter(|p| !p.is_npc)
+                    .filter(|p| {
+                        let vel_ok = min_velocity.map_or(true, |v| {
+                            stats.max_velocity.get(&p.id).copied().unwrap_or(0) >= v
+                        });
+                        let dist_ok = min_distance.map_or(true, |d| {
+                            stats.total_path_weight.get(&p.id).copied().unwrap_or(0) >= d
+                        });
+                        let target_ok = target.map_or(true, |t| p.current_position.0 == t);
+                        vel_ok && dist_ok && target_ok
+                    })
+                    .map(|p| p.id)
+                    .collect();
+                if winners.is_empty() {
+                    Some(GameResult::Loss)
+                } else if winners.len() == 1 {
+                    Some(GameResult::Win(winners))
+                } else {
+                    Some(GameResult::Draw(winners))
+                }
+            }
         }
     }
 }

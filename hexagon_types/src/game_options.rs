@@ -20,4 +20,9 @@ pub enum WinningCondition {
     #[default]
     LongestWay,
     HighestVelocity,
+    Highscore {
+        min_velocity: Option<u32>,
+        min_distance: Option<u32>,
+        target: Option<crate::board_types::ConnectorId>,
+    },
 }
