@@ -127,6 +127,11 @@ impl ApiClient {
     }
 
     // --- missions ---
+    pub async fn fetch_all_missions(&self) -> Result<Vec<MissionEntry>, ApiError> {
+        let res = self.get(self.url("/missions")).send().await?;
+        Self::expect_json(res).await
+    }
+
     pub async fn fetch_missions(&self, kind: MissionKind) -> Result<Vec<MissionEntry>, ApiError> {
         let kind_str = match kind {
             MissionKind::HighScore => "HighScore",

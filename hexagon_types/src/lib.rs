@@ -1,20 +1,10 @@
 use std::collections::HashMap;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub enum MissionKind {
-    HighScore,
-    Delivery,
-}
-
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct MissionEntry {
-    pub id: Uuid,
-    pub kind: MissionKind,
-    pub name: String,
-    pub number: u32,
-    pub json: serde_json::Value,
-}
+pub mod game_options;
+pub use game_options::*;
+pub mod missions;
+pub use missions::*;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct LoginResponse {

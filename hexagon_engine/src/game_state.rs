@@ -5,7 +5,7 @@ use crate::board_types::{
     Connector, ConnectorEnd, ConnectorId, ConnectorKind, ConnectorOnHex, ConnectorPosition,
     HexagonPosition, Tile, TileRotationDirection,
 };
-use crate::game_options::{GameOptions, WinningConditionStandard};
+use crate::game_options::{GameOptions, WinningCondition};
 use crate::player_types::{HistoryConnector, PlayerHistorySingleTurn};
 use crate::random_number_generator::RandomNumberGenerator;
 use crate::statistics::Statistics;
@@ -273,7 +273,7 @@ impl GameState {
 #[cfg(test)]
 mod tests {
     use crate::game_options::{
-        CollisionMode, GameOptionsStandard, OuterConnectors, WinningConditionStandard,
+        CollisionMode, GameOptionsStandard, OuterConnectors, WinningCondition,
     };
 
     use super::*;
@@ -286,7 +286,7 @@ mod tests {
             random_seed: 0,
             player_count: 2,
             collision_mode: CollisionMode::PassThrough,
-            winning_condition: WinningConditionStandard::HighestVelocity,
+            winning_condition: WinningCondition::HighestVelocity,
             hand_size: 3,
         };
         let game = options.start_game().unwrap();

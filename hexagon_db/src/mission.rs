@@ -1,5 +1,4 @@
-use hexagon_types::{MissionEntry, MissionKind};
-use serde_json::Value;
+use hexagon_types::{Mission, MissionEntry, MissionKind};
 use uuid::Uuid;
 
 #[derive(sqlx::Type, Debug)]
@@ -12,8 +11,8 @@ enum DbMissionKind {
 impl From<MissionKind> for DbMissionKind {
     fn from(k: MissionKind) -> Self {
         match k {
-            MissionKind::HighScore => DbMissionKind::HighScore,
-            MissionKind::Delivery => DbMissionKind::Delivery,
+            MissionKind::HighScore => Self::HighScore,
+            MissionKind::Delivery => Self::Delivery,
         }
     }
 }
@@ -23,8 +22,9 @@ struct MissionRow {
     id: Uuid,
     kind: DbMissionKind,
     name: String,
+    description: String,
     number: i32,
-    json: Value,
+    json: sqlx::types::Json<Mission>,
 }
 
 impl From<MissionRow> for MissionEntry {
@@ -36,19 +36,29 @@ impl From<MissionRow> for MissionEntry {
                 DbMissionKind::Delivery => MissionKind::Delivery,
             },
             name: r.name,
+            description: r.description,
             number: r.number as u32,
-            json: r.json,
+            json: r.json.0,
         }
     }
 }
 
 impl crate::DB {
+    pub async fn fetch_all_missions(&self) -> Result<Vec<MissionEntry>, sqlx::Error> {
+        let rows: Vec<MissionRow> = sqlx::query_as(
+            "SELECT id, kind, name, description, number, json FROM missions ORDER BY number",
+        )
+        .fetch_all(&self.0)
+        .await?;
+        Ok(rows.into_iter().map(Into::into).collect())
+    }
+
     pub async fn fetch_missions_by_kind(
         &self,
         kind: MissionKind,
     ) -> Result<Vec<MissionEntry>, sqlx::Error> {
         let rows: Vec<MissionRow> = sqlx::query_as(
-            "SELECT id, kind, name, number, json FROM missions WHERE kind = $1 ORDER BY number",
+            "SELECT id, kind, name, description, number, json FROM missions WHERE kind = $1 ORDER BY number",
         )
         .bind(DbMissionKind::from(kind))
         .fetch_all(&self.0)

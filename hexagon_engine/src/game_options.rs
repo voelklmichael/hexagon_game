@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+pub use hexagon_types::game_options::{CollisionMode, OuterConnectors, WinningCondition};
+
 use crate::{
     board_types::{Board, ConnectorEnd, Tile},
     game_state::{GameResult, GameState},
@@ -15,28 +17,10 @@ pub struct GameOptionsStandard {
     pub random_seed: u32,
     pub player_count: usize,
     pub collision_mode: CollisionMode,
-    pub winning_condition: WinningConditionStandard,
+    pub winning_condition: WinningCondition,
     pub hand_size: usize,
 }
 
-#[derive(strum::EnumIter, Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub enum OuterConnectors {
-    OnlyDeathEnds,
-    ReducedDeathEnds,
-}
-
-#[derive(Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub enum CollisionMode {
-    PassThrough,
-    BothDie,
-}
-
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
-pub enum WinningConditionStandard {
-    LastManStanding,
-    LongestWay,
-    HighestVelocity,
-}
 #[derive(Clone, Serialize, Deserialize)]
 pub struct GameOptionsDelivery {
     pub board_radius: usize,
@@ -225,7 +209,7 @@ impl GameOptionsStandard {
         stats: &Statistics,
     ) -> Option<GameResult> {
         match self.winning_condition {
-            WinningConditionStandard::LastManStanding => {
+            WinningCondition::LastManStanding => {
                 let active: Vec<_> = players
                     .iter()
                     .filter(|p| p.is_active && !p.is_npc)
@@ -242,7 +226,7 @@ impl GameOptionsStandard {
                     _ => None,
                 }
             }
-            WinningConditionStandard::LongestWay => {
+            WinningCondition::LongestWay => {
                 let all_done = players.iter().filter(|p| !p.is_npc).all(|p| !p.is_active);
                 if !all_done {
                     return None;
@@ -260,7 +244,7 @@ impl GameOptionsStandard {
                     Some(GameResult::Draw(top))
                 }
             }
-            WinningConditionStandard::HighestVelocity => {
+            WinningCondition::HighestVelocity => {
                 let all_done = players.iter().filter(|p| !p.is_npc).all(|p| !p.is_active);
                 if !all_done {
                     return None;

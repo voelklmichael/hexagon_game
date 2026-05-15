@@ -9,7 +9,7 @@ use uuid::Uuid;
 use hexagon_engine::{
     CollisionMode, Color, GameOptionsDelivery, GameOptionsDiscriminants, GameOptionsStandard,
     GameResult, GameState, OuterConnectors, PlayerId, RandomNumberGenerator,
-    WinningConditionStandard,
+    WinningCondition,
 };
 
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Copy, Default)]
@@ -76,7 +76,7 @@ impl Default for OptionsState {
                 random_seed: 0,
                 player_count: 2,
                 collision_mode: CollisionMode::PassThrough,
-                winning_condition: WinningConditionStandard::HighestVelocity,
+                winning_condition: WinningCondition::HighestVelocity,
                 hand_size: 3,
             },
             delivery: GameOptionsDelivery {
