@@ -1,8 +1,9 @@
 mod config;
 mod highscore;
+mod mission;
 mod user;
 pub use config::DBConfig;
-pub use hexagon_types::{DBHighscore, DBHighscorePeak};
+pub use hexagon_types::{DBHighscore, DBHighscorePeak, MissionEntry, MissionKind};
 pub use user::*;
 
 pub struct DB(sqlx::PgPool);
