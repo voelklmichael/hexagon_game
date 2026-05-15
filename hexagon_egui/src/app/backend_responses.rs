@@ -2,6 +2,13 @@ use crate::HexApp;
 
 impl HexApp {
     pub(super) fn process_backend_responses(&mut self) {
+        if let Some(result) = self.backend_reqwest.fetch_all_missions_task.take() {
+            match result {
+                Ok(missions) => self.missions = missions,
+                Err(e) => tracing::warn!("fetch_all_missions failed: {e}"),
+            }
+        }
+
         if let Some(result) = self.backend_reqwest.fetch_won_missions_task.take() {
             match result {
                 Ok(ids) => {

@@ -1,7 +1,7 @@
 mod backend_reqwest;
 mod backend_responses;
 pub use backend_reqwest::BackendReqwest;
-use hexagon_types::DBHighscorePeak;
+use hexagon_types::{DBHighscorePeak, MissionEntry};
 use indexmap::IndexMap;
 use std::collections::HashSet;
 use uuid::Uuid;
@@ -215,6 +215,8 @@ pub struct HexApp {
     #[serde(skip)]
     pub music_player: Option<crate::music::MusicPlayer>,
     pub rng: RandomNumberGenerator,
+    #[serde(skip)]
+    pub missions: Vec<MissionEntry>,
     pub missions_won: HashSet<Uuid>,
     pub current_mission: Option<usize>,
     pub user_login: crate::panels::user_login::UserLogin,
