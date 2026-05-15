@@ -267,7 +267,7 @@ impl GameState {
             GameOptions::Standard(s) => s.check_winning_condition(&self.players, &self.statistics),
             GameOptions::Highscore(m) => {
                 crate::game_options::GameOptionsStandard::check_winning_condition_for(
-                    &m.winning_condition,
+                    &WinningCondition::Highscore(m.winning_condition.clone()),
                     &self.players,
                     &self.statistics,
                 )

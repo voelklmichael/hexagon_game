@@ -2,8 +2,8 @@
     Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, strum::EnumIter, Default,
 )]
 pub enum OuterConnectors {
-    OnlyDeathEnds,
     #[default]
+    OnlyDeathEnds,
     ReducedDeathEnds,
 }
 
@@ -15,14 +15,17 @@ pub enum CollisionMode {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Default)]
+pub struct WinningConditionHighscore {
+    pub min_velocity: Option<u32>,
+    pub min_distance: Option<u32>,
+    pub target: Option<crate::board_types::ConnectorId>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Default)]
 pub enum WinningCondition {
     LastManStanding,
     #[default]
     LongestWay,
     HighestVelocity,
-    Highscore {
-        min_velocity: Option<u32>,
-        min_distance: Option<u32>,
-        target: Option<crate::board_types::ConnectorId>,
-    },
+    Highscore(WinningConditionHighscore),
 }

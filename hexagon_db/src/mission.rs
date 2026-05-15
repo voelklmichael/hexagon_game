@@ -65,4 +65,26 @@ impl crate::DB {
         .await?;
         Ok(rows.into_iter().map(Into::into).collect())
     }
+
+    pub async fn upsert_mission(&self, entry: &MissionEntry) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            "INSERT INTO missions (id, kind, name, description, number, json)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (id) DO UPDATE SET
+               kind        = EXCLUDED.kind,
+               name        = EXCLUDED.name,
+               description = EXCLUDED.description,
+               number      = EXCLUDED.number,
+               json        = EXCLUDED.json",
+        )
+        .bind(entry.id)
+        .bind(DbMissionKind::from(entry.kind))
+        .bind(&entry.name)
+        .bind(&entry.description)
+        .bind(entry.number as i32)
+        .bind(sqlx::types::Json(&entry.json))
+        .execute(&self.0)
+        .await?;
+        Ok(())
+    }
 }

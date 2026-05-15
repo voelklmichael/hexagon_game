@@ -1,7 +1,8 @@
 use uuid::Uuid;
 
+use crate::WinningConditionHighscore;
 use crate::board_types::{Board, ConnectorId, Tile};
-use crate::game_options::{OuterConnectors, WinningCondition};
+use crate::game_options::OuterConnectors;
 
 // --- delivery ---
 
@@ -29,7 +30,7 @@ pub struct MissionHighscoreV1 {
     pub starting_point: ConnectorId,
     pub random_seed: u32,
     pub starting_hand: Vec<Tile>,
-    pub winning_condition: WinningCondition,
+    pub winning_condition: WinningConditionHighscore,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

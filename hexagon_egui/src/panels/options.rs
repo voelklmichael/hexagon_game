@@ -1,4 +1,5 @@
 use hexagon_engine::{CollisionMode, GameOptionsDiscriminants, OuterConnectors, WinningCondition};
+use hexagon_types::WinningConditionHighscore;
 
 use crate::app::OptionsState;
 
@@ -104,7 +105,7 @@ fn show_standard(ui: &mut egui::Ui, options: &mut OptionsState) {
                     WinningCondition::LastManStanding => "Last man standing",
                     WinningCondition::LongestWay => "Longest way",
                     WinningCondition::HighestVelocity => "Highest velocity",
-                    WinningCondition::Highscore { .. } => "Highscore",
+                    WinningCondition::Highscore(WinningConditionHighscore { .. }) => "Highscore",
                 })
                 .show_ui(ui, |ui| {
                     ui.selectable_value(

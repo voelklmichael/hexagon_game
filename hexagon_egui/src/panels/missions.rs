@@ -1,7 +1,7 @@
 use hexagon_engine::{GameOptionsDelivery, GameState, start_highscore_game};
 use hexagon_types::{Mission, MissionDelivery, MissionEntry, MissionKind};
-use strum::VariantArray as _;
 use std::collections::HashSet;
+use strum::VariantArray as _;
 use uuid::Uuid;
 
 pub(crate) fn mission_id(missions: &[MissionEntry], index: usize) -> Option<Uuid> {
@@ -96,11 +96,7 @@ pub fn show(
                             } else {
                                 mission.name.clone()
                             };
-                            let can_start = matches!(&mission.json, Mission::Delivery(_));
-                            if ui
-                                .add_enabled(can_start, egui::Button::new(label))
-                                .clicked()
-                            {
+                            if ui.button(label).clicked() {
                                 start_mission(missions, *i, game);
                                 started = Some(*i);
                             }

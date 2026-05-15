@@ -1,3 +1,4 @@
+use hexagon_types::WinningConditionHighscore;
 use serde::{Deserialize, Serialize};
 
 pub use hexagon_types::game_options::{CollisionMode, OuterConnectors, WinningCondition};
@@ -272,11 +273,11 @@ impl GameOptionsStandard {
                     Some(GameResult::Draw(top))
                 }
             }
-            WinningCondition::Highscore {
+            WinningCondition::Highscore(WinningConditionHighscore {
                 min_velocity,
                 min_distance,
                 target,
-            } => {
+            }) => {
                 let all_done = players.iter().filter(|p| !p.is_npc).all(|p| !p.is_active);
                 if !all_done {
                     return None;
@@ -319,10 +320,9 @@ fn hash_seed(seed: u32) -> u32 {
 pub fn start_highscore_game(mission: MissionHighscoreV1) -> Result<GameState, String> {
     let start_id = mission.starting_point;
     let target = match &mission.winning_condition {
-        WinningCondition::Highscore { target, .. } => *target,
+        WinningConditionHighscore { target, .. } => *target,
         _ => None,
     };
-    let rng = RandomNumberGenerator::new(mission.random_seed);
     let player = Player {
         id: PlayerId(0),
         current_position: (start_id, ConnectorEnd::StartedAtA),
@@ -338,7 +338,7 @@ pub fn start_highscore_game(mission: MissionHighscoreV1) -> Result<GameState, St
         board: mission.board.clone(),
         result: None,
         players: vec![player],
-        rng,
+        rng: RandomNumberGenerator::new(mission.random_seed),
         options: GameOptions::Highscore(mission),
     })
 }
@@ -356,7 +356,7 @@ impl GameOptions {
         match self {
             GameOptions::Delivery(o) => o.random_seed = hash_seed(o.random_seed),
             GameOptions::Standard(o) => o.random_seed = hash_seed(o.random_seed),
-            GameOptions::Highscore(o) => o.random_seed = hash_seed(o.random_seed),//TODO: this should not be possible!
+            GameOptions::Highscore(o) => o.random_seed = hash_seed(o.random_seed), //TODO: this should not be possible!
         }
     }
 

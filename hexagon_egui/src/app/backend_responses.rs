@@ -5,7 +5,10 @@ impl HexApp {
         if let Some(result) = self.backend_reqwest.fetch_all_missions_task.take() {
             self.missions_loaded = true;
             match result {
-                Ok(missions) => self.missions = missions,
+                Ok(missions) => {
+                    tracing::info!("Fetched missions: {}", missions.len());
+                    self.missions = missions
+                }
                 Err(e) => tracing::warn!("fetch_all_missions failed: {e}"),
             }
         }

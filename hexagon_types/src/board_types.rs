@@ -159,6 +159,12 @@ impl Board {
             return Err("Radius must be at least 1".to_string());
         }
         let hexagons = Self::generate_hexagons(radius);
+        Self::create_board_from_hexagons(hexagons, outer_connectors)
+    }
+    pub fn create_board_from_hexagons(
+        hexagons: Vec<HexagonPosition>,
+        outer_connectors: OuterConnectors,
+    ) -> Result<Board, String> {
         let hex_set: HashSet<(i32, i32)> = hexagons.iter().map(|h| (h.x, h.y)).collect();
         let outside_pairs: Vec<(ConnectorPosition, ConnectorPosition)> = match outer_connectors {
             OuterConnectors::OnlyDeathEnds => vec![],
