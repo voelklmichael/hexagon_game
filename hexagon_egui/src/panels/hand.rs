@@ -8,10 +8,10 @@ use crate::panels::color_to_egui;
 fn try_start_music(music: &mut MusicState, player: Option<&crate::music::MusicPlayer>) {
     if !music.started {
         music.started = true;
-        if !music.paused {
-            if let Some(p) = player {
-                p.play_track(music.current_track);
-            }
+        if !music.paused
+            && let Some(p) = player
+        {
+            p.play_track(music.current_track);
         }
     }
 }

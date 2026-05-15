@@ -4,15 +4,17 @@ impl HexApp {
     pub(super) fn process_backend_responses(&mut self) {
         if let Some((id, name)) = self.backend_reqwest.session_user.take() {
             self.user_login.logged_in_as = Some((id, name));
-            if !self.backend_reqwest.fetch_mission_user_best_task.is_pending() {
-                if let (Some((user_id, _)), Some(uuid)) = (
+            if !self
+                .backend_reqwest
+                .fetch_mission_user_best_task
+                .is_pending()
+                && let (Some((user_id, _)), Some(uuid)) = (
                     &self.user_login.logged_in_as,
                     self.current_mission
                         .and_then(|idx| crate::panels::missions::mission_id(&self.missions, idx)),
-                ) {
-                    self.backend_reqwest
-                        .fetch_mission_user_best(*user_id, uuid);
-                }
+                )
+            {
+                self.backend_reqwest.fetch_mission_user_best(*user_id, uuid);
             }
         }
 
