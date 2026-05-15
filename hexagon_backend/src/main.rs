@@ -18,7 +18,7 @@ async fn main() {
 
     let db = Arc::new(db.connect().await.unwrap());
 
-    let app = routes::router(AppState { db });
+    let app = routes::router(AppState { db }).await;
     let ServerConfig {
         server_host,
         server_port,

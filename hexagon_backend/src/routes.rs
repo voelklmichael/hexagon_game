@@ -10,7 +10,8 @@ use axum_login::{AuthManagerLayerBuilder, AuthUser};
 use axum_messages::MessagesManagerLayer;
 use hexagon_db::{DB, DBHighscore, DBHighscorePeak, MissionEntry, MissionKind};
 use tower_http::cors::{AllowOrigin, CorsLayer};
-use tower_sessions::{MemoryStore, SessionManagerLayer};
+use tower_sessions::SessionManagerLayer;
+use tower_sessions_sqlx_store::PostgresStore;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -18,11 +19,14 @@ pub struct AppState {
     pub db: Arc<DB>,
 }
 
-pub fn router(state: AppState) -> Router {
+pub async fn router(state: AppState) -> Router {
+    let session_store = PostgresStore::new(state.db.pool().clone());
+    session_store.migrate().await.expect("session store migration failed");
+
     #[cfg(debug_assertions)]
-    let session_layer = SessionManagerLayer::new(MemoryStore::default());
+    let session_layer = SessionManagerLayer::new(session_store);
     #[cfg(not(debug_assertions))]
-    let session_layer = SessionManagerLayer::new(MemoryStore::default())
+    let session_layer = SessionManagerLayer::new(session_store)
         .with_same_site(tower_sessions::cookie::SameSite::None)
         .with_secure(true);
     let auth_layer = AuthManagerLayerBuilder::new(state.clone(), session_layer).build();
