@@ -101,12 +101,6 @@ pub fn show(
     let mut players: Vec<PlayerId> = statistics.total_path_segments.keys().copied().collect();
     players.sort_unstable_by_key(|id| id.0);
 
-    let max_segments = players
-        .iter()
-        .filter_map(|id| statistics.total_path_segments.get(id))
-        .copied()
-        .max()
-        .unwrap_or(0);
     let max_weight = players
         .iter()
         .filter_map(|id| statistics.total_path_weight.get(id))
@@ -125,7 +119,6 @@ pub fn show(
         .min_col_width(80.0)
         .show(ui, |ui| {
             ui.label("Player");
-            ui.label("Segments");
             ui.label("Total Weight");
             ui.label("Max Velocity");
             ui.end_row();
@@ -136,18 +129,12 @@ pub fn show(
                         ui.allocate_exact_size(egui::vec2(14.0, 14.0), egui::Sense::hover());
                     ui.painter().rect_filled(rect, 2.0, color_to_egui(color));
                 }
-                let segments = statistics
-                    .total_path_segments
-                    .get(player_id)
-                    .copied()
-                    .unwrap_or(0);
                 let weight = statistics
                     .total_path_weight
                     .get(player_id)
                     .copied()
                     .unwrap_or(0);
                 let velocity = statistics.max_velocity.get(player_id).copied().unwrap_or(0);
-                highlight_label(ui, segments, max_segments);
                 highlight_label(ui, weight, max_weight);
                 highlight_label(ui, velocity, max_velocity);
                 ui.end_row();
