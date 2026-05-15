@@ -1,4 +1,4 @@
-use hexagon_types::{DBHighscore, DBHighscorePeak, LoginResponse, MeResponse};
+use hexagon_types::{DBHighscore, DBHighscorePeak, LoginResponse, MeResponse, MissionEntry, MissionKind};
 use uuid::Uuid;
 
 #[derive(Debug, thiserror::Error)]
@@ -121,6 +121,19 @@ impl ApiClient {
     pub async fn fetch_won_missions(&self, user_id: Uuid) -> Result<Vec<Uuid>, ApiError> {
         let res = self
             .get(self.url(&format!("/highscore/user/{user_id}/missions")))
+            .send()
+            .await?;
+        Self::expect_json(res).await
+    }
+
+    // --- missions ---
+    pub async fn fetch_missions(&self, kind: MissionKind) -> Result<Vec<MissionEntry>, ApiError> {
+        let kind_str = match kind {
+            MissionKind::HighScore => "HighScore",
+            MissionKind::Delivery => "Delivery",
+        };
+        let res = self
+            .get(self.url(&format!("/missions/{kind_str}")))
             .send()
             .await?;
         Self::expect_json(res).await
