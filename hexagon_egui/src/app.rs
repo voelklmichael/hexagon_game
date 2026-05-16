@@ -236,6 +236,8 @@ pub struct HexApp {
     pub mission_user_best: Option<DBHighscorePeak>,
     #[serde(skip)]
     pub mission_overall_best: Option<DBHighscorePeak>,
+    #[serde(skip)]
+    pub game_saved: bool,
 }
 
 impl HexApp {
@@ -370,6 +372,26 @@ impl eframe::App for HexApp {
         }
         if !game_done {
             self.mission_result_reported = false;
+        }
+
+        // Save the completed game state to the backend once per win.
+        if game_done
+            && !self.game_saved
+            && let Some(game) = &self.game
+            && matches!(&game.result, Some(GameResult::Win(_)))
+            && let (Some((user_id, _)), Some(mission_id)) = (
+                &self.user_login.logged_in_as,
+                self.current_mission
+                    .and_then(|idx| crate::panels::missions::mission_id(&self.missions, idx)),
+            )
+        {
+            if let Ok(value) = serde_json::to_value(game) {
+                self.backend_reqwest.save_previous_game(*user_id, mission_id, value);
+            }
+            self.game_saved = true;
+        }
+        if !game_done {
+            self.game_saved = false;
         }
 
         // Snapshot the replay step index now (before panel closures borrow self).

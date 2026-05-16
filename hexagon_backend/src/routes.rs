@@ -9,6 +9,7 @@ use axum::{
 use axum_login::{AuthManagerLayerBuilder, AuthUser};
 use axum_messages::MessagesManagerLayer;
 use hexagon_db::{DB, DBHighscore, DBHighscorePeak, MissionEntry, MissionKind};
+use hexagon_types::{PreviousGame, SavePreviousGameRequest};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_sessions::SessionManagerLayer;
 use tower_sessions_sqlx_store::PostgresStore;
@@ -71,6 +72,8 @@ pub async fn router(state: AppState) -> Router {
         )
         .route("/missions", get(fetch_all_missions))
         .route("/missions/{kind}", get(fetch_missions))
+        .route("/previous_games", post(save_previous_game))
+        .route("/previous_games", get(fetch_previous_games))
         .nest("/user_login", crate::user::login_router())
         .fallback(fallback)
         .layer(MessagesManagerLayer)
@@ -188,6 +191,43 @@ async fn fetch_missions(
         Ok(missions) => Ok(Json(missions)),
         Err(e) => {
             tracing::warn!("fetch_missions failed: {e}");
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn save_previous_game(
+    auth_session: crate::user::AuthSession,
+    State(state): State<AppState>,
+    Json(req): Json<SavePreviousGameRequest>,
+) -> Result<Json<i64>, StatusCode> {
+    tracing::info!(
+        "POST /previous_games user_id={} mission_id={}",
+        req.user_id,
+        req.mission_id
+    );
+    require_own_user(&auth_session, req.user_id)?;
+    match state
+        .db
+        .insert_previous_game(req.user_id, req.mission_id, &req.game_state)
+        .await
+    {
+        Ok(id) => Ok(Json(id)),
+        Err(e) => {
+            tracing::warn!("insert_previous_game failed: {e}");
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn fetch_previous_games(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<PreviousGame>>, StatusCode> {
+    tracing::info!("GET /previous_games");
+    match state.db.fetch_previous_games().await {
+        Ok(games) => Ok(Json(games)),
+        Err(e) => {
+            tracing::warn!("fetch_previous_games failed: {e}");
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }

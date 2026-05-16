@@ -1,5 +1,6 @@
 use hexagon_types::{
     DBHighscore, DBHighscorePeak, LoginResponse, MeResponse, MissionEntry, MissionKind,
+    PreviousGame, SavePreviousGameRequest,
 };
 use uuid::Uuid;
 
@@ -143,6 +144,26 @@ impl ApiClient {
             .get(self.url(&format!("/missions/{kind_str}")))
             .send()
             .await?;
+        Self::expect_json(res).await
+    }
+
+    // --- previous games ---
+    pub async fn save_previous_game(
+        &self,
+        user_id: Uuid,
+        mission_id: Uuid,
+        game_state: &serde_json::Value,
+    ) -> Result<i64, ApiError> {
+        let res = self
+            .post(self.url("/previous_games"))
+            .json(&SavePreviousGameRequest { user_id, mission_id, game_state: game_state.clone() })
+            .send()
+            .await?;
+        Self::expect_json(res).await
+    }
+
+    pub async fn fetch_previous_games(&self) -> Result<Vec<PreviousGame>, ApiError> {
+        let res = self.get(self.url("/previous_games")).send().await?;
         Self::expect_json(res).await
     }
 

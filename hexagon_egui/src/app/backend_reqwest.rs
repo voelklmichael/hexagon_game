@@ -22,6 +22,7 @@ pub struct BackendReqwest {
     pub fetch_mission_user_best_task: Bind<(uuid::Uuid, Option<DBHighscorePeak>), ApiError>,
     pub fetch_mission_overall_best_task: Bind<(uuid::Uuid, DBHighscorePeak), ApiError>,
     pub fetch_all_missions_task: Bind<Vec<MissionEntry>, ApiError>,
+    pub save_previous_game_task: Bind<i64, ApiError>,
     session_checked: bool,
     missions_fetched: bool,
 }
@@ -144,6 +145,20 @@ impl BackendReqwest {
                 Err(ApiError::Status { status: 404, .. }) => Ok((mission_id, None)),
                 Err(e) => Err(e),
             }
+        });
+    }
+
+    pub(crate) fn save_previous_game(
+        &mut self,
+        user_id: uuid::Uuid,
+        mission_id: uuid::Uuid,
+        game_state: serde_json::Value,
+    ) {
+        let Some(client) = self.get_client() else {
+            return;
+        };
+        self.save_previous_game_task.request(async move {
+            client.save_previous_game(user_id, mission_id, &game_state).await
         });
     }
 
