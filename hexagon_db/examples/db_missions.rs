@@ -20,6 +20,7 @@ async fn main() {
     upsert_mission_3(&db).await;
     upsert_mission_4(&db).await;
     upsert_mission_5(&db).await;
+    upsert_mission_6(&db).await;
 
     tracing::info!("Done")
 }
@@ -259,6 +260,60 @@ async fn upsert_mission_5(db: &DB) {
                 winning_condition: WinningConditionHighscore {
                     min_velocity: None,
                     min_distance: Some(10_000),
+                    target: Some(ConnectorId(21)),
+                },
+            },
+        )),
+    };
+    db.upsert_mission(&mission).await.unwrap();
+}
+
+async fn upsert_mission_6(db: &DB) {
+    let number = 600u32;
+    let mission_id = Uuid::from_u128(number as u128);
+
+    let hand_size = 3;
+    let random_seed = 2443546;
+
+    let mut rng = RandomNumberGenerator::new(random_seed);
+    let starting_hand = (0..hand_size)
+        .map(|_| Tile::create_fully_connected(&mut rng))
+        .collect();
+
+    let mut board =
+        Board::create_board(3, hexagon_types::OuterConnectors::ReducedDeathEnds).unwrap();
+    let tile = Tile {
+        inner_connectors: Edge::opposites()
+            .into_iter()
+            .map(|(a, b)| ConnectorEdgeSub {
+                a: EdgeSub {
+                    edge: a,
+                    sub: Sub::Left,
+                },
+                b: EdgeSub {
+                    edge: b,
+                    sub: Sub::Right,
+                },
+            })
+            .collect(),
+    };
+    board.play_tile(HexagonPosition { x: 0, y: 0 }, tile);
+
+    let mission = MissionEntry {
+        id: mission_id,
+        kind: hexagon_db::MissionKind::HighScore,
+        name: "Tutorial #6".into(),
+        description: "Move at high speed: Travel 5 segments in one turn".into(),
+        number: number,
+        json: hexagon_types::Mission::HighScore(hexagon_types::MissionHighscore::V1(
+            MissionHighscoreV1 {
+                board,
+                starting_point: ConnectorId(3),
+                random_seed: hand_size,
+                starting_hand: starting_hand,
+                winning_condition: WinningConditionHighscore {
+                    min_velocity: Some(5_000),
+                    min_distance: None,
                     target: Some(ConnectorId(21)),
                 },
             },

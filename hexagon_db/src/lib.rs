@@ -1,6 +1,7 @@
 mod config;
 mod highscore;
 mod mission;
+mod previous_games;
 mod user;
 pub use config::DBConfig;
 pub use hexagon_types::{DBHighscore, DBHighscorePeak, MissionEntry, MissionKind};

@@ -352,11 +352,9 @@ impl eframe::App for HexApp {
 
         self.process_backend_responses();
 
-        // Report mission completion to backend once per win, if the user is logged in.
+        // Report mission completion and save game state to backend once per win.
         if game_done
             && !self.mission_result_reported
-            && self.current_mission.is_some()
-            && self.user_login.logged_in_as.is_some()
             && let Some(game) = &self.game
             && matches!(&game.result, Some(GameResult::Win(_)))
             && let (Some((user_id, _)), Some(mission_idx)) =
@@ -364,8 +362,14 @@ impl eframe::App for HexApp {
             && let Some(mission_uuid) =
                 crate::panels::missions::mission_id(&self.missions, mission_idx)
         {
-            self.backend_reqwest
-                .report_mission_done(*user_id, mission_uuid, &game.statistics);
+            if let Ok(value) = serde_json::to_value(game) {
+                self.backend_reqwest.report_mission_completed(
+                    *user_id,
+                    mission_uuid,
+                    &game.statistics,
+                    value,
+                );
+            }
             self.mission_result_reported = true;
         }
         if !game_done {
@@ -422,7 +426,6 @@ impl eframe::App for HexApp {
                             self.current_mission = Some(idx);
                             self.left_tab = LeftTab::Hand;
                             self.right_tab = RightTab::Statistics;
-                            self.right_panel_open = true;
                             self.mission_user_best = None;
                             self.mission_overall_best = None;
                             if let Some(mission_uuid) =
@@ -459,7 +462,6 @@ impl eframe::App for HexApp {
                                     self.current_mission = None;
                                     self.left_tab = LeftTab::Hand;
                                     self.right_tab = RightTab::Statistics;
-                                    self.right_panel_open = true;
                                 }
                                 Err(e) => eprintln!("Failed to start game: {e}"),
                             }
@@ -472,7 +474,6 @@ impl eframe::App for HexApp {
                             self.current_mission = None;
                             self.left_tab = LeftTab::Hand;
                             self.right_tab = RightTab::Statistics;
-                            self.right_panel_open = true;
                         }
                     }
                     LeftTab::Hand => {
@@ -485,20 +486,16 @@ impl eframe::App for HexApp {
                             &mut self.current_mission,
                             &self.missions,
                             &mut self.missions_won,
-                            self.user_login.logged_in_as.as_ref().map(|(id, _)| *id),
-                            &mut self.backend_reqwest,
                             &mut self.music,
                             self.music_player.as_ref(),
                         ) {
                             self.right_tab = RightTab::Statistics;
-                            self.right_panel_open = true;
                         }
                     }
                     LeftTab::Controls => {
                         if crate::panels::controls::show(ui, &mut self.game, &mut self.history) {
                             self.left_tab = LeftTab::Hand;
                             self.right_tab = RightTab::Statistics;
-                            self.right_panel_open = true;
                         }
                     }
                     LeftTab::Music => {

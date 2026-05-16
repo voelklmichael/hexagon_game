@@ -170,8 +170,6 @@ pub fn show(
     current_mission: &mut Option<usize>,
     missions: &[hexagon_types::MissionEntry],
     missions_won: &mut std::collections::HashSet<uuid::Uuid>,
-    user_id: Option<uuid::Uuid>,
-    backend: &mut crate::app::BackendReqwest,
     music: &mut MusicState,
     music_player: Option<&crate::music::MusicPlayer>,
 ) -> bool {
@@ -253,10 +251,7 @@ pub fn show(
             && let Some(cur) = *current_mission
             && let Some(mission_id) = crate::panels::missions::mission_id(missions, cur)
         {
-            let is_new = missions_won.insert(mission_id);
-            if is_new && let Some(uid) = user_id {
-                backend.report_mission_done(uid, mission_id, &saved.statistics);
-            }
+            missions_won.insert(mission_id);
         }
 
         ui.label(

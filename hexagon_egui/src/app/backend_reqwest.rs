@@ -22,6 +22,7 @@ pub struct BackendReqwest {
     pub fetch_mission_user_best_task: Bind<(uuid::Uuid, Option<DBHighscorePeak>), ApiError>,
     pub fetch_mission_overall_best_task: Bind<(uuid::Uuid, DBHighscorePeak), ApiError>,
     pub fetch_all_missions_task: Bind<Vec<MissionEntry>, ApiError>,
+    pub save_previous_game_task: Bind<i64, ApiError>,
     session_checked: bool,
     missions_fetched: bool,
 }
@@ -100,11 +101,12 @@ impl BackendReqwest {
             .request(async move { client.fetch_won_missions(user_id).await });
     }
 
-    pub(crate) fn report_mission_done(
+    pub(crate) fn report_mission_completed(
         &mut self,
         user_id: uuid::Uuid,
         mission_id: uuid::Uuid,
         statistics: &Statistics,
+        game_state: serde_json::Value,
     ) {
         let Some(client) = self.get_client() else {
             return;
@@ -130,8 +132,14 @@ impl BackendReqwest {
             mission_id,
             players,
         };
+        let client2 = client.clone();
         self.mission_done_task
             .request(async move { client.upsert_highscore(&score).await });
+        self.save_previous_game_task.request(async move {
+            client2
+                .save_previous_game(user_id, mission_id, &game_state)
+                .await
+        });
     }
 
     pub(crate) fn fetch_mission_user_best(&mut self, user_id: uuid::Uuid, mission_id: uuid::Uuid) {
