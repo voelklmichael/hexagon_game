@@ -156,7 +156,11 @@ impl ApiClient {
     ) -> Result<i64, ApiError> {
         let res = self
             .post(self.url("/previous_games"))
-            .json(&SavePreviousGameRequest { user_id, mission_id, game_state: game_state.clone() })
+            .json(&SavePreviousGameRequest {
+                user_id,
+                mission_id,
+                game_state: game_state.clone(),
+            })
             .send()
             .await?;
         Self::expect_json(res).await

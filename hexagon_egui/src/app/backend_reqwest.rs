@@ -136,7 +136,9 @@ impl BackendReqwest {
         self.mission_done_task
             .request(async move { client.upsert_highscore(&score).await });
         self.save_previous_game_task.request(async move {
-            client2.save_previous_game(user_id, mission_id, &game_state).await
+            client2
+                .save_previous_game(user_id, mission_id, &game_state)
+                .await
         });
     }
 
