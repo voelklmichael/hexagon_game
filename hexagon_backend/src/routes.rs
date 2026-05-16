@@ -21,7 +21,10 @@ pub struct AppState {
 
 pub async fn router(state: AppState) -> Router {
     let session_store = PostgresStore::new(state.db.pool().clone());
-    session_store.migrate().await.expect("session store migration failed");
+    session_store
+        .migrate()
+        .await
+        .expect("session store migration failed");
 
     #[cfg(debug_assertions)]
     let session_layer = SessionManagerLayer::new(session_store);
