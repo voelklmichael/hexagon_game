@@ -352,32 +352,94 @@ pub fn show(
 
     if let GameOptions::Highscore(mission) = &game_state.options {
         let wc = &mission.winning_condition;
-        if let Some(target_dist) = wc.min_distance {
-            let current_dist = game_state
+
+        let current_dist = wc.min_distance.map(|target| {
+            let current = game_state
                 .statistics
                 .total_path_weight
                 .get(&current_id)
                 .copied()
                 .unwrap_or(0);
-            ui.label(format!(
-                "Target Distance: {:.1}/{:.1}",
-                current_dist as f32 / 1000.0,
-                target_dist as f32 / 1000.0,
-            ));
-        }
-        if let Some(target_vel) = wc.min_velocity {
-            let current_vel = game_state
+            (current, target)
+        });
+        let current_vel = wc.min_velocity.map(|target| {
+            let current = game_state
                 .statistics
                 .max_velocity
                 .get(&current_id)
                 .copied()
                 .unwrap_or(0);
-            ui.label(format!(
-                "Target Velocity: {:.1}/{:.1}",
-                current_vel as f32 / 1000.0,
-                target_vel as f32 / 1000.0,
-            ));
-        }
+            (current, target)
+        });
+
+        let mission_entry = current_mission.and_then(|idx| missions.get(idx));
+
+        let collapse_id =
+            ui.make_persistent_id(("mission_stats_collapsible", mission_entry.map(|e| e.id)));
+        let state = egui::collapsing_header::CollapsingState::load_with_default_open(
+            ui.ctx(),
+            collapse_id,
+            true,
+        );
+
+        let has_player_target = player.target.is_some();
+
+        let mission_name = mission_entry
+            .map(|e| e.name.clone())
+            .unwrap_or_else(|| "Mission".to_string());
+
+        let header_label = if state.is_open() {
+            mission_name.clone()
+        } else {
+            let mut parts = Vec::new();
+            if let Some((cur, tgt)) = current_dist {
+                parts.push(format!(
+                    "↔ {:.1}/{:.1}",
+                    cur as f32 / 1000.0,
+                    tgt as f32 / 1000.0
+                ));
+            }
+            if let Some((cur, tgt)) = current_vel {
+                parts.push(format!(
+                    "⚡ {:.1}/{:.1}",
+                    cur as f32 / 1000.0,
+                    tgt as f32 / 1000.0
+                ));
+            }
+            if parts.is_empty() {
+                mission_name
+            } else {
+                parts.join("  ")
+            }
+        };
+
+        state
+            .show_header(ui, |ui| {
+                ui.label(header_label);
+            })
+            .body(|ui| {
+                if let Some(entry) = mission_entry {
+                    ui.label(&entry.description);
+                    ui.separator();
+                }
+                if let Some((cur, tgt)) = current_dist {
+                    ui.label(format!(
+                        "Target Distance: {:.1}/{:.1}",
+                        cur as f32 / 1000.0,
+                        tgt as f32 / 1000.0,
+                    ));
+                }
+                if let Some((cur, tgt)) = current_vel {
+                    ui.label(format!(
+                        "Target Velocity: {:.1}/{:.1}",
+                        cur as f32 / 1000.0,
+                        tgt as f32 / 1000.0,
+                    ));
+                }
+                if has_player_target {
+                    ui.label("Player needs to reach target");
+                }
+            });
     }
 
     let disabled = player.is_npc;
