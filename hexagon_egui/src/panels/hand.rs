@@ -178,7 +178,7 @@ pub fn show(
     let btn_font_size = egui::TextStyle::Body.resolve(ui.style()).size * 1.4;
 
     let can_undo = !history.undo_stack.is_empty();
-    let can_redo = !history.redo_stack.is_empty();
+    // let can_redo = !history.redo_stack.is_empty();
     ui.horizontal(|ui| {
         if ui
             .add_enabled(
