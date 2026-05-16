@@ -20,6 +20,7 @@ async fn main() {
     upsert_mission_3(&db).await;
     upsert_mission_4(&db).await;
     upsert_mission_5(&db).await;
+    upsert_mission_6(&db).await;
 
     tracing::info!("Done")
 }
@@ -282,15 +283,15 @@ async fn upsert_mission_6(db: &DB) {
     let mut board =
         Board::create_board(3, hexagon_types::OuterConnectors::ReducedDeathEnds).unwrap();
     let tile = Tile {
-        inner_connectors: Edge::variants()
-            .iter()
-            .map(|&edge| ConnectorEdgeSub {
+        inner_connectors: Edge::opposites()
+            .into_iter()
+            .map(|(a, b)| ConnectorEdgeSub {
                 a: EdgeSub {
-                    edge,
+                    edge: a,
                     sub: Sub::Left,
                 },
                 b: EdgeSub {
-                    edge,
+                    edge: b,
                     sub: Sub::Right,
                 },
             })
