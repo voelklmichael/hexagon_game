@@ -422,7 +422,6 @@ impl eframe::App for HexApp {
                             self.current_mission = Some(idx);
                             self.left_tab = LeftTab::Hand;
                             self.right_tab = RightTab::Statistics;
-                            self.right_panel_open = true;
                             self.mission_user_best = None;
                             self.mission_overall_best = None;
                             if let Some(mission_uuid) =
@@ -459,7 +458,6 @@ impl eframe::App for HexApp {
                                     self.current_mission = None;
                                     self.left_tab = LeftTab::Hand;
                                     self.right_tab = RightTab::Statistics;
-                                    self.right_panel_open = true;
                                 }
                                 Err(e) => eprintln!("Failed to start game: {e}"),
                             }
@@ -472,7 +470,6 @@ impl eframe::App for HexApp {
                             self.current_mission = None;
                             self.left_tab = LeftTab::Hand;
                             self.right_tab = RightTab::Statistics;
-                            self.right_panel_open = true;
                         }
                     }
                     LeftTab::Hand => {
@@ -491,14 +488,12 @@ impl eframe::App for HexApp {
                             self.music_player.as_ref(),
                         ) {
                             self.right_tab = RightTab::Statistics;
-                            self.right_panel_open = true;
                         }
                     }
                     LeftTab::Controls => {
                         if crate::panels::controls::show(ui, &mut self.game, &mut self.history) {
                             self.left_tab = LeftTab::Hand;
                             self.right_tab = RightTab::Statistics;
-                            self.right_panel_open = true;
                         }
                     }
                     LeftTab::Music => {
