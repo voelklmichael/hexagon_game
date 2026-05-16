@@ -7,10 +7,11 @@ pub fn show(ui: &mut egui::Ui, game: &mut Option<GameState>, history: &mut GameH
     let can_undo = !history.undo_stack.is_empty();
     let can_redo = !history.redo_stack.is_empty();
     let mut started = false;
+    let btn_font_size = egui::TextStyle::Body.resolve(ui.style()).size * 1.4;
 
     ui.horizontal(|ui| {
         if ui
-            .add_enabled(has_game, egui::Button::new("Restart this game"))
+            .add_enabled(has_game, egui::Button::new(egui::RichText::new("Restart this game").size(btn_font_size)))
             .clicked()
             && let Some(current) = game
         {
@@ -27,7 +28,7 @@ pub fn show(ui: &mut egui::Ui, game: &mut Option<GameState>, history: &mut GameH
         }
 
         if ui
-            .add_enabled(has_game, egui::Button::new("New game"))
+            .add_enabled(has_game, egui::Button::new(egui::RichText::new("New game").size(btn_font_size)))
             .clicked()
             && let Some(current) = game
         {
@@ -45,7 +46,7 @@ pub fn show(ui: &mut egui::Ui, game: &mut Option<GameState>, history: &mut GameH
         }
 
         if ui
-            .add_enabled(can_undo, egui::Button::new("Undo"))
+            .add_enabled(can_undo, egui::Button::new(egui::RichText::new("Undo").size(btn_font_size)))
             .clicked()
             && let Some(prev) = history.undo_stack.pop()
         {
@@ -56,7 +57,7 @@ pub fn show(ui: &mut egui::Ui, game: &mut Option<GameState>, history: &mut GameH
         }
 
         if ui
-            .add_enabled(can_redo, egui::Button::new("Redo"))
+            .add_enabled(can_redo, egui::Button::new(egui::RichText::new("Redo").size(btn_font_size)))
             .clicked()
             && let Some(next) = history.redo_stack.pop()
         {
