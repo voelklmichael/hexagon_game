@@ -101,11 +101,12 @@ impl BackendReqwest {
             .request(async move { client.fetch_won_missions(user_id).await });
     }
 
-    pub(crate) fn report_mission_done(
+    pub(crate) fn report_mission_completed(
         &mut self,
         user_id: uuid::Uuid,
         mission_id: uuid::Uuid,
         statistics: &Statistics,
+        game_state: serde_json::Value,
     ) {
         let Some(client) = self.get_client() else {
             return;
@@ -131,8 +132,12 @@ impl BackendReqwest {
             mission_id,
             players,
         };
+        let client2 = client.clone();
         self.mission_done_task
             .request(async move { client.upsert_highscore(&score).await });
+        self.save_previous_game_task.request(async move {
+            client2.save_previous_game(user_id, mission_id, &game_state).await
+        });
     }
 
     pub(crate) fn fetch_mission_user_best(&mut self, user_id: uuid::Uuid, mission_id: uuid::Uuid) {
@@ -145,20 +150,6 @@ impl BackendReqwest {
                 Err(ApiError::Status { status: 404, .. }) => Ok((mission_id, None)),
                 Err(e) => Err(e),
             }
-        });
-    }
-
-    pub(crate) fn save_previous_game(
-        &mut self,
-        user_id: uuid::Uuid,
-        mission_id: uuid::Uuid,
-        game_state: serde_json::Value,
-    ) {
-        let Some(client) = self.get_client() else {
-            return;
-        };
-        self.save_previous_game_task.request(async move {
-            client.save_previous_game(user_id, mission_id, &game_state).await
         });
     }
 
