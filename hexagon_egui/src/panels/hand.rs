@@ -175,11 +175,16 @@ pub fn show(
 ) -> bool {
     let mut started = false;
 
+    let btn_font_size = egui::TextStyle::Body.resolve(ui.style()).size * 1.4;
+
     let can_undo = !history.undo_stack.is_empty();
     let can_redo = !history.redo_stack.is_empty();
     ui.horizontal(|ui| {
         if ui
-            .add_enabled(can_undo, egui::Button::new("↩ Undo"))
+            .add_enabled(
+                can_undo,
+                egui::Button::new(egui::RichText::new("↩ Undo").size(btn_font_size)),
+            )
             .clicked()
             && let Some(prev) = history.undo_stack.pop()
         {
@@ -188,16 +193,19 @@ pub fn show(
             }
             *game = Some(prev);
         }
-        if ui
-            .add_enabled(can_redo, egui::Button::new("↪ Redo"))
-            .clicked()
-            && let Some(next) = history.redo_stack.pop()
-        {
-            if let Some(current) = game.take() {
-                history.undo_stack.push(current);
-            }
-            *game = Some(next);
-        }
+        // if ui
+        //     .add_enabled(
+        //         can_redo,
+        //         egui::Button::new(egui::RichText::new("↪ Redo").size(btn_font_size)),
+        //     )
+        //     .clicked()
+        //     && let Some(next) = history.redo_stack.pop()
+        // {
+        //     if let Some(current) = game.take() {
+        //         history.undo_stack.push(current);
+        //     }
+        //     *game = Some(next);
+        // }
     });
 
     if game.is_none() {
@@ -267,7 +275,10 @@ pub fn show(
             .filter(|&next| next < crate::panels::missions::mission_count(missions));
 
         if let Some(next_idx) = next_mission {
-            if ui.button("Start next mission").clicked() {
+            if ui
+                .button(egui::RichText::new("Start next mission").size(btn_font_size))
+                .clicked()
+            {
                 history.undo_stack.clear();
                 history.redo_stack.clear();
                 crate::panels::missions::start_mission(missions, next_idx, game);
@@ -275,7 +286,10 @@ pub fn show(
                 started = true;
             }
         } else {
-            if ui.button("Start new game").clicked() {
+            if ui
+                .button(egui::RichText::new("Start new game").size(btn_font_size))
+                .clicked()
+            {
                 let mut new_opts = opts.clone();
                 new_opts.randomize_seed();
                 match new_opts.start_game() {
