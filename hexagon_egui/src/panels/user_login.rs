@@ -4,39 +4,19 @@ use crate::app::BackendReqwest;
 #[serde(default, rename_all = "camelCase")]
 #[derive(Default)]
 pub struct UserLogin {
-    email_textbox: String,
+    pub email_textbox: String,
     name_textbox: String,
     #[serde(skip)]
-    password_textbox: String,
+    pub password_textbox: String,
     #[serde(skip)]
     pub logged_in_as: Option<(uuid::Uuid, String)>,
     #[serde(skip)]
-    login_error: Option<String>,
+    pub login_error: Option<String>,
     #[serde(skip)]
-    create_error: Option<String>,
+    pub create_error: Option<String>,
 }
 
 pub fn show(ui: &mut egui::Ui, user: &mut UserLogin, client: &mut BackendReqwest) {
-    if let Some(result) = client.login_user_task.take() {
-        match result {
-            Ok((id, name)) => {
-                client.fetch_won_missions(id);
-                user.logged_in_as = Some((id, name));
-                user.login_error = None;
-            }
-            Err(e) => user.login_error = Some(e.to_string()),
-        }
-    }
-    if let Some(result) = client.create_user_task.take() {
-        match result {
-            Ok(()) => {
-                user.create_error = None;
-                client.log_in(user.email_textbox.clone(), user.password_textbox.clone());
-            }
-            Err(e) => user.create_error = Some(e.to_string()),
-        }
-    }
-
     let checking_session = client.is_session_pending();
     let logging_in = client.login_user_task.is_pending();
     let creating = client.create_user_task.is_pending();

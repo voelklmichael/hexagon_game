@@ -3,7 +3,7 @@ mod backend_responses;
 pub use backend_reqwest::BackendReqwest;
 use hexagon_types::{DBHighscorePeak, MissionEntry};
 use indexmap::IndexMap;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
 use hexagon_engine::{
@@ -221,10 +221,7 @@ pub struct HexApp {
     #[serde(skip)]
     pub music_player: Option<crate::music::MusicPlayer>,
     pub rng: RandomNumberGenerator,
-    #[serde(skip)]
     pub missions: Vec<MissionEntry>,
-    #[serde(skip)]
-    pub missions_loaded: bool,
     pub missions_won: HashSet<Uuid>,
     pub current_mission: Option<usize>,
     pub user_login: crate::panels::user_login::UserLogin,
@@ -232,10 +229,10 @@ pub struct HexApp {
     pub backend_reqwest: BackendReqwest,
     #[serde(skip)]
     pub mission_result_reported: bool,
-    #[serde(skip)]
-    pub mission_user_best: Option<DBHighscorePeak>,
-    #[serde(skip)]
-    pub mission_overall_best: Option<DBHighscorePeak>,
+    /// Cached per-user highscores keyed by mission id, persisted for offline display.
+    pub cached_user_bests: HashMap<Uuid, DBHighscorePeak>,
+    /// Cached global highscores keyed by mission id, persisted for offline display.
+    pub cached_overall_bests: HashMap<Uuid, DBHighscorePeak>,
 }
 
 impl HexApp {
@@ -350,25 +347,29 @@ impl eframe::App for HexApp {
             ui.ctx().request_repaint();
         }
 
-        self.process_backend_responses();
+        let current_time = ui.ctx().input(|i| i.time);
+        self.process_backend_responses(current_time);
 
-        // Report mission completion and save game state to backend once per win.
+        let logged_in_user_id = self.user_login.logged_in_as.as_ref().map(|(id, _)| *id);
+        self.backend_reqwest
+            .poll_mission_writes(logged_in_user_id, current_time);
+        self.backend_reqwest
+            .poll_fetch_retries(logged_in_user_id, current_time);
+
+        // Queue mission completion write once per win. The write is submitted (and
+        // retried on failure) by `poll_mission_writes`; if the player is not yet
+        // logged in the write is held until they log in.
         if game_done
             && !self.mission_result_reported
             && let Some(game) = &self.game
             && matches!(&game.result, Some(GameResult::Win(_)))
-            && let (Some((user_id, _)), Some(mission_idx)) =
-                (&self.user_login.logged_in_as, self.current_mission)
+            && let Some(mission_idx) = self.current_mission
             && let Some(mission_uuid) =
                 crate::panels::missions::mission_id(&self.missions, mission_idx)
         {
             if let Ok(value) = serde_json::to_value(game) {
-                self.backend_reqwest.report_mission_completed(
-                    *user_id,
-                    mission_uuid,
-                    &game.statistics,
-                    value,
-                );
+                self.backend_reqwest
+                    .queue_mission_result(mission_uuid, &game.statistics, value);
             }
             self.mission_result_reported = true;
         }
@@ -417,7 +418,6 @@ impl eframe::App for HexApp {
                         if let Some(idx) = crate::panels::missions::show(
                             ui,
                             &self.missions,
-                            self.missions_loaded,
                             &mut self.game,
                             &self.missions_won,
                         ) {
@@ -426,8 +426,6 @@ impl eframe::App for HexApp {
                             self.current_mission = Some(idx);
                             self.left_tab = LeftTab::Hand;
                             self.right_tab = RightTab::Statistics;
-                            self.mission_user_best = None;
-                            self.mission_overall_best = None;
                             if let Some(mission_uuid) =
                                 crate::panels::missions::mission_id(&self.missions, idx)
                             {
@@ -540,13 +538,20 @@ impl eframe::App for HexApp {
                             crate::panels::help::show(ui);
                         }
                         RightTab::Statistics => {
+                            let active_id = self.current_mission.and_then(|idx| {
+                                crate::panels::missions::mission_id(&self.missions, idx)
+                            });
+                            let user_best =
+                                active_id.and_then(|id| self.cached_user_bests.get(&id));
+                            let overall_best =
+                                active_id.and_then(|id| self.cached_overall_bests.get(&id));
                             crate::panels::statistics::show(
                                 ui,
                                 &self.rendering_data,
                                 self.game.as_ref().map(|g| &g.statistics),
                                 self.game.as_ref().map(|g| &g.options),
-                                self.mission_user_best.as_ref(),
-                                self.mission_overall_best.as_ref(),
+                                user_best,
+                                overall_best,
                             );
                         }
                         RightTab::GameStateJson => {

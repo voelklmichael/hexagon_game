@@ -44,19 +44,9 @@ pub(crate) fn start_mission(missions: &[MissionEntry], index: usize, game: &mut 
 pub fn show(
     ui: &mut egui::Ui,
     missions: &[MissionEntry],
-    missions_loaded: bool,
     game: &mut Option<GameState>,
     missions_won: &HashSet<Uuid>,
 ) -> Option<usize> {
-    if !missions_loaded {
-        ui.add_space(8.0);
-        ui.horizontal(|ui| {
-            ui.spinner();
-            ui.label("Loading…");
-        });
-        return None;
-    }
-
     if missions.is_empty() {
         ui.label("No missions available.");
         return None;
