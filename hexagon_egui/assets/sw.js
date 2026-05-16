@@ -2,8 +2,8 @@ var cacheName = 'hexagon-pwa';
 var filesToCache = [
   './',
   './index.html',
-  './hexagon_egui.js',
-  './hexagon_egui.wasm',
+  './hexagon.js',
+  './hexagon_bg.wasm',
 ];
 
 /* Start the service worker and cache all of the app's content */
