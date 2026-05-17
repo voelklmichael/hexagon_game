@@ -23,7 +23,6 @@ pub use game_options::{
     OuterConnectors, WinningCondition, start_highscore_game,
 };
 pub use game_state::{GameResult, GameState};
-pub use player_types::PlayerId;
 pub use random_number_generator::RandomNumberGenerator;
 pub use render::{Color, CurrentPlayerPosition, PlayerData, RenderTask, UsedConnector};
 pub use statistics::Statistics;

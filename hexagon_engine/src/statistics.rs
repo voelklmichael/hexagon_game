@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
+use hexagon_types::player::PlayerId;
 use serde::{Deserialize, Serialize};
 
-use crate::{Player, PlayerId};
+use crate::Player;
 
 #[derive(Clone, Serialize, Deserialize, Default)]
 pub struct Statistics {

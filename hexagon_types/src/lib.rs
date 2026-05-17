@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 pub mod board_types;
+pub mod player;
 pub use board_types::*;
 pub mod game_options;
 pub mod rng;

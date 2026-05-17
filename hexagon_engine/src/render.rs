@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use hexagon_types::player::PlayerId;
 use svg::node::element::path::Data;
 use svg::node::element::{Circle, Path, Polygon};
 

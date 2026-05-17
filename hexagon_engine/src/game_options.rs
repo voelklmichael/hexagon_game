@@ -1,4 +1,5 @@
-use hexagon_types::WinningConditionHighscore;
+use hexagon_types::WinningConditionHighscoreV1;
+use hexagon_types::player::PlayerId;
 use serde::{Deserialize, Serialize};
 
 pub use hexagon_types::game_options::{CollisionMode, OuterConnectors, WinningCondition};
@@ -7,7 +8,7 @@ pub use hexagon_types::missions::MissionHighscoreV1;
 use crate::{
     board_types::{Board, ConnectorEnd, Tile},
     game_state::{GameResult, GameState},
-    player_types::{Player, PlayerHistorySingleTurn, PlayerId},
+    player_types::{Player, PlayerHistorySingleTurn},
     random_number_generator::RandomNumberGenerator,
     statistics::Statistics,
 };
@@ -273,7 +274,7 @@ impl GameOptionsStandard {
                     Some(GameResult::Draw(top))
                 }
             }
-            WinningCondition::Highscore(WinningConditionHighscore {
+            WinningCondition::Highscore(WinningConditionHighscoreV1 {
                 min_velocity,
                 min_distance,
                 target,
@@ -320,7 +321,7 @@ fn hash_seed(seed: u32) -> u32 {
 pub fn start_highscore_game(mission: MissionHighscoreV1) -> Result<GameState, String> {
     let start_id = mission.starting_point;
     let target = match &mission.winning_condition {
-        WinningConditionHighscore { target, .. } => *target,
+        WinningConditionHighscoreV1 { target, .. } => *target,
         _ => None,
     };
     let player = Player {

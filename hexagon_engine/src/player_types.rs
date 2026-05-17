@@ -1,9 +1,8 @@
+use hexagon_types::player::PlayerId;
 use serde::{Deserialize, Serialize};
 
 use super::board_types::{ConnectorEnd, ConnectorId, ConnectorPosition, Tile};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct PlayerId(pub u32);
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Player {

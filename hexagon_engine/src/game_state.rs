@@ -1,6 +1,8 @@
+use hexagon_types::player::PlayerId;
 use serde::{Deserialize, Serialize};
 
 use crate::Board;
+use crate::Player;
 use crate::board_types::{
     Connector, ConnectorEnd, ConnectorId, ConnectorKind, ConnectorOnHex, ConnectorPosition,
     HexagonPosition, Tile, TileRotationDirection,
@@ -9,7 +11,6 @@ use crate::game_options::{GameOptions, WinningCondition};
 use crate::player_types::{HistoryConnector, PlayerHistorySingleTurn};
 use crate::random_number_generator::RandomNumberGenerator;
 use crate::statistics::Statistics;
-use crate::{Player, PlayerId};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub enum GameResult {

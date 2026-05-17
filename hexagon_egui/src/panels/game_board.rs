@@ -293,7 +293,7 @@ pub fn show(
 
     // Step 2: connectors
     for uc in &render_task.connectors {
-        let player_color = |pid: &hexagon_engine::PlayerId| -> Color {
+        let player_color = |pid: &hexagon_types::player::PlayerId| -> Color {
             player_data
                 .colors
                 .get(pid)

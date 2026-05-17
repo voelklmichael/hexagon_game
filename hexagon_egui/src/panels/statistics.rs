@@ -1,5 +1,5 @@
-use hexagon_engine::{GameOptions, PlayerId, Statistics};
-use hexagon_types::DBHighscorePeak;
+use hexagon_engine::{GameOptions, Statistics};
+use hexagon_types::{DBHighscorePeak, player::PlayerId};
 
 use crate::app::RenderingData;
 use crate::panels::color_to_egui;

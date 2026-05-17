@@ -1,3 +1,7 @@
+use std::collections::HashMap;
+
+use crate::{ConnectorId, player::PlayerId};
+
 #[derive(
     Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, strum::EnumIter, Default,
 )]
@@ -15,10 +19,17 @@ pub enum CollisionMode {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Default)]
-pub struct WinningConditionHighscore {
+pub struct WinningConditionHighscoreV1 {
     pub min_velocity: Option<u32>,
     pub min_distance: Option<u32>,
-    pub target: Option<crate::board_types::ConnectorId>,
+    pub target: Option<ConnectorId>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Default)]
+pub struct WinningConditionHighscoreV2 {
+    pub min_velocity: HashMap<PlayerId, u32>,
+    pub min_distance: HashMap<PlayerId, u32>,
+    pub target: HashMap<PlayerId, ConnectorId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Default)]
@@ -27,5 +38,5 @@ pub enum WinningCondition {
     #[default]
     LongestWay,
     HighestVelocity,
-    Highscore(WinningConditionHighscore),
+    Highscore(WinningConditionHighscoreV1),
 }

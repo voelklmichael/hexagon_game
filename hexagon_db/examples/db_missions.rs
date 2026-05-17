@@ -1,7 +1,7 @@
 use hexagon_db::{DB, DBConfig, MissionEntry};
 use hexagon_types::{
     Board, ConnectorEdgeSub, ConnectorId, Edge, EdgeSub, HexagonPosition, MissionHighscoreV1,
-    RandomNumberGenerator, Sub, Tile, WinningConditionHighscore,
+    RandomNumberGenerator, Sub, Tile, WinningConditionHighscoreV1,
 };
 use uuid::Uuid;
 
@@ -61,7 +61,7 @@ async fn upsert_mission_1(db: &DB) {
                 starting_point: ConnectorId(0),
                 random_seed: hand_size,
                 starting_hand: starting_hand,
-                winning_condition: WinningConditionHighscore {
+                winning_condition: WinningConditionHighscoreV1 {
                     min_velocity: None,
                     min_distance: None,
                     target: Some(ConnectorId(25)),
@@ -97,7 +97,7 @@ async fn upsert_mission_2(db: &DB) {
                 starting_point: ConnectorId(3),
                 random_seed: hand_size,
                 starting_hand: starting_hand,
-                winning_condition: WinningConditionHighscore {
+                winning_condition: WinningConditionHighscoreV1 {
                     min_velocity: None,
                     min_distance: None,
                     target: Some(ConnectorId(32)),
@@ -150,7 +150,7 @@ async fn upsert_mission_3(db: &DB) {
                 starting_point: ConnectorId(3),
                 random_seed: hand_size,
                 starting_hand: starting_hand,
-                winning_condition: WinningConditionHighscore {
+                winning_condition: WinningConditionHighscoreV1 {
                     min_velocity: None,
                     min_distance: None,
                     target: Some(ConnectorId(32)),
@@ -203,7 +203,7 @@ async fn upsert_mission_4(db: &DB) {
                 starting_point: ConnectorId(3),
                 random_seed: hand_size,
                 starting_hand: starting_hand,
-                winning_condition: WinningConditionHighscore {
+                winning_condition: WinningConditionHighscoreV1 {
                     min_velocity: None,
                     min_distance: None,
                     target: Some(ConnectorId(32)),
@@ -257,7 +257,7 @@ async fn upsert_mission_5(db: &DB) {
                 starting_point: ConnectorId(3),
                 random_seed: hand_size,
                 starting_hand: starting_hand,
-                winning_condition: WinningConditionHighscore {
+                winning_condition: WinningConditionHighscoreV1 {
                     min_velocity: None,
                     min_distance: Some(10_000),
                     target: Some(ConnectorId(21)),
@@ -311,7 +311,7 @@ async fn upsert_mission_6(db: &DB) {
                 starting_point: ConnectorId(3),
                 random_seed: hand_size,
                 starting_hand: starting_hand,
-                winning_condition: WinningConditionHighscore {
+                winning_condition: WinningConditionHighscoreV1 {
                     min_velocity: Some(5_000),
                     min_distance: None,
                     target: Some(ConnectorId(21)),
