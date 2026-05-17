@@ -30,7 +30,7 @@ async fn main() {
 }
 
 async fn upsert_mission_1(db: &DB) {
-    let number = 100u32;
+    let number = 1u32;
     let mission_id = Uuid::from_u128(number as u128);
 
     let hand_size = 3;
@@ -55,8 +55,8 @@ async fn upsert_mission_1(db: &DB) {
         name: "Tutorial #1".into(),
         description: "Move to the green target arrow".into(),
         number: number,
-        json: hexagon_types::Mission::HighScore(hexagon_types::MissionHighscore::V1(
-            MissionHighscoreV1 {
+        json: hexagon_types::Mission::HighScore(
+            hexagon_types::MissionHighscore::V1(MissionHighscoreV1 {
                 board: Board::create_board_from_hexagons(
                     hexagons,
                     hexagon_types::OuterConnectors::OnlyDeathEnds,
@@ -70,14 +70,15 @@ async fn upsert_mission_1(db: &DB) {
                     min_distance: None,
                     target: Some(ConnectorId(25)),
                 },
-            },
-        )),
+            })
+            .into(),
+        ),
     };
     db.upsert_mission(&mission).await.unwrap();
 }
 
 async fn upsert_mission_2(db: &DB) {
-    let number = 200u32;
+    let number = 2u32;
     let mission_id = Uuid::from_u128(number as u128);
 
     let hand_size = 3;
@@ -94,8 +95,8 @@ async fn upsert_mission_2(db: &DB) {
         name: "Tutorial #2".into(),
         description: "Move to the green target arrow".into(),
         number: number,
-        json: hexagon_types::Mission::HighScore(hexagon_types::MissionHighscore::V1(
-            MissionHighscoreV1 {
+        json: hexagon_types::Mission::HighScore(
+            hexagon_types::MissionHighscore::V1(MissionHighscoreV1 {
                 board: Board::create_board(3, hexagon_types::OuterConnectors::OnlyDeathEnds)
                     .unwrap(),
                 starting_point: ConnectorId(3),
@@ -106,14 +107,15 @@ async fn upsert_mission_2(db: &DB) {
                     min_distance: None,
                     target: Some(ConnectorId(32)),
                 },
-            },
-        )),
+            })
+            .into(),
+        ),
     };
     db.upsert_mission(&mission).await.unwrap();
 }
 
 async fn upsert_mission_3(db: &DB) {
-    let number = 300u32;
+    let number = 3u32;
     let mission_id = Uuid::from_u128(number as u128);
 
     let hand_size = 3;
@@ -148,8 +150,8 @@ async fn upsert_mission_3(db: &DB) {
         name: "Tutorial #3".into(),
         description: "Move to the green target arrow".into(),
         number: number,
-        json: hexagon_types::Mission::HighScore(hexagon_types::MissionHighscore::V1(
-            MissionHighscoreV1 {
+        json: hexagon_types::Mission::HighScore(
+            hexagon_types::MissionHighscore::V1(MissionHighscoreV1 {
                 board,
                 starting_point: ConnectorId(3),
                 random_seed: hand_size,
@@ -159,14 +161,15 @@ async fn upsert_mission_3(db: &DB) {
                     min_distance: None,
                     target: Some(ConnectorId(32)),
                 },
-            },
-        )),
+            })
+            .into(),
+        ),
     };
     db.upsert_mission(&mission).await.unwrap();
 }
 
 async fn upsert_mission_4(db: &DB) {
-    let number = 400u32;
+    let number = 4u32;
     let mission_id = Uuid::from_u128(number as u128);
 
     let hand_size = 3;
@@ -201,8 +204,8 @@ async fn upsert_mission_4(db: &DB) {
         name: "Tutorial #4".into(),
         description: "Move to the green target arrow".into(),
         number: number,
-        json: hexagon_types::Mission::HighScore(hexagon_types::MissionHighscore::V1(
-            MissionHighscoreV1 {
+        json: hexagon_types::Mission::HighScore(
+            hexagon_types::MissionHighscore::V1(MissionHighscoreV1 {
                 board,
                 starting_point: ConnectorId(3),
                 random_seed: hand_size,
@@ -212,14 +215,15 @@ async fn upsert_mission_4(db: &DB) {
                     min_distance: None,
                     target: Some(ConnectorId(32)),
                 },
-            },
-        )),
+            })
+            .into(),
+        ),
     };
     db.upsert_mission(&mission).await.unwrap();
 }
 
 async fn upsert_mission_5(db: &DB) {
-    let number = 500u32;
+    let number = 5u32;
     let mission_id = Uuid::from_u128(number as u128);
 
     let hand_size = 3;
@@ -255,8 +259,8 @@ async fn upsert_mission_5(db: &DB) {
         name: "Tutorial #5".into(),
         description: "Move at least 10".into(),
         number: number,
-        json: hexagon_types::Mission::HighScore(hexagon_types::MissionHighscore::V1(
-            MissionHighscoreV1 {
+        json: hexagon_types::Mission::HighScore(
+            hexagon_types::MissionHighscore::V1(MissionHighscoreV1 {
                 board,
                 starting_point: ConnectorId(3),
                 random_seed: hand_size,
@@ -266,14 +270,15 @@ async fn upsert_mission_5(db: &DB) {
                     min_distance: Some(10_000),
                     target: Some(ConnectorId(21)),
                 },
-            },
-        )),
+            })
+            .into(),
+        ),
     };
     db.upsert_mission(&mission).await.unwrap();
 }
 
 async fn upsert_mission_6(db: &DB) {
-    let number = 600u32;
+    let number = 6u32;
     let mission_id = Uuid::from_u128(number as u128);
 
     let hand_size = 3;
@@ -309,8 +314,8 @@ async fn upsert_mission_6(db: &DB) {
         name: "Tutorial #6".into(),
         description: "Move at high speed: Travel 5 segments in one turn".into(),
         number: number,
-        json: hexagon_types::Mission::HighScore(hexagon_types::MissionHighscore::V1(
-            MissionHighscoreV1 {
+        json: hexagon_types::Mission::HighScore(
+            hexagon_types::MissionHighscore::V1(MissionHighscoreV1 {
                 board,
                 starting_point: ConnectorId(3),
                 random_seed: hand_size,
@@ -320,14 +325,15 @@ async fn upsert_mission_6(db: &DB) {
                     min_distance: None,
                     target: Some(ConnectorId(21)),
                 },
-            },
-        )),
+            })
+            .into(),
+        ),
     };
     db.upsert_mission(&mission).await.unwrap();
 }
 
 async fn upsert_mission_7(db: &DB) {
-    let number = 700u32;
+    let number = 7u32;
     let mission_id = Uuid::from_u128(number as u128);
 
     let hand_size = 3;
@@ -352,8 +358,8 @@ async fn upsert_mission_7(db: &DB) {
         name: "Tutorial #7".into(),
         description: "Move the red player to the red target arrow".into(),
         number: number,
-        json: hexagon_types::Mission::HighScore(hexagon_types::MissionHighscore::V2(
-            MissionHighscoreV2 {
+        json: hexagon_types::Mission::HighScore(
+            hexagon_types::MissionHighscore::V2(MissionHighscoreV2 {
                 board: Board::create_board_from_hexagons(
                     hexagons,
                     hexagon_types::OuterConnectors::OnlyDeathEnds,
@@ -367,8 +373,9 @@ async fn upsert_mission_7(db: &DB) {
                     min_distance: HashMap::new(),
                     target: [(PlayerId(1), ConnectorId(25))].into(),
                 },
-            },
-        )),
+            })
+            .into(),
+        ),
     };
     db.upsert_mission(&mission).await.unwrap();
 }
