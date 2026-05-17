@@ -1,7 +1,10 @@
+use std::collections::HashMap;
+
 use hexagon_db::{DB, DBConfig, MissionEntry};
 use hexagon_types::{
     Board, ConnectorEdgeSub, ConnectorId, Edge, EdgeSub, HexagonPosition, MissionHighscoreV1,
-    RandomNumberGenerator, Sub, Tile, WinningConditionHighscoreV1,
+    MissionHighscoreV2, RandomNumberGenerator, Sub, Tile, WinningConditionHighscoreV1,
+    WinningConditionHighscoreV2, player::PlayerId,
 };
 use uuid::Uuid;
 
@@ -21,6 +24,7 @@ async fn main() {
     upsert_mission_4(&db).await;
     upsert_mission_5(&db).await;
     upsert_mission_6(&db).await;
+    upsert_mission_7(&db).await;
 
     tracing::info!("Done")
 }
@@ -315,6 +319,53 @@ async fn upsert_mission_6(db: &DB) {
                     min_velocity: Some(5_000),
                     min_distance: None,
                     target: Some(ConnectorId(21)),
+                },
+            },
+        )),
+    };
+    db.upsert_mission(&mission).await.unwrap();
+}
+
+async fn upsert_mission_7(db: &DB) {
+    let number = 700u32;
+    let mission_id = Uuid::from_u128(number as u128);
+
+    let hand_size = 3;
+    let random_seed = 9876556;
+
+    let mut rng = RandomNumberGenerator::new(random_seed);
+    let starting_hand = (0..hand_size)
+        .map(|_| Tile::create_fully_connected(&mut rng))
+        .collect();
+
+    let hexagons = [
+        HexagonPosition { x: 0, y: 0 },
+        HexagonPosition { x: 0, y: 1 },
+        HexagonPosition { x: 1, y: 0 },
+        HexagonPosition { x: 1, y: 1 },
+    ]
+    .into();
+
+    let mission = MissionEntry {
+        id: mission_id,
+        kind: hexagon_db::MissionKind::HighScore,
+        name: "Tutorial #7".into(),
+        description: "Move the red player to the red target arrow".into(),
+        number: number,
+        json: hexagon_types::Mission::HighScore(hexagon_types::MissionHighscore::V2(
+            MissionHighscoreV2 {
+                board: Board::create_board_from_hexagons(
+                    hexagons,
+                    hexagon_types::OuterConnectors::OnlyDeathEnds,
+                )
+                .unwrap(),
+                starting_points: vec![ConnectorId(0), ConnectorId(12)],
+                random_seed: hand_size,
+                starting_hand: starting_hand,
+                winning_condition: WinningConditionHighscoreV2 {
+                    min_velocity: HashMap::new(),
+                    min_distance: HashMap::new(),
+                    target: [(PlayerId(1), ConnectorId(25))].into(),
                 },
             },
         )),

@@ -22,7 +22,7 @@ pub fn show(ui: &mut egui::Ui, options: &mut OptionsState) -> bool {
     match options.selected {
         GameOptionsDiscriminants::Standard => show_standard(ui, options),
         GameOptionsDiscriminants::Delivery => show_delivery(ui, options),
-        GameOptionsDiscriminants::Highscore => {}
+        GameOptionsDiscriminants::Highscore | GameOptionsDiscriminants::HighscoreV2 => {}
     }
 
     ui.separator();

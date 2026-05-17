@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 use hexagon_engine::{
     CollisionMode, Color, GameOptionsDelivery, GameOptionsDiscriminants, GameOptionsStandard,
-    GameResult, GameState, OuterConnectors,  RandomNumberGenerator, WinningCondition,
+    GameResult, GameState, OuterConnectors, RandomNumberGenerator, WinningCondition,
 };
 
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Copy, Default)]
@@ -447,7 +447,8 @@ impl eframe::App for HexApp {
                                 hexagon_engine::GameOptionsDiscriminants::Delivery => {
                                     self.options.delivery.clone().start_game()
                                 }
-                                hexagon_engine::GameOptionsDiscriminants::Highscore => Err(
+                                hexagon_engine::GameOptionsDiscriminants::Highscore
+                                | hexagon_engine::GameOptionsDiscriminants::HighscoreV2 => Err(
                                     "Highscore missions must be started from the Missions panel"
                                         .to_string(),
                                 ),

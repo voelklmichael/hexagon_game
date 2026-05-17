@@ -1,5 +1,5 @@
-use hexagon_types::WinningConditionHighscoreV1;
 use hexagon_types::player::PlayerId;
+use hexagon_types::{MissionHighscoreV2, WinningConditionHighscoreV1};
 use serde::{Deserialize, Serialize};
 
 pub use hexagon_types::game_options::{CollisionMode, OuterConnectors, WinningCondition};
@@ -40,6 +40,7 @@ pub enum GameOptions {
     Delivery(GameOptionsDelivery),
     Standard(GameOptionsStandard),
     Highscore(MissionHighscoreV1),
+    HighscoreV2(MissionHighscoreV2),
 }
 
 impl GameOptionsDelivery {
@@ -318,7 +319,7 @@ fn hash_seed(seed: u32) -> u32 {
     t ^ (t >> 14)
 }
 
-pub fn start_highscore_game(mission: MissionHighscoreV1) -> Result<GameState, String> {
+pub fn start_highscore_game_v1(mission: MissionHighscoreV1) -> Result<GameState, String> {
     let start_id = mission.starting_point;
     let target = match &mission.winning_condition {
         WinningConditionHighscoreV1 { target, .. } => *target,
@@ -344,12 +345,50 @@ pub fn start_highscore_game(mission: MissionHighscoreV1) -> Result<GameState, St
     })
 }
 
+pub fn start_highscore_game_v2(mission: MissionHighscoreV2) -> Result<GameState, String> {
+    if mission.starting_points.is_empty() {
+        return Err("starting_points must not be empty".to_string());
+    }
+    let players = mission
+        .starting_points
+        .iter()
+        .enumerate()
+        .map(|(i, start)| {
+            let id = PlayerId(i as u32);
+            Player {
+                id,
+                history: PlayerHistorySingleTurn::new_from_start(start),
+                current_position: (*start, ConnectorEnd::StartedAtA),
+                target: mission.winning_condition.target.get(&id).cloned(),
+                is_npc: i > 0,
+                is_active: true,
+                hand: if i == 0 {
+                    mission.starting_hand.clone()
+                } else {
+                    Default::default()
+                },
+            }
+        })
+        .collect::<Vec<_>>();
+
+    Ok(GameState {
+        statistics: Statistics::compute(&players),
+        current_player: PlayerId(0),
+        board: mission.board.clone(),
+        result: None,
+        players,
+        rng: RandomNumberGenerator::new(mission.random_seed),
+        options: GameOptions::HighscoreV2(mission),
+    })
+}
+
 impl GameOptions {
     pub fn start_game(self) -> Result<GameState, String> {
         match self {
             GameOptions::Delivery(game) => game.start_game(),
             GameOptions::Standard(game) => game.start_game(),
-            GameOptions::Highscore(mission) => start_highscore_game(mission),
+            GameOptions::Highscore(mission) => start_highscore_game_v1(mission),
+            GameOptions::HighscoreV2(mission) => start_highscore_game_v2(mission),
         }
     }
 
@@ -358,6 +397,7 @@ impl GameOptions {
             GameOptions::Delivery(o) => o.random_seed = hash_seed(o.random_seed),
             GameOptions::Standard(o) => o.random_seed = hash_seed(o.random_seed),
             GameOptions::Highscore(o) => o.random_seed = hash_seed(o.random_seed), //TODO: this should not be possible!
+            GameOptions::HighscoreV2(o) => o.random_seed = hash_seed(o.random_seed), //TODO: this should not be possible!
         }
     }
 
@@ -366,6 +406,7 @@ impl GameOptions {
             GameOptions::Delivery(o) => o.collision_mode(),
             GameOptions::Standard(o) => o.collision_mode(),
             GameOptions::Highscore(_) => CollisionMode::PassThrough,
+            GameOptions::HighscoreV2(_) => CollisionMode::PassThrough,
         }
     }
 }

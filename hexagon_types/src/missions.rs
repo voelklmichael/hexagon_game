@@ -1,8 +1,8 @@
 use uuid::Uuid;
 
-use crate::WinningConditionHighscoreV1;
 use crate::board_types::{Board, ConnectorId, Tile};
 use crate::game_options::OuterConnectors;
+use crate::{WinningConditionHighscoreV1, WinningConditionHighscoreV2};
 
 // --- delivery ---
 
@@ -36,10 +36,10 @@ pub struct MissionHighscoreV1 {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct MissionHighscoreV2 {
     pub board: Board,
-    pub starting_point: Vec<ConnectorId>,
+    pub starting_points: Vec<ConnectorId>,
     pub random_seed: u32,
     pub starting_hand: Vec<Tile>,
-    pub winning_condition: WinningConditionHighscoreV1,
+    pub winning_condition: WinningConditionHighscoreV2,
 }
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum MissionHighscore {
@@ -55,7 +55,7 @@ pub enum MissionHighscore {
     derive(serde::Serialize, serde::Deserialize, strum::VariantArray)
 )]
 pub enum Mission {
-    HighScore(MissionHighscore),
+    HighScore(Box<MissionHighscore>),
     Delivery(MissionDelivery),
 }
 

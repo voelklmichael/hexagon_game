@@ -1,4 +1,6 @@
-use hexagon_engine::{GameOptionsDelivery, GameState, start_highscore_game};
+use hexagon_engine::{
+    GameOptionsDelivery, GameState, start_highscore_game_v1, start_highscore_game_v2,
+};
 use hexagon_types::{Mission, MissionDelivery, MissionEntry, MissionKind};
 use std::collections::HashSet;
 use strum::VariantArray as _;
@@ -31,12 +33,16 @@ pub(crate) fn start_mission(missions: &[MissionEntry], index: usize, game: &mut 
                 Err(e) => tracing::error!("Failed to start mission '{}': {e}", entry.name),
             }
         }
-        Mission::HighScore(hexagon_types::MissionHighscore::V1(v1)) => {
-            match start_highscore_game(v1.clone()) {
+        Mission::HighScore(hs) => match hs.as_ref() {
+            hexagon_types::MissionHighscore::V1(v1) => match start_highscore_game_v1(v1.clone()) {
                 Ok(new_game) => *game = Some(new_game),
                 Err(e) => tracing::error!("Failed to start mission '{}': {e}", entry.name),
-            }
-        }
+            },
+            hexagon_types::MissionHighscore::V2(v2) => match start_highscore_game_v2(v2.clone()) {
+                Ok(new_game) => *game = Some(new_game),
+                Err(e) => tracing::error!("Failed to start mission '{}': {e}", entry.name),
+            },
+        },
     }
 }
 

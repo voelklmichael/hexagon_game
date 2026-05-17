@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 
 use super::board_types::{ConnectorEnd, ConnectorId, ConnectorPosition, Tile};
 
-
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Player {
     pub id: PlayerId,

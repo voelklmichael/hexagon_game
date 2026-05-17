@@ -185,12 +185,15 @@ pub fn show(
 
     // Game-over section: collect all data from a scoped borrow so the borrow
     // is released before we write back to *game.
-    let game_over_data: Option<(String, egui::Color32, _, _, bool)> = {
+    let game_over_data = {
         let g = game.as_ref().unwrap();
         g.result.as_ref().map(|result| {
             let (text, color, is_win) = match result {
                 GameResult::Win(winners) => {
-                    let text = if matches!(g.options, GameOptions::Highscore(_)) {
+                    let text = if matches!(
+                        g.options,
+                        GameOptions::Highscore(_) | GameOptions::HighscoreV2(_)
+                    ) {
                         "Mission solved".to_string()
                     } else {
                         let names: Vec<String> = winners
@@ -314,9 +317,12 @@ pub fn show(
             .map(|idx| idx + 1)
             .filter(|&next| next < crate::panels::missions::mission_count(missions));
 
-        if !is_win && let GameOptions::Highscore(mission) = &opts {
-            let wc = &mission.winning_condition;
-
+        let is_highscore_loss = !is_win
+            && matches!(
+                &opts,
+                GameOptions::Highscore(_) | GameOptions::HighscoreV2(_)
+            );
+        if is_highscore_loss {
             if let Some(idx) = *current_mission
                 && let Some(entry) = missions.get(idx)
             {
@@ -327,57 +333,59 @@ pub fn show(
 
             ui.separator();
 
-            let player = saved.players.first();
-            let red = egui::Color32::from_rgb(200, 60, 60);
-
-            if let Some(min_dist) = wc.min_distance {
-                let cur = player
-                    .and_then(|p| saved.statistics.total_path_weight.get(&p.id).copied())
-                    .unwrap_or(0);
-                let met = cur >= min_dist;
-                let (check, col) = if met {
-                    ("✓", egui::Color32::GREEN)
-                } else {
-                    ("❌", red)
-                };
-                ui.label(
-                    egui::RichText::new(format!(
-                        "{check} Distance: {:.1}/{:.1}",
-                        cur as f32 / 1000.0,
-                        min_dist as f32 / 1000.0,
-                    ))
-                    .color(col),
-                );
-            }
-
-            if let Some(min_vel) = wc.min_velocity {
-                let cur = player
-                    .and_then(|p| saved.statistics.max_velocity.get(&p.id).copied())
-                    .unwrap_or(0);
-                let met = cur >= min_vel;
-                let (check, col) = if met {
-                    ("✓", egui::Color32::GREEN)
-                } else {
-                    ("❌", red)
-                };
-                ui.label(
-                    egui::RichText::new(format!(
-                        "{check} Velocity: {:.1}/{:.1}",
-                        cur as f32 / 1000.0,
-                        min_vel as f32 / 1000.0,
-                    ))
-                    .color(col),
-                );
-            }
-
-            if let Some(target_id) = wc.target {
-                let met = player.is_some_and(|p| p.current_position.0 == target_id);
-                let (check, col) = if met {
-                    ("✓", egui::Color32::GREEN)
-                } else {
-                    ("❌", red)
-                };
-                ui.label(egui::RichText::new(format!("{check} Reach target")).color(col));
+            match &opts {
+                GameOptions::Highscore(m) => {
+                    let wc = &m.winning_condition;
+                    let player = saved.players.first();
+                    let target_met = wc
+                        .target
+                        .map(|t| player.is_some_and(|p| p.current_position.0 == t));
+                    show_highscore_conditions(
+                        ui,
+                        wc.min_distance,
+                        wc.min_velocity,
+                        target_met,
+                        player
+                            .and_then(|p| saved.statistics.total_path_weight.get(&p.id).copied())
+                            .unwrap_or(0),
+                        player
+                            .and_then(|p| saved.statistics.max_velocity.get(&p.id).copied())
+                            .unwrap_or(0),
+                    );
+                }
+                GameOptions::HighscoreV2(m) => {
+                    let wc = &m.winning_condition;
+                    for player in saved.players.iter() {
+                        let id = player.id;
+                        let min_dist = wc.min_distance.get(&id).copied();
+                        let min_vel = wc.min_velocity.get(&id).copied();
+                        let target_met =
+                            wc.target.get(&id).map(|&t| player.current_position.0 == t);
+                        if min_dist.is_none() && min_vel.is_none() && target_met.is_none() {
+                            continue;
+                        }
+                        let color = rendering_data
+                            .player_colors
+                            .get(&id)
+                            .copied()
+                            .unwrap_or(hexagon_engine::Color::Gray);
+                        ui.label(egui::RichText::new("Player ⏺").color(color_to_egui(color)));
+                        show_highscore_conditions(
+                            ui,
+                            min_dist,
+                            min_vel,
+                            target_met,
+                            saved
+                                .statistics
+                                .total_path_weight
+                                .get(&id)
+                                .copied()
+                                .unwrap_or(0),
+                            saved.statistics.max_velocity.get(&id).copied().unwrap_or(0),
+                        );
+                    }
+                }
+                _ => {}
             }
 
             ui.separator();
@@ -467,116 +475,135 @@ pub fn show(
         });
     }
 
-    if let GameOptions::Highscore(mission) = &game_state.options {
-        let wc = &mission.winning_condition;
+    let mission_entry = current_mission.and_then(|idx| missions.get(idx));
 
-        let current_dist = wc.min_distance.map(|target| {
-            let current = game_state
-                .statistics
-                .total_path_weight
-                .get(&current_id)
-                .copied()
-                .unwrap_or(0);
-            (current, target)
-        });
-        let current_vel = wc.min_velocity.map(|target| {
-            let current = game_state
-                .statistics
-                .max_velocity
-                .get(&current_id)
-                .copied()
-                .unwrap_or(0);
-            (current, target)
-        });
-
-        let mission_entry = current_mission.and_then(|idx| missions.get(idx));
-
-        let collapse_id =
-            ui.make_persistent_id(("mission_stats_collapsible", mission_entry.map(|e| e.id)));
-        let state = egui::collapsing_header::CollapsingState::load_with_default_open(
-            ui.ctx(),
-            collapse_id,
-            true,
-        );
-
-        let has_player_target = player.target.is_some();
-
-        let mission_name = mission_entry
-            .map(|e| e.name.clone())
-            .unwrap_or_else(|| "Mission".to_string());
-
-        let header_label = if state.is_open() {
-            mission_name.clone()
-        } else {
-            let mut parts = Vec::new();
-            if let Some((cur, tgt)) = current_dist {
-                parts.push(format!(
-                    "↔ {:.1}/{:.1}",
-                    cur as f32 / 1000.0,
-                    tgt as f32 / 1000.0
-                ));
-            }
-            if let Some((cur, tgt)) = current_vel {
-                parts.push(format!(
-                    "⚡ {:.1}/{:.1}",
-                    cur as f32 / 1000.0,
-                    tgt as f32 / 1000.0
-                ));
-            }
-            if parts.is_empty() {
-                mission_name
+    match &game_state.options {
+        GameOptions::Highscore(m) => {
+            let wc = &m.winning_condition;
+            let min_dist = wc.min_distance;
+            let min_vel = wc.min_velocity;
+            let current_dist = min_dist.map(|tgt| {
+                let cur = game_state
+                    .statistics
+                    .total_path_weight
+                    .get(&current_id)
+                    .copied()
+                    .unwrap_or(0);
+                (cur, tgt)
+            });
+            let current_vel = min_vel.map(|tgt| {
+                let cur = game_state
+                    .statistics
+                    .max_velocity
+                    .get(&current_id)
+                    .copied()
+                    .unwrap_or(0);
+                (cur, tgt)
+            });
+            let mission_name = mission_entry
+                .map(|e| e.name.clone())
+                .unwrap_or_else(|| "Mission".to_string());
+            let collapse_id =
+                ui.make_persistent_id(("mission_stats_collapsible", mission_entry.map(|e| e.id)));
+            let state = egui::collapsing_header::CollapsingState::load_with_default_open(
+                ui.ctx(),
+                collapse_id,
+                true,
+            );
+            let header_label = if state.is_open() {
+                mission_name.clone()
             } else {
-                parts.join("  ")
-            }
-        };
-
-        state
-            .show_header(ui, |ui| {
-                ui.label(header_label);
-            })
-            .body(|ui| {
-                if let Some(entry) = mission_entry {
-                    ui.label(&entry.description);
-                    ui.separator();
-                }
+                let mut parts = Vec::new();
                 if let Some((cur, tgt)) = current_dist {
-                    let met = cur >= tgt;
-                    let color = if met {
-                        egui::Color32::GREEN
-                    } else {
-                        ui.style().visuals.text_color()
-                    };
-                    let check = if met { "✓ " } else { "" };
-                    ui.label(
-                        egui::RichText::new(format!(
-                            "{check}Distance: {:.1}/{:.1}",
-                            cur as f32 / 1000.0,
-                            tgt as f32 / 1000.0,
-                        ))
-                        .color(color),
-                    );
+                    parts.push(format!(
+                        "↔ {:.1}/{:.1}",
+                        cur as f32 / 1000.0,
+                        tgt as f32 / 1000.0
+                    ));
                 }
                 if let Some((cur, tgt)) = current_vel {
-                    let met = cur >= tgt;
-                    let color = if met {
-                        egui::Color32::GREEN
-                    } else {
-                        ui.style().visuals.text_color()
-                    };
-                    let check = if met { "✓ " } else { "" };
-                    ui.label(
-                        egui::RichText::new(format!(
-                            "{check}Velocity: {:.1}/{:.1}",
-                            cur as f32 / 1000.0,
-                            tgt as f32 / 1000.0,
-                        ))
-                        .color(color),
-                    );
+                    parts.push(format!(
+                        "⚡ {:.1}/{:.1}",
+                        cur as f32 / 1000.0,
+                        tgt as f32 / 1000.0
+                    ));
                 }
-                if has_player_target {
-                    ui.label("Reach target");
+                if parts.is_empty() {
+                    mission_name
+                } else {
+                    parts.join("  ")
                 }
-            });
+            };
+            state
+                .show_header(ui, |ui| {
+                    ui.label(header_label);
+                })
+                .body(|ui| {
+                    if let Some(entry) = mission_entry {
+                        ui.label(&entry.description);
+                        ui.separator();
+                    }
+                    show_highscore_progress(ui, current_dist, current_vel, player.target.is_some());
+                });
+        }
+        GameOptions::HighscoreV2(m) => {
+            let wc = &m.winning_condition;
+            let mission_name = mission_entry
+                .map(|e| e.name.clone())
+                .unwrap_or_else(|| "Mission".to_string());
+            let collapse_id =
+                ui.make_persistent_id(("mission_stats_collapsible", mission_entry.map(|e| e.id)));
+            let state = egui::collapsing_header::CollapsingState::load_with_default_open(
+                ui.ctx(),
+                collapse_id,
+                true,
+            );
+            state
+                .show_header(ui, |ui| {
+                    ui.label(mission_name);
+                })
+                .body(|ui| {
+                    if let Some(entry) = mission_entry {
+                        ui.label(&entry.description);
+                        ui.separator();
+                    }
+                    for p in game_state.players.iter() {
+                        let id = p.id;
+                        let min_dist = wc.min_distance.get(&id).copied();
+                        let min_vel = wc.min_velocity.get(&id).copied();
+                        let has_target = p.target.is_some();
+                        if min_dist.is_none() && min_vel.is_none() && !has_target {
+                            continue;
+                        }
+                        let color = rendering_data
+                            .player_colors
+                            .get(&id)
+                            .copied()
+                            .unwrap_or(hexagon_engine::Color::Gray);
+                        ui.label(egui::RichText::new("Player ⏺").color(color_to_egui(color)));
+                        let current_dist = min_dist.map(|tgt| {
+                            let cur = game_state
+                                .statistics
+                                .total_path_weight
+                                .get(&id)
+                                .copied()
+                                .unwrap_or(0);
+                            (cur, tgt)
+                        });
+                        let current_vel = min_vel.map(|tgt| {
+                            let cur = game_state
+                                .statistics
+                                .max_velocity
+                                .get(&id)
+                                .copied()
+                                .unwrap_or(0);
+                            (cur, tgt)
+                        });
+                        show_highscore_progress(ui, current_dist, current_vel, has_target);
+                    }
+                });
+        }
+        _ => {}
     }
 
     let disabled = player.is_npc;
@@ -697,6 +724,102 @@ pub fn show(
         }
     });
     false
+}
+
+#[allow(clippy::too_many_arguments)]
+fn show_highscore_conditions(
+    ui: &mut egui::Ui,
+    min_dist: Option<u32>,
+    min_vel: Option<u32>,
+    target_met: Option<bool>,
+    cur_dist: u32,
+    cur_vel: u32,
+) {
+    if let Some(tgt) = min_dist {
+        let met = cur_dist >= tgt;
+        let (check, col) = if met {
+            ("✓", egui::Color32::GREEN)
+        } else {
+            ("❌", egui::Color32::RED)
+        };
+        ui.label(
+            egui::RichText::new(format!(
+                "{check} Distance: {:.1}/{:.1}",
+                cur_dist as f32 / 1000.0,
+                tgt as f32 / 1000.0,
+            ))
+            .color(col),
+        );
+    }
+    if let Some(tgt) = min_vel {
+        let met = cur_vel >= tgt;
+        let (check, col) = if met {
+            ("✓", egui::Color32::GREEN)
+        } else {
+            ("❌", egui::Color32::RED)
+        };
+        ui.label(
+            egui::RichText::new(format!(
+                "{check} Velocity: {:.1}/{:.1}",
+                cur_vel as f32 / 1000.0,
+                tgt as f32 / 1000.0,
+            ))
+            .color(col),
+        );
+    }
+    if let Some(met) = target_met {
+        let (check, col) = if met {
+            ("✓", egui::Color32::GREEN)
+        } else {
+            ("❌", egui::Color32::RED)
+        };
+        ui.label(egui::RichText::new(format!("{check} Reach target")).color(col));
+    }
+}
+
+fn show_highscore_progress(
+    ui: &mut egui::Ui,
+    current_dist: Option<(u32, u32)>,
+    current_vel: Option<(u32, u32)>,
+    has_target: bool,
+) {
+    if let Some((cur, tgt)) = current_dist {
+        let met = cur >= tgt;
+        let color = if met {
+            egui::Color32::GREEN
+        } else {
+            ui.style().visuals.text_color()
+        };
+        let check = if met { "✓ " } else { "" };
+        ui.label(
+            egui::RichText::new(format!(
+                "{check}Distance: {:.1}/{:.1}",
+                cur as f32 / 1000.0,
+                tgt as f32 / 1000.0,
+            ))
+            .color(color),
+        );
+    }
+    if let Some((cur, tgt)) = current_vel {
+        let met = cur >= tgt;
+        let color = if met {
+            egui::Color32::GREEN
+        } else {
+            ui.style().visuals.text_color()
+        };
+        let check = if met { "✓ " } else { "" };
+        ui.label(
+            egui::RichText::new(format!(
+                "{check}Velocity: {:.1}/{:.1}",
+                cur as f32 / 1000.0,
+                tgt as f32 / 1000.0,
+            ))
+            .color(color),
+        );
+    }
+    if has_target {
+        ui.label("Reach target");
+    }
 }
 
 #[allow(clippy::too_many_arguments)]

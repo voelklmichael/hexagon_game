@@ -89,7 +89,10 @@ pub fn show(
         return;
     };
 
-    let highlight = !matches!(game_options, Some(GameOptions::Highscore(_)));
+    let highlight = !matches!(
+        game_options,
+        Some(GameOptions::Highscore(_) | GameOptions::HighscoreV2(_))
+    );
 
     let mut players: Vec<PlayerId> = statistics.total_path_segments.keys().copied().collect();
     players.sort_unstable_by_key(|id| id.0);
