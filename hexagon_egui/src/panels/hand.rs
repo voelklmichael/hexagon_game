@@ -176,37 +176,7 @@ pub fn show(
     let mut started = false;
 
     let btn_font_size = egui::TextStyle::Body.resolve(ui.style()).size * 1.4;
-
     let can_undo = !history.undo_stack.is_empty();
-    // let can_redo = !history.redo_stack.is_empty();
-    ui.horizontal(|ui| {
-        if ui
-            .add_enabled(
-                can_undo,
-                egui::Button::new(egui::RichText::new("↩ Undo").size(btn_font_size)),
-            )
-            .clicked()
-            && let Some(prev) = history.undo_stack.pop()
-        {
-            if let Some(current) = game.take() {
-                history.redo_stack.push(current);
-            }
-            *game = Some(prev);
-        }
-        // if ui
-        //     .add_enabled(
-        //         can_redo,
-        //         egui::Button::new(egui::RichText::new("↪ Redo").size(btn_font_size)),
-        //     )
-        //     .clicked()
-        //     && let Some(next) = history.redo_stack.pop()
-        // {
-        //     if let Some(current) = game.take() {
-        //         history.undo_stack.push(current);
-        //     }
-        //     *game = Some(next);
-        // }
-    });
 
     if game.is_none() {
         ui.label("No game in progress.");
@@ -215,20 +185,21 @@ pub fn show(
 
     // Game-over section: collect all data from a scoped borrow so the borrow
     // is released before we write back to *game.
-    let game_over_data: Option<(String, egui::Color32, _, _, bool, bool)> = {
+    let game_over_data: Option<(String, egui::Color32, _, _, bool)> = {
         let g = game.as_ref().unwrap();
         g.result.as_ref().map(|result| {
             let (text, color, is_win) = match result {
                 GameResult::Win(winners) => {
-                    let names: Vec<String> = winners
-                        .iter()
-                        .map(|p| format!("Player {}", p.0 + 1))
-                        .collect();
-                    (
-                        format!("Winner: {}", names.join(", ")),
-                        egui::Color32::GOLD,
-                        true,
-                    )
+                    let text = if matches!(g.options, GameOptions::Highscore(_)) {
+                        "Mission solved".to_string()
+                    } else {
+                        let names: Vec<String> = winners
+                            .iter()
+                            .map(|p| format!("Player {}", p.0 + 1))
+                            .collect();
+                        format!("Winner: {}", names.join(", "))
+                    };
+                    (text, egui::Color32::GOLD, true)
                 }
                 GameResult::Draw(players) => {
                     let names: Vec<String> = players
@@ -249,95 +220,50 @@ pub fn show(
             };
             let opts = g.options.clone();
             let saved = g.clone();
-            let can_undo = !history.undo_stack.is_empty();
-            (text, color, opts, saved, can_undo, is_win)
+            (text, color, opts, saved, is_win)
         })
     }; // immutable borrow of *game released here
 
-    if let Some((text, color, opts, saved, can_undo, is_win)) = game_over_data {
-        if is_win
-            && let Some(cur) = *current_mission
+    // Win: render action buttons above the top undo button.
+    if let Some((_, _, ref opts, _, true)) = game_over_data {
+        if let Some(cur) = *current_mission
             && let Some(mission_id) = crate::panels::missions::mission_id(missions, cur)
         {
             missions_won.insert(mission_id);
         }
 
-        ui.label(
-            egui::RichText::new("The game is finished")
-                .strong()
-                .heading(),
-        );
-        ui.label(egui::RichText::new(text).strong().color(color).heading());
+        let next_mission = current_mission
+            .map(|idx| idx + 1)
+            .filter(|&next| next < crate::panels::missions::mission_count(missions));
 
-        if !is_win
-            && let GameOptions::Highscore(mission) = &opts {
-                let wc = &mission.winning_condition;
-
-                if let Some(idx) = *current_mission
-                    && let Some(entry) = missions.get(idx)
-                {
-                    ui.separator();
-                    ui.label(egui::RichText::new(&entry.name).strong());
-                    ui.label(&entry.description);
-                }
-
-                ui.separator();
-
-                let player = saved.players.first();
-                let red = egui::Color32::from_rgb(200, 60, 60);
-
-                if let Some(min_dist) = wc.min_distance {
-                    let cur = player
-                        .and_then(|p| saved.statistics.total_path_weight.get(&p.id).copied())
-                        .unwrap_or(0);
-                    let met = cur >= min_dist;
-                    let (check, col) = if met {
-                        ("✓", egui::Color32::GREEN)
-                    } else {
-                        ("❌", red)
-                    };
-                    ui.label(
-                        egui::RichText::new(format!(
-                            "{check} Distance: {:.1}/{:.1}",
-                            cur as f32 / 1000.0,
-                            min_dist as f32 / 1000.0,
-                        ))
-                        .color(col),
-                    );
-                }
-
-                if let Some(min_vel) = wc.min_velocity {
-                    let cur = player
-                        .and_then(|p| saved.statistics.max_velocity.get(&p.id).copied())
-                        .unwrap_or(0);
-                    let met = cur >= min_vel;
-                    let (check, col) = if met {
-                        ("✓", egui::Color32::GREEN)
-                    } else {
-                        ("❌", red)
-                    };
-                    ui.label(
-                        egui::RichText::new(format!(
-                            "{check} Velocity: {:.1}/{:.1}",
-                            cur as f32 / 1000.0,
-                            min_vel as f32 / 1000.0,
-                        ))
-                        .color(col),
-                    );
-                }
-
-                if let Some(target_id) = wc.target {
-                    let met = player.is_some_and(|p| p.current_position.0 == target_id);
-                    let (check, col) = if met {
-                        ("✓", egui::Color32::GREEN)
-                    } else {
-                        ("❌", red)
-                    };
-                    ui.label(egui::RichText::new(format!("{check} Reach target")).color(col));
-                }
+        if let Some(next_idx) = next_mission {
+            if ui
+                .button(egui::RichText::new("Start next mission").size(btn_font_size))
+                .clicked()
+            {
+                history.undo_stack.clear();
+                history.redo_stack.clear();
+                crate::panels::missions::start_mission(missions, next_idx, game);
+                *current_mission = Some(next_idx);
+                started = true;
             }
-
-        ui.separator();
+        } else if ui
+            .button(egui::RichText::new("Start new game").size(btn_font_size))
+            .clicked()
+        {
+            let mut new_opts = opts.clone();
+            new_opts.randomize_seed();
+            match new_opts.start_game() {
+                Ok(g) => {
+                    history.undo_stack.clear();
+                    history.redo_stack.clear();
+                    *game = Some(g);
+                    *current_mission = None;
+                    started = true;
+                }
+                Err(e) => tracing::info!("New game failed: {e}"),
+            }
+        }
 
         let restart_label = if current_mission.is_some() {
             "Restart this mission"
@@ -359,54 +285,158 @@ pub fn show(
             }
         }
 
+        ui.separator();
+    }
+
+    // Top undo button.
+    if ui
+        .add_enabled(
+            can_undo,
+            egui::Button::new(egui::RichText::new("↩ Undo").size(btn_font_size)),
+        )
+        .clicked()
+        && let Some(prev) = history.undo_stack.pop()
+    {
+        if let Some(current) = game.take() {
+            history.redo_stack.push(current);
+        }
+        *game = Some(prev);
+    }
+
+    if let Some((text, color, opts, saved, is_win)) = game_over_data {
+        ui.label(
+            egui::RichText::new("The game is finished")
+                .strong()
+                .heading(),
+        );
+        ui.label(egui::RichText::new(text).strong().color(color).heading());
         let next_mission = current_mission
             .map(|idx| idx + 1)
             .filter(|&next| next < crate::panels::missions::mission_count(missions));
 
-        if let Some(next_idx) = next_mission {
-            if ui
-                .button(egui::RichText::new("Start next mission").size(btn_font_size))
-                .clicked()
+        if !is_win && let GameOptions::Highscore(mission) = &opts {
+            let wc = &mission.winning_condition;
+
+            if let Some(idx) = *current_mission
+                && let Some(entry) = missions.get(idx)
             {
-                history.undo_stack.clear();
-                history.redo_stack.clear();
-                crate::panels::missions::start_mission(missions, next_idx, game);
-                *current_mission = Some(next_idx);
-                started = true;
+                ui.separator();
+                ui.label(egui::RichText::new(&entry.name).strong());
+                ui.label(&entry.description);
             }
-        } else {
+
+            ui.separator();
+
+            let player = saved.players.first();
+            let red = egui::Color32::from_rgb(200, 60, 60);
+
+            if let Some(min_dist) = wc.min_distance {
+                let cur = player
+                    .and_then(|p| saved.statistics.total_path_weight.get(&p.id).copied())
+                    .unwrap_or(0);
+                let met = cur >= min_dist;
+                let (check, col) = if met {
+                    ("✓", egui::Color32::GREEN)
+                } else {
+                    ("❌", red)
+                };
+                ui.label(
+                    egui::RichText::new(format!(
+                        "{check} Distance: {:.1}/{:.1}",
+                        cur as f32 / 1000.0,
+                        min_dist as f32 / 1000.0,
+                    ))
+                    .color(col),
+                );
+            }
+
+            if let Some(min_vel) = wc.min_velocity {
+                let cur = player
+                    .and_then(|p| saved.statistics.max_velocity.get(&p.id).copied())
+                    .unwrap_or(0);
+                let met = cur >= min_vel;
+                let (check, col) = if met {
+                    ("✓", egui::Color32::GREEN)
+                } else {
+                    ("❌", red)
+                };
+                ui.label(
+                    egui::RichText::new(format!(
+                        "{check} Velocity: {:.1}/{:.1}",
+                        cur as f32 / 1000.0,
+                        min_vel as f32 / 1000.0,
+                    ))
+                    .color(col),
+                );
+            }
+
+            if let Some(target_id) = wc.target {
+                let met = player.is_some_and(|p| p.current_position.0 == target_id);
+                let (check, col) = if met {
+                    ("✓", egui::Color32::GREEN)
+                } else {
+                    ("❌", red)
+                };
+                ui.label(egui::RichText::new(format!("{check} Reach target")).color(col));
+            }
+
+            ui.separator();
+
+            show_start_button(
+                ui,
+                game,
+                history,
+                current_mission,
+                missions,
+                &mut started,
+                btn_font_size,
+                next_mission,
+                &opts,
+            );
+
+            let restart_label = if current_mission.is_some() {
+                "Restart this mission"
+            } else {
+                "Restart this game"
+            };
             if ui
-                .button(egui::RichText::new("Start new game").size(btn_font_size))
+                .button(egui::RichText::new(restart_label).size(btn_font_size))
                 .clicked()
             {
-                let mut new_opts = opts.clone();
-                new_opts.randomize_seed();
-                match new_opts.start_game() {
+                match opts.clone().start_game() {
                     Ok(g) => {
                         history.undo_stack.clear();
                         history.redo_stack.clear();
                         *game = Some(g);
-                        *current_mission = None;
                         started = true;
                     }
-                    Err(e) => tracing::info!("New game failed: {e}"),
+                    Err(e) => tracing::info!("Restart failed: {e}"),
                 }
             }
         }
-        if ui
-            .add_enabled(can_undo, egui::Button::new("Undo"))
-            .clicked()
-            && let Some(prev) = history.undo_stack.pop()
-        {
-            history.redo_stack.push(saved);
-            *game = Some(prev);
-        }
 
         if is_win {
-            let rect = ui.max_rect();
+            show_start_button(
+                ui,
+                game,
+                history,
+                current_mission,
+                missions,
+                &mut started,
+                btn_font_size,
+                next_mission,
+                &opts,
+            );
+
+            let top = ui.cursor().top();
+            let max_rect = ui.max_rect();
+            let confetti_rect =
+                egui::Rect::from_min_max(egui::pos2(max_rect.left(), top), max_rect.max);
             let dt = ui.ctx().input(|i| i.stable_dt).min(0.05);
             interaction.confetti.activate();
-            interaction.confetti.update_and_draw(dt, rect, ui.painter());
+            interaction
+                .confetti
+                .update_and_draw(dt, confetti_rect, ui.painter());
             if interaction.confetti.is_active() {
                 ui.ctx().request_repaint();
             }
@@ -667,4 +697,46 @@ pub fn show(
         }
     });
     false
+}
+
+#[allow(clippy::too_many_arguments)]
+fn show_start_button(
+    ui: &mut egui::Ui,
+    game: &mut Option<GameState>,
+    history: &mut GameHistory,
+    current_mission: &mut Option<usize>,
+    missions: &[hexagon_types::MissionEntry],
+    started: &mut bool,
+    btn_font_size: f32,
+    next_mission: Option<usize>,
+    opts: &GameOptions,
+) {
+    if let Some(next_idx) = next_mission {
+        if ui
+            .button(egui::RichText::new("Start next mission").size(btn_font_size))
+            .clicked()
+        {
+            history.undo_stack.clear();
+            history.redo_stack.clear();
+            crate::panels::missions::start_mission(missions, next_idx, game);
+            *current_mission = Some(next_idx);
+            *started = true;
+        }
+    } else if ui
+        .button(egui::RichText::new("Start new game").size(btn_font_size))
+        .clicked()
+    {
+        let mut new_opts = opts.clone();
+        new_opts.randomize_seed();
+        match new_opts.start_game() {
+            Ok(g) => {
+                history.undo_stack.clear();
+                history.redo_stack.clear();
+                *game = Some(g);
+                *current_mission = None;
+                *started = true;
+            }
+            Err(e) => tracing::info!("New game failed: {e}"),
+        }
+    }
 }
