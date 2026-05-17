@@ -268,7 +268,96 @@ pub fn show(
                 .heading(),
         );
         ui.label(egui::RichText::new(text).strong().color(color).heading());
+
+        if !is_win
+            && let GameOptions::Highscore(mission) = &opts {
+                let wc = &mission.winning_condition;
+
+                if let Some(idx) = *current_mission
+                    && let Some(entry) = missions.get(idx)
+                {
+                    ui.separator();
+                    ui.label(egui::RichText::new(&entry.name).strong());
+                    ui.label(&entry.description);
+                }
+
+                ui.separator();
+
+                let player = saved.players.first();
+                let red = egui::Color32::from_rgb(200, 60, 60);
+
+                if let Some(min_dist) = wc.min_distance {
+                    let cur = player
+                        .and_then(|p| saved.statistics.total_path_weight.get(&p.id).copied())
+                        .unwrap_or(0);
+                    let met = cur >= min_dist;
+                    let (check, col) = if met {
+                        ("✓", egui::Color32::GREEN)
+                    } else {
+                        ("❌", red)
+                    };
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "{check} Distance: {:.1}/{:.1}",
+                            cur as f32 / 1000.0,
+                            min_dist as f32 / 1000.0,
+                        ))
+                        .color(col),
+                    );
+                }
+
+                if let Some(min_vel) = wc.min_velocity {
+                    let cur = player
+                        .and_then(|p| saved.statistics.max_velocity.get(&p.id).copied())
+                        .unwrap_or(0);
+                    let met = cur >= min_vel;
+                    let (check, col) = if met {
+                        ("✓", egui::Color32::GREEN)
+                    } else {
+                        ("❌", red)
+                    };
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "{check} Velocity: {:.1}/{:.1}",
+                            cur as f32 / 1000.0,
+                            min_vel as f32 / 1000.0,
+                        ))
+                        .color(col),
+                    );
+                }
+
+                if let Some(target_id) = wc.target {
+                    let met = player.is_some_and(|p| p.current_position.0 == target_id);
+                    let (check, col) = if met {
+                        ("✓", egui::Color32::GREEN)
+                    } else {
+                        ("❌", red)
+                    };
+                    ui.label(egui::RichText::new(format!("{check} Reach target")).color(col));
+                }
+            }
+
         ui.separator();
+
+        let restart_label = if current_mission.is_some() {
+            "Restart this mission"
+        } else {
+            "Restart this game"
+        };
+        if ui
+            .button(egui::RichText::new(restart_label).size(btn_font_size))
+            .clicked()
+        {
+            match opts.clone().start_game() {
+                Ok(g) => {
+                    history.undo_stack.clear();
+                    history.redo_stack.clear();
+                    *game = Some(g);
+                    started = true;
+                }
+                Err(e) => tracing::info!("Restart failed: {e}"),
+            }
+        }
 
         let next_mission = current_mission
             .map(|idx| idx + 1)
@@ -302,22 +391,6 @@ pub fn show(
                     }
                     Err(e) => tracing::info!("New game failed: {e}"),
                 }
-            }
-        }
-        let restart_label = if current_mission.is_some() {
-            "Restart this mission"
-        } else {
-            "Restart this game"
-        };
-        if ui.button(restart_label).clicked() {
-            match opts.start_game() {
-                Ok(g) => {
-                    history.undo_stack.clear();
-                    history.redo_stack.clear();
-                    *game = Some(g);
-                    started = true;
-                }
-                Err(e) => tracing::info!("Restart failed: {e}"),
             }
         }
         if ui
@@ -437,21 +510,41 @@ pub fn show(
                     ui.separator();
                 }
                 if let Some((cur, tgt)) = current_dist {
-                    ui.label(format!(
-                        "Target Distance: {:.1}/{:.1}",
-                        cur as f32 / 1000.0,
-                        tgt as f32 / 1000.0,
-                    ));
+                    let met = cur >= tgt;
+                    let color = if met {
+                        egui::Color32::GREEN
+                    } else {
+                        ui.style().visuals.text_color()
+                    };
+                    let check = if met { "✓ " } else { "" };
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "{check}Distance: {:.1}/{:.1}",
+                            cur as f32 / 1000.0,
+                            tgt as f32 / 1000.0,
+                        ))
+                        .color(color),
+                    );
                 }
                 if let Some((cur, tgt)) = current_vel {
-                    ui.label(format!(
-                        "Target Velocity: {:.1}/{:.1}",
-                        cur as f32 / 1000.0,
-                        tgt as f32 / 1000.0,
-                    ));
+                    let met = cur >= tgt;
+                    let color = if met {
+                        egui::Color32::GREEN
+                    } else {
+                        ui.style().visuals.text_color()
+                    };
+                    let check = if met { "✓ " } else { "" };
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "{check}Velocity: {:.1}/{:.1}",
+                            cur as f32 / 1000.0,
+                            tgt as f32 / 1000.0,
+                        ))
+                        .color(color),
+                    );
                 }
                 if has_player_target {
-                    ui.label("Player needs to reach target");
+                    ui.label("Reach target");
                 }
             });
     }
