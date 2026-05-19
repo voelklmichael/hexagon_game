@@ -738,7 +738,7 @@ fn show_highscore_conditions(
     if let Some(tgt) = min_dist {
         let met = cur_dist >= tgt;
         let (check, col) = if met {
-            ("✓", egui::Color32::GREEN)
+            ("✔", egui::Color32::GREEN)
         } else {
             ("❌", egui::Color32::RED)
         };
@@ -754,7 +754,7 @@ fn show_highscore_conditions(
     if let Some(tgt) = min_vel {
         let met = cur_vel >= tgt;
         let (check, col) = if met {
-            ("✓", egui::Color32::GREEN)
+            ("✔", egui::Color32::GREEN)
         } else {
             ("❌", egui::Color32::RED)
         };
@@ -769,7 +769,7 @@ fn show_highscore_conditions(
     }
     if let Some(met) = target_met {
         let (check, col) = if met {
-            ("✓", egui::Color32::GREEN)
+            ("✔", egui::Color32::GREEN)
         } else {
             ("❌", egui::Color32::RED)
         };
@@ -785,37 +785,21 @@ fn show_highscore_progress(
 ) {
     if let Some((cur, tgt)) = current_dist {
         let met = cur >= tgt;
-        let color = if met {
-            egui::Color32::GREEN
-        } else {
-            ui.style().visuals.text_color()
-        };
-        let check = if met { "✓ " } else { "" };
-        ui.label(
-            egui::RichText::new(format!(
-                "{check}Distance: {:.1}/{:.1}",
-                cur as f32 / 1000.0,
-                tgt as f32 / 1000.0,
-            ))
-            .color(color),
-        );
+        let check = if met { "✔ " } else { "" };
+        ui.label(format!(
+            "{check}Distance: {:.1}/{:.1}",
+            cur as f32 / 1000.0,
+            tgt as f32 / 1000.0,
+        ));
     }
     if let Some((cur, tgt)) = current_vel {
         let met = cur >= tgt;
-        let color = if met {
-            egui::Color32::GREEN
-        } else {
-            ui.style().visuals.text_color()
-        };
-        let check = if met { "✓ " } else { "" };
-        ui.label(
-            egui::RichText::new(format!(
-                "{check}Velocity: {:.1}/{:.1}",
-                cur as f32 / 1000.0,
-                tgt as f32 / 1000.0,
-            ))
-            .color(color),
-        );
+        let check = if met { "✔ " } else { "" };
+        ui.label(format!(
+            "{check}Velocity: {:.1}/{:.1}",
+            cur as f32 / 1000.0,
+            tgt as f32 / 1000.0,
+        ));
     }
     if has_target {
         ui.label("Reach target");
