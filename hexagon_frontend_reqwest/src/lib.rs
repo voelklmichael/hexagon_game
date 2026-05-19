@@ -1,6 +1,6 @@
 use hexagon_types::{
-    DBHighscorePeak, LoginResponse, MeResponse, MissionEntry, MissionKind, PlayerStats,
-    PreviousGame, SavePreviousGameRequest,
+    DBHighscorePeak, LoginResponse, MeResponse, MissionEntry, PlayerStats, PreviousGame,
+    SavePreviousGameRequest,
 };
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -128,18 +128,6 @@ impl ApiClient {
     // --- missions ---
     pub async fn fetch_all_missions(&self) -> Result<Vec<MissionEntry>, ApiError> {
         let res = self.get(self.url("/missions")).send().await?;
-        Self::expect_json(res).await
-    }
-
-    pub async fn fetch_missions(&self, kind: MissionKind) -> Result<Vec<MissionEntry>, ApiError> {
-        let kind_str = match kind {
-            MissionKind::HighScore => "HighScore",
-            MissionKind::Delivery => "Delivery",
-        };
-        let res = self
-            .get(self.url(&format!("/missions/{kind_str}")))
-            .send()
-            .await?;
         Self::expect_json(res).await
     }
 

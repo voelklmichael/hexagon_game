@@ -29,6 +29,7 @@ async fn main() {
     upsert_mission_9(&db).await;
 
     upsert_mission_delivery_1(&db).await;
+    upsert_mission_delivery_2(&db).await;
     upsert_mission_delivery_5(&db).await;
 
     tracing::info!("Done")
@@ -55,8 +56,8 @@ async fn upsert_mission_1(db: &DB) {
 
     let mission = MissionEntry {
         id: mission_id,
-        kind: hexagon_db::MissionKind::HighScore,
         name: "Tutorial #1".into(),
+        tag: hexagon_types::MissionTag::Tutorial,
         description: "Move to the green target arrow".into(),
         number: 1u32,
         json: hexagon_types::Mission::HighScore(
@@ -94,8 +95,8 @@ async fn upsert_mission_2(db: &DB) {
 
     let mission = MissionEntry {
         id: mission_id,
-        kind: hexagon_db::MissionKind::HighScore,
         name: "Tutorial #2".into(),
+        tag: hexagon_types::MissionTag::Tutorial,
         description: "Move to the green target arrow".into(),
         number: 2u32,
         json: hexagon_types::Mission::HighScore(
@@ -148,8 +149,8 @@ async fn upsert_mission_3(db: &DB) {
 
     let mission = MissionEntry {
         id: mission_id,
-        kind: hexagon_db::MissionKind::HighScore,
         name: "Tutorial #3".into(),
+        tag: hexagon_types::MissionTag::Tutorial,
         description: "Move to the green target arrow".into(),
         number: 3u32,
         json: hexagon_types::Mission::HighScore(
@@ -201,8 +202,8 @@ async fn upsert_mission_4(db: &DB) {
 
     let mission = MissionEntry {
         id: mission_id,
-        kind: hexagon_db::MissionKind::HighScore,
         name: "Tutorial #4".into(),
+        tag: hexagon_types::MissionTag::Tutorial,
         description: "Move to the green target arrow".into(),
         number: 4u32,
         json: hexagon_types::Mission::HighScore(
@@ -255,8 +256,8 @@ async fn upsert_mission_5(db: &DB) {
 
     let mission = MissionEntry {
         id: mission_id,
-        kind: hexagon_db::MissionKind::HighScore,
         name: "Tutorial #5".into(),
+        tag: hexagon_types::MissionTag::Tutorial,
         description: "Move at least 10".into(),
         number: 5u32,
         json: hexagon_types::Mission::HighScore(
@@ -309,8 +310,8 @@ async fn upsert_mission_6(db: &DB) {
 
     let mission = MissionEntry {
         id: mission_id,
-        kind: hexagon_db::MissionKind::HighScore,
         name: "Tutorial #6".into(),
+        tag: hexagon_types::MissionTag::Tutorial,
         description: "Move at high speed: Travel 5 segments in one turn".into(),
         number: 6u32,
         json: hexagon_types::Mission::HighScore(
@@ -352,8 +353,8 @@ async fn upsert_mission_7(db: &DB) {
 
     let mission = MissionEntry {
         id: mission_id,
-        kind: hexagon_db::MissionKind::HighScore,
         name: "Tutorial #7".into(),
+        tag: hexagon_types::MissionTag::Tutorial,
         description: "Move the red player to the red target arrow".into(),
         number: 7u32,
         json: hexagon_types::Mission::HighScore(
@@ -391,8 +392,8 @@ async fn upsert_mission_8(db: &DB) {
 
     let mission = MissionEntry {
         id: mission_id,
-        kind: hexagon_db::MissionKind::HighScore,
         name: "Tutorial #8".into(),
+        tag: hexagon_types::MissionTag::Tutorial,
         description: "Move the red player to the red target arrow".into(),
         number: 8u32,
         json: hexagon_types::Mission::HighScore(
@@ -427,8 +428,8 @@ async fn upsert_mission_9(db: &DB) {
 
     let mission = MissionEntry {
         id: mission_id,
-        kind: hexagon_db::MissionKind::HighScore,
         name: "Tutorial #9".into(),
+        tag: hexagon_types::MissionTag::Tutorial,
         description: "Move the red player to the red target arrow".into(),
         number: 9u32,
         json: hexagon_types::Mission::HighScore(
@@ -451,6 +452,42 @@ async fn upsert_mission_9(db: &DB) {
 }
 
 async fn upsert_mission_delivery_1(db: &DB) {
+    let mission_id = Uuid::from_u128(12);
+
+    let hand_size = 3;
+    let random_seed = 768621;
+
+    let mut rng = RandomNumberGenerator::new(random_seed);
+    let starting_hand = (0..hand_size)
+        .map(|_| Tile::create_fully_connected(&mut rng))
+        .collect();
+
+    let mission = MissionEntry {
+        id: mission_id,
+        name: "Delivery #1".into(),
+        tag: hexagon_types::MissionTag::Deliviery,
+        description: "Move the red player to the red target arrow, moving at least 5 steps".into(),
+        number: 101u32,
+        json: hexagon_types::Mission::HighScore(
+            hexagon_types::MissionHighscore::V2(MissionHighscoreV2 {
+                board: Board::create_board(3, hexagon_types::OuterConnectors::ReducedDeathEnds)
+                    .unwrap(),
+                starting_points: vec![ConnectorId(18), ConnectorId(19)],
+                random_seed: hand_size,
+                starting_hand: starting_hand,
+                winning_condition: WinningConditionHighscoreV2 {
+                    min_velocity: HashMap::new(),
+                    min_distance: [(PlayerId(1), 5_000)].into(),
+                    target: [(PlayerId(1), ConnectorId(22))].into(),
+                },
+            })
+            .into(),
+        ),
+    };
+    db.upsert_mission(&mission).await.unwrap();
+}
+
+async fn upsert_mission_delivery_2(db: &DB) {
     let mission_id = Uuid::from_u128(11);
 
     let hand_size = 3;
@@ -463,10 +500,10 @@ async fn upsert_mission_delivery_1(db: &DB) {
 
     let mission = MissionEntry {
         id: mission_id,
-        kind: hexagon_db::MissionKind::HighScore,
-        name: "Delivery #1".into(),
+        name: "Delivery #2".into(),
+        tag: hexagon_types::MissionTag::Deliviery,
         description: "Move green and red to their targets".into(),
-        number: 101u32,
+        number: 102u32,
         json: hexagon_types::Mission::HighScore(
             hexagon_types::MissionHighscore::V2(MissionHighscoreV2 {
                 board: Board::create_board(3, hexagon_types::OuterConnectors::OnlyDeathEnds)
@@ -478,8 +515,8 @@ async fn upsert_mission_delivery_1(db: &DB) {
                     min_velocity: HashMap::new(),
                     min_distance: HashMap::new(),
                     target: [
-                        (PlayerId(0), ConnectorId(28)),
-                        (PlayerId(1), ConnectorId(18)),
+                        (PlayerId(0), ConnectorId(29)),
+                        (PlayerId(1), ConnectorId(28)),
                     ]
                     .into(),
                 },
@@ -503,7 +540,7 @@ async fn upsert_mission_delivery_5(db: &DB) {
 
     let mission = MissionEntry {
         id: mission_id,
-        kind: hexagon_db::MissionKind::HighScore,
+        tag: hexagon_types::MissionTag::Deliviery,
         name: "Delivery #5".into(),
         description: "Move green and red to their targets".into(),
         number: 105u32,
@@ -518,8 +555,8 @@ async fn upsert_mission_delivery_5(db: &DB) {
                     min_velocity: HashMap::new(),
                     min_distance: HashMap::new(),
                     target: [
-                        (PlayerId(0), ConnectorId(22)),
-                        (PlayerId(1), ConnectorId(8)),
+                        (PlayerId(0), ConnectorId(29)),
+                        (PlayerId(1), ConnectorId(28)),
                     ]
                     .into(),
                 },

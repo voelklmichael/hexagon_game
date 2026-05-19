@@ -8,7 +8,7 @@ use axum::{
 };
 use axum_login::{AuthManagerLayerBuilder, AuthUser};
 use axum_messages::MessagesManagerLayer;
-use hexagon_db::{DB, DBHighscore, DBHighscorePeak, MissionEntry, MissionKind};
+use hexagon_db::{DB, DBHighscore, DBHighscorePeak, MissionEntry};
 use hexagon_types::{PreviousGame, SavePreviousGameRequest};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tower_sessions::SessionManagerLayer;
@@ -70,7 +70,6 @@ pub async fn router(state: AppState) -> Router {
             get(fetch_won_missions),
         )
         .route("/missions", get(fetch_all_missions))
-        .route("/missions/{kind}", get(fetch_missions))
         .route("/previous_games", post(save_previous_game))
         .route("/previous_games", get(fetch_previous_games))
         .nest("/user_login", crate::user::login_router())
@@ -156,20 +155,6 @@ async fn fetch_all_missions(
         Ok(missions) => Ok(Json(missions)),
         Err(e) => {
             tracing::warn!("fetch_all_missions failed: {e}");
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
-}
-
-async fn fetch_missions(
-    State(state): State<AppState>,
-    Path(kind): Path<MissionKind>,
-) -> Result<Json<Vec<MissionEntry>>, StatusCode> {
-    tracing::info!("GET /missions/{kind:?}");
-    match state.db.fetch_missions_by_kind(kind).await {
-        Ok(missions) => Ok(Json(missions)),
-        Err(e) => {
-            tracing::warn!("fetch_missions failed: {e}");
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }

@@ -4,7 +4,7 @@ mod mission;
 mod previous_games;
 mod user;
 pub use config::DBConfig;
-pub use hexagon_types::{DBHighscore, DBHighscorePeak, MissionEntry, MissionKind};
+pub use hexagon_types::{DBHighscore, DBHighscorePeak, MissionEntry};
 pub use user::*;
 
 pub struct DB(sqlx::PgPool);

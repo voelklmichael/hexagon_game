@@ -83,7 +83,12 @@ async fn main() {
     // 4. Submit a game + highscore as user a
     let mission_id = Uuid::new_v4();
     client
-        .save_previous_game(user_id_a, mission_id, &serde_json::json!({}), sample_players())
+        .save_previous_game(
+            user_id_a,
+            mission_id,
+            &serde_json::json!({}),
+            sample_players(),
+        )
         .await
         .expect("save_previous_game failed");
     println!("save_previous_game: OK");
@@ -104,7 +109,12 @@ async fn main() {
 
     // 7. Try to save game for user b while logged in as user a — must be rejected with 403
     let err = client
-        .save_previous_game(user_id_b, mission_id, &serde_json::json!({}), sample_players())
+        .save_previous_game(
+            user_id_b,
+            mission_id,
+            &serde_json::json!({}),
+            sample_players(),
+        )
         .await
         .expect_err("save_previous_game for other user should be rejected");
     assert_status(err, 403, "save_previous_game (wrong user)");
@@ -139,7 +149,12 @@ async fn main() {
 
     // 11. Try to save game while not logged in — must be rejected with 401
     let err = client
-        .save_previous_game(user_id_a, mission_id, &serde_json::json!({}), sample_players())
+        .save_previous_game(
+            user_id_a,
+            mission_id,
+            &serde_json::json!({}),
+            sample_players(),
+        )
         .await
         .expect_err("save_previous_game should require login");
     assert_status(err, 401, "save_previous_game (logged out)");

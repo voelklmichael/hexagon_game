@@ -1,7 +1,7 @@
 use hexagon_engine::{
     GameOptionsDelivery, GameState, start_highscore_game_v1, start_highscore_game_v2,
 };
-use hexagon_types::{Mission, MissionDelivery, MissionEntry, MissionKind};
+use hexagon_types::{Mission, MissionDelivery, MissionEntry, MissionTag};
 use std::collections::HashSet;
 use strum::VariantArray as _;
 use uuid::Uuid;
@@ -60,26 +60,26 @@ pub fn show(
 
     let mut started = None;
 
-    for &kind in MissionKind::VARIANTS {
+    for &tag in MissionTag::VARIANTS {
         let section: Vec<(usize, &MissionEntry)> = missions
             .iter()
             .enumerate()
-            .filter(|(_, m)| m.kind == kind)
+            .filter(|(_, m)| m.tag == tag)
             .collect();
 
         if section.is_empty() {
             continue;
         }
 
-        let header = match kind {
-            MissionKind::Delivery => "Delivery",
-            MissionKind::HighScore => "High Score",
+        let header = match tag {
+            MissionTag::Tutorial => "Tutorial",
+            MissionTag::Deliviery => "Delivery",
         };
 
         egui::CollapsingHeader::new(header)
             .default_open(true)
             .show(ui, |ui| {
-                egui::Grid::new(header)
+                egui::Grid::new(tag as usize)
                     .num_columns(2)
                     .spacing([12.0, 6.0])
                     .show(ui, |ui| {
