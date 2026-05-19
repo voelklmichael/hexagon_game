@@ -4,7 +4,7 @@ use std::sync::Arc;
 use egui_async::Bind;
 use hexagon_engine::Statistics;
 use hexagon_frontend_reqwest::{ApiClient, ApiError};
-use hexagon_types::{DBHighscore, DBHighscorePeak, MeResponse, MissionEntry, PlayerStats};
+use hexagon_types::{DBHighscorePeak, MeResponse, MissionEntry, PlayerStats};
 
 #[cfg(debug_assertions)]
 static BASE_URL: &str = "http://localhost:3000";
@@ -387,19 +387,13 @@ impl BackendReqwest {
         };
 
         let entry = &self.pending_mission_results[idx];
-        let score = DBHighscore {
-            user_id,
-            mission_id: entry.mission_id,
-            players: entry.players.clone(),
-        };
-        let client2 = client.clone();
+        let players = entry.players.clone();
         let game_state = entry.game_state.clone();
         let mission_id = entry.mission_id;
 
         self.mission_write_task.request(async move {
-            client.upsert_highscore(&score).await?;
-            client2
-                .save_previous_game(user_id, mission_id, &game_state)
+            client
+                .save_previous_game(user_id, mission_id, &game_state, players)
                 .await?;
             Ok(())
         });

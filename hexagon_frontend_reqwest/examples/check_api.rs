@@ -22,28 +22,24 @@ fn print_peak(label: &str, peak: &DBHighscorePeak) {
     }
 }
 
-fn sample_score(user_id: Uuid, mission_id: Uuid) -> DBHighscore {
-    DBHighscore {
-        user_id,
-        mission_id,
-        players: [
-            (
-                0u8,
-                PlayerStats {
-                    max_velocity: 120,
-                    total_distance: 5000,
-                },
-            ),
-            (
-                1u8,
-                PlayerStats {
-                    max_velocity: 80,
-                    total_distance: 3200,
-                },
-            ),
-        ]
-        .into(),
-    }
+fn sample_players() -> std::collections::HashMap<u8, PlayerStats> {
+    [
+        (
+            0u8,
+            PlayerStats {
+                max_velocity: 120,
+                total_distance: 5000,
+            },
+        ),
+        (
+            1u8,
+            PlayerStats {
+                max_velocity: 80,
+                total_distance: 3200,
+            },
+        ),
+    ]
+    .into()
 }
 
 #[tokio::main]
@@ -84,13 +80,13 @@ async fn main() {
         .expect("login failed");
     println!("login a: next={:?}", next.next);
 
-    // 4. Submit a highscore as user a
+    // 4. Submit a game + highscore as user a
     let mission_id = Uuid::new_v4();
     client
-        .upsert_highscore(&sample_score(user_id_a, mission_id))
+        .save_previous_game(user_id_a, mission_id, &serde_json::json!({}), sample_players())
         .await
-        .expect("upsert_highscore failed");
-    println!("upsert_highscore: OK");
+        .expect("save_previous_game failed");
+    println!("save_previous_game: OK");
 
     // 5. Fetch user a's own highscore
     let user_peak = client
@@ -106,12 +102,12 @@ async fn main() {
         .expect("fetch_highscore_overall failed");
     print_peak("fetch_highscore_overall", &overall_peak);
 
-    // 7. Try to upsert/fetch for user b while logged in as user a — must be rejected with 403
+    // 7. Try to save game for user b while logged in as user a — must be rejected with 403
     let err = client
-        .upsert_highscore(&sample_score(user_id_b, mission_id))
+        .save_previous_game(user_id_b, mission_id, &serde_json::json!({}), sample_players())
         .await
-        .expect_err("upsert_highscore for other user should be rejected");
-    assert_status(err, 403, "upsert_highscore (wrong user)");
+        .expect_err("save_previous_game for other user should be rejected");
+    assert_status(err, 403, "save_previous_game (wrong user)");
 
     let err = client
         .fetch_highscore_user(user_id_b, mission_id)
@@ -141,12 +137,12 @@ async fn main() {
     client.logout().await.expect("logout failed");
     println!("logout: OK");
 
-    // 11. Try to upsert/fetch while not logged in — must be rejected with 401
+    // 11. Try to save game while not logged in — must be rejected with 401
     let err = client
-        .upsert_highscore(&sample_score(user_id_a, mission_id))
+        .save_previous_game(user_id_a, mission_id, &serde_json::json!({}), sample_players())
         .await
-        .expect_err("upsert_highscore should require login");
-    assert_status(err, 401, "upsert_highscore (logged out)");
+        .expect_err("save_previous_game should require login");
+    assert_status(err, 401, "save_previous_game (logged out)");
 
     let err = client
         .fetch_highscore_user(user_id_a, mission_id)

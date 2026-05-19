@@ -82,40 +82,121 @@ impl crate::DB {
             r#"
             INSERT INTO highscore (
                 user_id, mission_id,
-                player_0_max_velocity, player_0_total_distance,
-                player_1_max_velocity, player_1_total_distance,
-                player_2_max_velocity, player_2_total_distance,
-                player_3_max_velocity, player_3_total_distance,
-                player_4_max_velocity, player_4_total_distance,
-                player_5_max_velocity, player_5_total_distance,
-                player_6_max_velocity, player_6_total_distance,
-                player_7_max_velocity, player_7_total_distance,
-                player_8_max_velocity, player_8_total_distance,
-                player_9_max_velocity, player_9_total_distance
+                player_0_max_velocity, player_0_max_velocity_game_id,
+                player_0_total_distance, player_0_total_distance_game_id,
+                player_1_max_velocity, player_1_max_velocity_game_id,
+                player_1_total_distance, player_1_total_distance_game_id,
+                player_2_max_velocity, player_2_max_velocity_game_id,
+                player_2_total_distance, player_2_total_distance_game_id,
+                player_3_max_velocity, player_3_max_velocity_game_id,
+                player_3_total_distance, player_3_total_distance_game_id,
+                player_4_max_velocity, player_4_max_velocity_game_id,
+                player_4_total_distance, player_4_total_distance_game_id,
+                player_5_max_velocity, player_5_max_velocity_game_id,
+                player_5_total_distance, player_5_total_distance_game_id,
+                player_6_max_velocity, player_6_max_velocity_game_id,
+                player_6_total_distance, player_6_total_distance_game_id,
+                player_7_max_velocity, player_7_max_velocity_game_id,
+                player_7_total_distance, player_7_total_distance_game_id,
+                player_8_max_velocity, player_8_max_velocity_game_id,
+                player_8_total_distance, player_8_total_distance_game_id,
+                player_9_max_velocity, player_9_max_velocity_game_id,
+                player_9_total_distance, player_9_total_distance_game_id
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
-                    $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+            VALUES (
+                $1,  $2,
+                $3,  $23, $4,  $23,
+                $5,  $23, $6,  $23,
+                $7,  $23, $8,  $23,
+                $9,  $23, $10, $23,
+                $11, $23, $12, $23,
+                $13, $23, $14, $23,
+                $15, $23, $16, $23,
+                $17, $23, $18, $23,
+                $19, $23, $20, $23,
+                $21, $23, $22, $23
+            )
             ON CONFLICT (user_id, mission_id) DO UPDATE SET
-                player_0_max_velocity   = GREATEST(excluded.player_0_max_velocity,   highscore.player_0_max_velocity),
-                player_0_total_distance = GREATEST(excluded.player_0_total_distance, highscore.player_0_total_distance),
-                player_1_max_velocity   = GREATEST(excluded.player_1_max_velocity,   highscore.player_1_max_velocity),
-                player_1_total_distance = GREATEST(excluded.player_1_total_distance, highscore.player_1_total_distance),
-                player_2_max_velocity   = GREATEST(excluded.player_2_max_velocity,   highscore.player_2_max_velocity),
-                player_2_total_distance = GREATEST(excluded.player_2_total_distance, highscore.player_2_total_distance),
-                player_3_max_velocity   = GREATEST(excluded.player_3_max_velocity,   highscore.player_3_max_velocity),
-                player_3_total_distance = GREATEST(excluded.player_3_total_distance, highscore.player_3_total_distance),
-                player_4_max_velocity   = GREATEST(excluded.player_4_max_velocity,   highscore.player_4_max_velocity),
-                player_4_total_distance = GREATEST(excluded.player_4_total_distance, highscore.player_4_total_distance),
-                player_5_max_velocity   = GREATEST(excluded.player_5_max_velocity,   highscore.player_5_max_velocity),
-                player_5_total_distance = GREATEST(excluded.player_5_total_distance, highscore.player_5_total_distance),
-                player_6_max_velocity   = GREATEST(excluded.player_6_max_velocity,   highscore.player_6_max_velocity),
-                player_6_total_distance = GREATEST(excluded.player_6_total_distance, highscore.player_6_total_distance),
-                player_7_max_velocity   = GREATEST(excluded.player_7_max_velocity,   highscore.player_7_max_velocity),
-                player_7_total_distance = GREATEST(excluded.player_7_total_distance, highscore.player_7_total_distance),
-                player_8_max_velocity   = GREATEST(excluded.player_8_max_velocity,   highscore.player_8_max_velocity),
-                player_8_total_distance = GREATEST(excluded.player_8_total_distance, highscore.player_8_total_distance),
-                player_9_max_velocity   = GREATEST(excluded.player_9_max_velocity,   highscore.player_9_max_velocity),
-                player_9_total_distance = GREATEST(excluded.player_9_total_distance, highscore.player_9_total_distance)
+                player_0_max_velocity           = GREATEST(excluded.player_0_max_velocity,   highscore.player_0_max_velocity),
+                player_0_max_velocity_game_id   = CASE WHEN excluded.player_0_max_velocity > highscore.player_0_max_velocity
+                                                       THEN excluded.player_0_max_velocity_game_id
+                                                       ELSE highscore.player_0_max_velocity_game_id END,
+                player_0_total_distance         = GREATEST(excluded.player_0_total_distance, highscore.player_0_total_distance),
+                player_0_total_distance_game_id = CASE WHEN excluded.player_0_total_distance > highscore.player_0_total_distance
+                                                       THEN excluded.player_0_total_distance_game_id
+                                                       ELSE highscore.player_0_total_distance_game_id END,
+                player_1_max_velocity           = GREATEST(excluded.player_1_max_velocity,   highscore.player_1_max_velocity),
+                player_1_max_velocity_game_id   = CASE WHEN excluded.player_1_max_velocity > highscore.player_1_max_velocity
+                                                       THEN excluded.player_1_max_velocity_game_id
+                                                       ELSE highscore.player_1_max_velocity_game_id END,
+                player_1_total_distance         = GREATEST(excluded.player_1_total_distance, highscore.player_1_total_distance),
+                player_1_total_distance_game_id = CASE WHEN excluded.player_1_total_distance > highscore.player_1_total_distance
+                                                       THEN excluded.player_1_total_distance_game_id
+                                                      ELSE highscore.player_1_total_distance_game_id END,
+                player_2_max_velocity           = GREATEST(excluded.player_2_max_velocity,   highscore.player_2_max_velocity),
+                player_2_max_velocity_game_id   = CASE WHEN excluded.player_2_max_velocity > highscore.player_2_max_velocity
+                                                       THEN excluded.player_2_max_velocity_game_id
+                                                       ELSE highscore.player_2_max_velocity_game_id END,
+                player_2_total_distance         = GREATEST(excluded.player_2_total_distance, highscore.player_2_total_distance),
+                player_2_total_distance_game_id = CASE WHEN excluded.player_2_total_distance > highscore.player_2_total_distance
+                                                        THEN excluded.player_2_total_distance_game_id
+                                                       ELSE highscore.player_2_total_distance_game_id END,
+                player_3_max_velocity           = GREATEST(excluded.player_3_max_velocity,   highscore.player_3_max_velocity),
+                player_3_max_velocity_game_id   = CASE WHEN excluded.player_3_max_velocity > highscore.player_3_max_velocity
+                                                       THEN excluded.player_3_max_velocity_game_id
+                                                       ELSE highscore.player_3_max_velocity_game_id END,
+                player_3_total_distance         = GREATEST(excluded.player_3_total_distance, highscore.player_3_total_distance),
+                player_3_total_distance_game_id = CASE WHEN excluded.player_3_total_distance > highscore.player_3_total_distance
+                                                       THEN excluded.player_3_total_distance_game_id
+                                                       ELSE highscore.player_3_total_distance_game_id END,
+                player_4_max_velocity           = GREATEST(excluded.player_4_max_velocity,   highscore.player_4_max_velocity),
+                player_4_max_velocity_game_id   = CASE WHEN excluded.player_4_max_velocity > highscore.player_4_max_velocity
+                                                       THEN excluded.player_4_max_velocity_game_id
+                                                       ELSE highscore.player_4_max_velocity_game_id END,
+                player_4_total_distance         = GREATEST(excluded.player_4_total_distance, highscore.player_4_total_distance),
+                player_4_total_distance_game_id = CASE WHEN excluded.player_4_total_distance > highscore.player_4_total_distance
+                                                       THEN excluded.player_4_total_distance_game_id
+                                                       ELSE highscore.player_4_total_distance_game_id END,
+                player_5_max_velocity           = GREATEST(excluded.player_5_max_velocity,   highscore.player_5_max_velocity),
+                player_5_max_velocity_game_id   = CASE WHEN excluded.player_5_max_velocity > highscore.player_5_max_velocity
+                                                       THEN excluded.player_5_max_velocity_game_id
+                                                       ELSE highscore.player_5_max_velocity_game_id END,
+                player_5_total_distance         = GREATEST(excluded.player_5_total_distance, highscore.player_5_total_distance),
+                player_5_total_distance_game_id = CASE WHEN excluded.player_5_total_distance > highscore.player_5_total_distance
+                                                       THEN excluded.player_5_total_distance_game_id
+                                                       ELSE highscore.player_5_total_distance_game_id END,
+                player_6_max_velocity           = GREATEST(excluded.player_6_max_velocity,   highscore.player_6_max_velocity),
+                player_6_max_velocity_game_id   = CASE WHEN excluded.player_6_max_velocity > highscore.player_6_max_velocity
+                                                       THEN excluded.player_6_max_velocity_game_id
+                                                       ELSE highscore.player_6_max_velocity_game_id END,
+                player_6_total_distance         = GREATEST(excluded.player_6_total_distance, highscore.player_6_total_distance),
+                player_6_total_distance_game_id = CASE WHEN excluded.player_6_total_distance > highscore.player_6_total_distance
+                                                       THEN excluded.player_6_total_distance_game_id
+                                                       ELSE highscore.player_6_total_distance_game_id END,
+                player_7_max_velocity           = GREATEST(excluded.player_7_max_velocity,   highscore.player_7_max_velocity),
+                player_7_max_velocity_game_id   = CASE WHEN excluded.player_7_max_velocity > highscore.player_7_max_velocity
+                                                       THEN excluded.player_7_max_velocity_game_id
+                                                       ELSE highscore.player_7_max_velocity_game_id END,
+                player_7_total_distance         = GREATEST(excluded.player_7_total_distance, highscore.player_7_total_distance),
+                player_7_total_distance_game_id = CASE WHEN excluded.player_7_total_distance > highscore.player_7_total_distance
+                                                       THEN excluded.player_7_total_distance_game_id
+                                                       ELSE highscore.player_7_total_distance_game_id END,
+                player_8_max_velocity           = GREATEST(excluded.player_8_max_velocity,   highscore.player_8_max_velocity),
+                player_8_max_velocity_game_id   = CASE WHEN excluded.player_8_max_velocity > highscore.player_8_max_velocity
+                                                       THEN excluded.player_8_max_velocity_game_id
+                                                       ELSE highscore.player_8_max_velocity_game_id END,
+                player_8_total_distance         = GREATEST(excluded.player_8_total_distance, highscore.player_8_total_distance),
+                player_8_total_distance_game_id = CASE WHEN excluded.player_8_total_distance > highscore.player_8_total_distance
+                                                       THEN excluded.player_8_total_distance_game_id
+                                                       ELSE highscore.player_8_total_distance_game_id END,
+                player_9_max_velocity           = GREATEST(excluded.player_9_max_velocity,   highscore.player_9_max_velocity),
+                player_9_max_velocity_game_id   = CASE WHEN excluded.player_9_max_velocity > highscore.player_9_max_velocity
+                                                       THEN excluded.player_9_max_velocity_game_id
+                                                       ELSE highscore.player_9_max_velocity_game_id END,
+                player_9_total_distance         = GREATEST(excluded.player_9_total_distance, highscore.player_9_total_distance),
+                player_9_total_distance_game_id = CASE WHEN excluded.player_9_total_distance > highscore.player_9_total_distance
+                                                       THEN excluded.player_9_total_distance_game_id
+                                                       ELSE highscore.player_9_total_distance_game_id END
             "#,
         )
         .bind(score.user_id)
@@ -130,6 +211,7 @@ impl crate::DB {
         .bind(mv7).bind(td7)
         .bind(mv8).bind(td8)
         .bind(mv9).bind(td9)
+        .bind(score.game_id)
         .execute(&self.0)
         .await?;
 
@@ -137,40 +219,121 @@ impl crate::DB {
             r#"
             INSERT INTO highscore_peak (
                 mission_id,
-                player_0_max_velocity, player_0_total_distance,
-                player_1_max_velocity, player_1_total_distance,
-                player_2_max_velocity, player_2_total_distance,
-                player_3_max_velocity, player_3_total_distance,
-                player_4_max_velocity, player_4_total_distance,
-                player_5_max_velocity, player_5_total_distance,
-                player_6_max_velocity, player_6_total_distance,
-                player_7_max_velocity, player_7_total_distance,
-                player_8_max_velocity, player_8_total_distance,
-                player_9_max_velocity, player_9_total_distance
+                player_0_max_velocity, player_0_max_velocity_game_id,
+                player_0_total_distance, player_0_total_distance_game_id,
+                player_1_max_velocity, player_1_max_velocity_game_id,
+                player_1_total_distance, player_1_total_distance_game_id,
+                player_2_max_velocity, player_2_max_velocity_game_id,
+                player_2_total_distance, player_2_total_distance_game_id,
+                player_3_max_velocity, player_3_max_velocity_game_id,
+                player_3_total_distance, player_3_total_distance_game_id,
+                player_4_max_velocity, player_4_max_velocity_game_id,
+                player_4_total_distance, player_4_total_distance_game_id,
+                player_5_max_velocity, player_5_max_velocity_game_id,
+                player_5_total_distance, player_5_total_distance_game_id,
+                player_6_max_velocity, player_6_max_velocity_game_id,
+                player_6_total_distance, player_6_total_distance_game_id,
+                player_7_max_velocity, player_7_max_velocity_game_id,
+                player_7_total_distance, player_7_total_distance_game_id,
+                player_8_max_velocity, player_8_max_velocity_game_id,
+                player_8_total_distance, player_8_total_distance_game_id,
+                player_9_max_velocity, player_9_max_velocity_game_id,
+                player_9_total_distance, player_9_total_distance_game_id
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
-                    $13, $14, $15, $16, $17, $18, $19, $20, $21)
+            VALUES (
+                $1,
+                $2,  $22, $3,  $22,
+                $4,  $22, $5,  $22,
+                $6,  $22, $7,  $22,
+                $8,  $22, $9,  $22,
+                $10, $22, $11, $22,
+                $12, $22, $13, $22,
+                $14, $22, $15, $22,
+                $16, $22, $17, $22,
+                $18, $22, $19, $22,
+                $20, $22, $21, $22
+            )
             ON CONFLICT (mission_id) DO UPDATE SET
-                player_0_max_velocity   = GREATEST(excluded.player_0_max_velocity,   highscore_peak.player_0_max_velocity),
-                player_0_total_distance = GREATEST(excluded.player_0_total_distance, highscore_peak.player_0_total_distance),
-                player_1_max_velocity   = GREATEST(excluded.player_1_max_velocity,   highscore_peak.player_1_max_velocity),
-                player_1_total_distance = GREATEST(excluded.player_1_total_distance, highscore_peak.player_1_total_distance),
-                player_2_max_velocity   = GREATEST(excluded.player_2_max_velocity,   highscore_peak.player_2_max_velocity),
-                player_2_total_distance = GREATEST(excluded.player_2_total_distance, highscore_peak.player_2_total_distance),
-                player_3_max_velocity   = GREATEST(excluded.player_3_max_velocity,   highscore_peak.player_3_max_velocity),
-                player_3_total_distance = GREATEST(excluded.player_3_total_distance, highscore_peak.player_3_total_distance),
-                player_4_max_velocity   = GREATEST(excluded.player_4_max_velocity,   highscore_peak.player_4_max_velocity),
-                player_4_total_distance = GREATEST(excluded.player_4_total_distance, highscore_peak.player_4_total_distance),
-                player_5_max_velocity   = GREATEST(excluded.player_5_max_velocity,   highscore_peak.player_5_max_velocity),
-                player_5_total_distance = GREATEST(excluded.player_5_total_distance, highscore_peak.player_5_total_distance),
-                player_6_max_velocity   = GREATEST(excluded.player_6_max_velocity,   highscore_peak.player_6_max_velocity),
-                player_6_total_distance = GREATEST(excluded.player_6_total_distance, highscore_peak.player_6_total_distance),
-                player_7_max_velocity   = GREATEST(excluded.player_7_max_velocity,   highscore_peak.player_7_max_velocity),
-                player_7_total_distance = GREATEST(excluded.player_7_total_distance, highscore_peak.player_7_total_distance),
-                player_8_max_velocity   = GREATEST(excluded.player_8_max_velocity,   highscore_peak.player_8_max_velocity),
-                player_8_total_distance = GREATEST(excluded.player_8_total_distance, highscore_peak.player_8_total_distance),
-                player_9_max_velocity   = GREATEST(excluded.player_9_max_velocity,   highscore_peak.player_9_max_velocity),
-                player_9_total_distance = GREATEST(excluded.player_9_total_distance, highscore_peak.player_9_total_distance)
+                player_0_max_velocity           = GREATEST(excluded.player_0_max_velocity,   highscore_peak.player_0_max_velocity),
+                player_0_max_velocity_game_id   = CASE WHEN excluded.player_0_max_velocity > highscore_peak.player_0_max_velocity
+                                                       THEN excluded.player_0_max_velocity_game_id
+                                                       ELSE highscore_peak.player_0_max_velocity_game_id END,
+                player_0_total_distance         = GREATEST(excluded.player_0_total_distance, highscore_peak.player_0_total_distance),
+                player_0_total_distance_game_id = CASE WHEN excluded.player_0_total_distance > highscore_peak.player_0_total_distance
+                                                       THEN excluded.player_0_total_distance_game_id
+                                                       ELSE highscore_peak.player_0_total_distance_game_id END,
+                player_1_max_velocity           = GREATEST(excluded.player_1_max_velocity,   highscore_peak.player_1_max_velocity),
+                player_1_max_velocity_game_id   = CASE WHEN excluded.player_1_max_velocity > highscore_peak.player_1_max_velocity
+                                                       THEN excluded.player_1_max_velocity_game_id
+                                                       ELSE highscore_peak.player_1_max_velocity_game_id END,
+                player_1_total_distance         = GREATEST(excluded.player_1_total_distance, highscore_peak.player_1_total_distance),
+                player_1_total_distance_game_id = CASE WHEN excluded.player_1_total_distance > highscore_peak.player_1_total_distance
+                                                       THEN excluded.player_1_total_distance_game_id
+                                                       ELSE highscore_peak.player_1_total_distance_game_id END,
+                player_2_max_velocity           = GREATEST(excluded.player_2_max_velocity,   highscore_peak.player_2_max_velocity),
+                player_2_max_velocity_game_id   = CASE WHEN excluded.player_2_max_velocity > highscore_peak.player_2_max_velocity
+                                                       THEN excluded.player_2_max_velocity_game_id
+                                                       ELSE highscore_peak.player_2_max_velocity_game_id END,
+                player_2_total_distance         = GREATEST(excluded.player_2_total_distance, highscore_peak.player_2_total_distance),
+                player_2_total_distance_game_id = CASE WHEN excluded.player_2_total_distance > highscore_peak.player_2_total_distance
+                                                       THEN excluded.player_2_total_distance_game_id
+                                                       ELSE highscore_peak.player_2_total_distance_game_id END,
+                player_3_max_velocity           = GREATEST(excluded.player_3_max_velocity,   highscore_peak.player_3_max_velocity),
+                player_3_max_velocity_game_id   = CASE WHEN excluded.player_3_max_velocity > highscore_peak.player_3_max_velocity
+                                                       THEN excluded.player_3_max_velocity_game_id
+                                                       ELSE highscore_peak.player_3_max_velocity_game_id END,
+                player_3_total_distance         = GREATEST(excluded.player_3_total_distance, highscore_peak.player_3_total_distance),
+                player_3_total_distance_game_id = CASE WHEN excluded.player_3_total_distance > highscore_peak.player_3_total_distance
+                                                       THEN excluded.player_3_total_distance_game_id
+                                                       ELSE highscore_peak.player_3_total_distance_game_id END,
+                player_4_max_velocity           = GREATEST(excluded.player_4_max_velocity,   highscore_peak.player_4_max_velocity),
+                player_4_max_velocity_game_id   = CASE WHEN excluded.player_4_max_velocity > highscore_peak.player_4_max_velocity
+                                                       THEN excluded.player_4_max_velocity_game_id
+                                                       ELSE highscore_peak.player_4_max_velocity_game_id END,
+                player_4_total_distance         = GREATEST(excluded.player_4_total_distance, highscore_peak.player_4_total_distance),
+                player_4_total_distance_game_id = CASE WHEN excluded.player_4_total_distance > highscore_peak.player_4_total_distance
+                                                       THEN excluded.player_4_total_distance_game_id
+                                                       ELSE highscore_peak.player_4_total_distance_game_id END,
+                player_5_max_velocity           = GREATEST(excluded.player_5_max_velocity,   highscore_peak.player_5_max_velocity),
+                player_5_max_velocity_game_id   = CASE WHEN excluded.player_5_max_velocity > highscore_peak.player_5_max_velocity
+                                                       THEN excluded.player_5_max_velocity_game_id
+                                                       ELSE highscore_peak.player_5_max_velocity_game_id END,
+                player_5_total_distance         = GREATEST(excluded.player_5_total_distance, highscore_peak.player_5_total_distance),
+                player_5_total_distance_game_id = CASE WHEN excluded.player_5_total_distance > highscore_peak.player_5_total_distance
+                                                       THEN excluded.player_5_total_distance_game_id
+                                                       ELSE highscore_peak.player_5_total_distance_game_id END,
+                player_6_max_velocity           = GREATEST(excluded.player_6_max_velocity,   highscore_peak.player_6_max_velocity),
+                player_6_max_velocity_game_id   = CASE WHEN excluded.player_6_max_velocity > highscore_peak.player_6_max_velocity
+                                                       THEN excluded.player_6_max_velocity_game_id
+                                                       ELSE highscore_peak.player_6_max_velocity_game_id END,
+                player_6_total_distance         = GREATEST(excluded.player_6_total_distance, highscore_peak.player_6_total_distance),
+                player_6_total_distance_game_id = CASE WHEN excluded.player_6_total_distance > highscore_peak.player_6_total_distance
+                                                       THEN excluded.player_6_total_distance_game_id
+                                                       ELSE highscore_peak.player_6_total_distance_game_id END,
+                player_7_max_velocity           = GREATEST(excluded.player_7_max_velocity,   highscore_peak.player_7_max_velocity),
+                player_7_max_velocity_game_id   = CASE WHEN excluded.player_7_max_velocity > highscore_peak.player_7_max_velocity
+                                                       THEN excluded.player_7_max_velocity_game_id
+                                                       ELSE highscore_peak.player_7_max_velocity_game_id END,
+                player_7_total_distance         = GREATEST(excluded.player_7_total_distance, highscore_peak.player_7_total_distance),
+                player_7_total_distance_game_id = CASE WHEN excluded.player_7_total_distance > highscore_peak.player_7_total_distance
+                                                       THEN excluded.player_7_total_distance_game_id
+                                                       ELSE highscore_peak.player_7_total_distance_game_id END,
+                player_8_max_velocity           = GREATEST(excluded.player_8_max_velocity,   highscore_peak.player_8_max_velocity),
+                player_8_max_velocity_game_id   = CASE WHEN excluded.player_8_max_velocity > highscore_peak.player_8_max_velocity
+                                                       THEN excluded.player_8_max_velocity_game_id
+                                                       ELSE highscore_peak.player_8_max_velocity_game_id END,
+                player_8_total_distance         = GREATEST(excluded.player_8_total_distance, highscore_peak.player_8_total_distance),
+                player_8_total_distance_game_id = CASE WHEN excluded.player_8_total_distance > highscore_peak.player_8_total_distance
+                                                       THEN excluded.player_8_total_distance_game_id
+                                                       ELSE highscore_peak.player_8_total_distance_game_id END,
+                player_9_max_velocity           = GREATEST(excluded.player_9_max_velocity,   highscore_peak.player_9_max_velocity),
+                player_9_max_velocity_game_id   = CASE WHEN excluded.player_9_max_velocity > highscore_peak.player_9_max_velocity
+                                                       THEN excluded.player_9_max_velocity_game_id
+                                                       ELSE highscore_peak.player_9_max_velocity_game_id END,
+                player_9_total_distance         = GREATEST(excluded.player_9_total_distance, highscore_peak.player_9_total_distance),
+                player_9_total_distance_game_id = CASE WHEN excluded.player_9_total_distance > highscore_peak.player_9_total_distance
+                                                       THEN excluded.player_9_total_distance_game_id
+                                                       ELSE highscore_peak.player_9_total_distance_game_id END
             "#,
         )
         .bind(score.mission_id)
@@ -184,6 +347,7 @@ impl crate::DB {
         .bind(mv7).bind(td7)
         .bind(mv8).bind(td8)
         .bind(mv9).bind(td9)
+        .bind(score.game_id)
         .execute(&self.0)
         .await?;
 

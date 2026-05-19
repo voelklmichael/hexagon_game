@@ -57,7 +57,6 @@ pub async fn router(state: AppState) -> Router {
 
     Router::new()
         .route("/healthz", get(healthz))
-        .route("/highscore", post(upsert_highscore))
         .route(
             "/highscore/overall/{mission_id}",
             get(fetch_highscore_overall),
@@ -100,26 +99,6 @@ fn require_own_user(
 async fn healthz() -> StatusCode {
     tracing::debug!("GET /healthz");
     StatusCode::NO_CONTENT
-}
-
-async fn upsert_highscore(
-    auth_session: crate::user::AuthSession,
-    State(state): State<AppState>,
-    Json(score): Json<DBHighscore>,
-) -> Result<StatusCode, StatusCode> {
-    tracing::info!(
-        "POST /highscore user_id={} mission_id={}",
-        score.user_id,
-        score.mission_id
-    );
-    require_own_user(&auth_session, score.user_id)?;
-    match state.db.upsert_highscore(&score).await {
-        Ok(()) => Ok(StatusCode::NO_CONTENT),
-        Err(e) => {
-            tracing::warn!("upsert_highscore failed: {e}");
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
 }
 
 async fn fetch_highscore_user(
@@ -207,17 +186,28 @@ async fn save_previous_game(
         req.mission_id
     );
     require_own_user(&auth_session, req.user_id)?;
-    match state
+    let id = match state
         .db
         .insert_previous_game(req.user_id, req.mission_id, &req.game_state)
         .await
     {
-        Ok(id) => Ok(Json(id)),
+        Ok(id) => id,
         Err(e) => {
             tracing::warn!("insert_previous_game failed: {e}");
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
         }
+    };
+    let score = DBHighscore {
+        user_id: req.user_id,
+        mission_id: req.mission_id,
+        game_id: id,
+        players: req.players,
+    };
+    if let Err(e) = state.db.upsert_highscore(&score).await {
+        tracing::warn!("upsert_highscore failed: {e}");
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
     }
+    Ok(Json(id))
 }
 
 async fn fetch_previous_games(

@@ -36,6 +36,7 @@ pub struct PlayerStats {
 pub struct DBHighscore {
     pub user_id: Uuid,
     pub mission_id: Uuid,
+    pub game_id: i64,
     pub players: HashMap<u8, PlayerStats>,
 }
 
@@ -51,6 +52,7 @@ pub struct SavePreviousGameRequest {
     pub user_id: Uuid,
     pub mission_id: Uuid,
     pub game_state: serde_json::Value,
+    pub players: HashMap<u8, PlayerStats>,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]

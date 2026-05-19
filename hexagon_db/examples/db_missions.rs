@@ -25,13 +25,17 @@ async fn main() {
     upsert_mission_5(&db).await;
     upsert_mission_6(&db).await;
     upsert_mission_7(&db).await;
+    upsert_mission_8(&db).await;
+    upsert_mission_9(&db).await;
+
+    upsert_mission_delivery_1(&db).await;
+    upsert_mission_delivery_5(&db).await;
 
     tracing::info!("Done")
 }
 
 async fn upsert_mission_1(db: &DB) {
-    let number = 1u32;
-    let mission_id = Uuid::from_u128(number as u128);
+    let mission_id = Uuid::from_u128(100);
 
     let hand_size = 3;
     let random_seed = 42;
@@ -54,7 +58,7 @@ async fn upsert_mission_1(db: &DB) {
         kind: hexagon_db::MissionKind::HighScore,
         name: "Tutorial #1".into(),
         description: "Move to the green target arrow".into(),
-        number: number,
+        number: 1u32,
         json: hexagon_types::Mission::HighScore(
             hexagon_types::MissionHighscore::V1(MissionHighscoreV1 {
                 board: Board::create_board_from_hexagons(
@@ -78,8 +82,7 @@ async fn upsert_mission_1(db: &DB) {
 }
 
 async fn upsert_mission_2(db: &DB) {
-    let number = 2u32;
-    let mission_id = Uuid::from_u128(number as u128);
+    let mission_id = Uuid::from_u128(200);
 
     let hand_size = 3;
     let random_seed = 31;
@@ -94,7 +97,7 @@ async fn upsert_mission_2(db: &DB) {
         kind: hexagon_db::MissionKind::HighScore,
         name: "Tutorial #2".into(),
         description: "Move to the green target arrow".into(),
-        number: number,
+        number: 2u32,
         json: hexagon_types::Mission::HighScore(
             hexagon_types::MissionHighscore::V1(MissionHighscoreV1 {
                 board: Board::create_board(3, hexagon_types::OuterConnectors::OnlyDeathEnds)
@@ -115,8 +118,7 @@ async fn upsert_mission_2(db: &DB) {
 }
 
 async fn upsert_mission_3(db: &DB) {
-    let number = 3u32;
-    let mission_id = Uuid::from_u128(number as u128);
+    let mission_id = Uuid::from_u128(300);
 
     let hand_size = 3;
     let random_seed = 65;
@@ -149,7 +151,7 @@ async fn upsert_mission_3(db: &DB) {
         kind: hexagon_db::MissionKind::HighScore,
         name: "Tutorial #3".into(),
         description: "Move to the green target arrow".into(),
-        number: number,
+        number: 3u32,
         json: hexagon_types::Mission::HighScore(
             hexagon_types::MissionHighscore::V1(MissionHighscoreV1 {
                 board,
@@ -169,8 +171,7 @@ async fn upsert_mission_3(db: &DB) {
 }
 
 async fn upsert_mission_4(db: &DB) {
-    let number = 4u32;
-    let mission_id = Uuid::from_u128(number as u128);
+    let mission_id = Uuid::from_u128(400);
 
     let hand_size = 3;
     let random_seed = 3446;
@@ -203,7 +204,7 @@ async fn upsert_mission_4(db: &DB) {
         kind: hexagon_db::MissionKind::HighScore,
         name: "Tutorial #4".into(),
         description: "Move to the green target arrow".into(),
-        number: number,
+        number: 4u32,
         json: hexagon_types::Mission::HighScore(
             hexagon_types::MissionHighscore::V1(MissionHighscoreV1 {
                 board,
@@ -223,8 +224,7 @@ async fn upsert_mission_4(db: &DB) {
 }
 
 async fn upsert_mission_5(db: &DB) {
-    let number = 5u32;
-    let mission_id = Uuid::from_u128(number as u128);
+    let mission_id = Uuid::from_u128(500);
 
     let hand_size = 3;
     let random_seed = 343546;
@@ -258,7 +258,7 @@ async fn upsert_mission_5(db: &DB) {
         kind: hexagon_db::MissionKind::HighScore,
         name: "Tutorial #5".into(),
         description: "Move at least 10".into(),
-        number: number,
+        number: 5u32,
         json: hexagon_types::Mission::HighScore(
             hexagon_types::MissionHighscore::V1(MissionHighscoreV1 {
                 board,
@@ -278,8 +278,7 @@ async fn upsert_mission_5(db: &DB) {
 }
 
 async fn upsert_mission_6(db: &DB) {
-    let number = 6u32;
-    let mission_id = Uuid::from_u128(number as u128);
+    let mission_id = Uuid::from_u128(600);
 
     let hand_size = 3;
     let random_seed = 2443546;
@@ -313,7 +312,7 @@ async fn upsert_mission_6(db: &DB) {
         kind: hexagon_db::MissionKind::HighScore,
         name: "Tutorial #6".into(),
         description: "Move at high speed: Travel 5 segments in one turn".into(),
-        number: number,
+        number: 6u32,
         json: hexagon_types::Mission::HighScore(
             hexagon_types::MissionHighscore::V1(MissionHighscoreV1 {
                 board,
@@ -333,8 +332,7 @@ async fn upsert_mission_6(db: &DB) {
 }
 
 async fn upsert_mission_7(db: &DB) {
-    let number = 7u32;
-    let mission_id = Uuid::from_u128(number as u128);
+    let mission_id = Uuid::from_u128(700);
 
     let hand_size = 3;
     let random_seed = 9876556;
@@ -357,7 +355,7 @@ async fn upsert_mission_7(db: &DB) {
         kind: hexagon_db::MissionKind::HighScore,
         name: "Tutorial #7".into(),
         description: "Move the red player to the red target arrow".into(),
-        number: number,
+        number: 7u32,
         json: hexagon_types::Mission::HighScore(
             hexagon_types::MissionHighscore::V2(MissionHighscoreV2 {
                 board: Board::create_board_from_hexagons(
@@ -372,6 +370,158 @@ async fn upsert_mission_7(db: &DB) {
                     min_velocity: HashMap::new(),
                     min_distance: HashMap::new(),
                     target: [(PlayerId(1), ConnectorId(25))].into(),
+                },
+            })
+            .into(),
+        ),
+    };
+    db.upsert_mission(&mission).await.unwrap();
+}
+
+async fn upsert_mission_8(db: &DB) {
+    let mission_id = Uuid::from_u128(8);
+
+    let hand_size = 3;
+    let random_seed = 56321;
+
+    let mut rng = RandomNumberGenerator::new(random_seed);
+    let starting_hand = (0..hand_size)
+        .map(|_| Tile::create_fully_connected(&mut rng))
+        .collect();
+
+    let mission = MissionEntry {
+        id: mission_id,
+        kind: hexagon_db::MissionKind::HighScore,
+        name: "Tutorial #8".into(),
+        description: "Move the red player to the red target arrow".into(),
+        number: 8u32,
+        json: hexagon_types::Mission::HighScore(
+            hexagon_types::MissionHighscore::V2(MissionHighscoreV2 {
+                board: Board::create_board(3, hexagon_types::OuterConnectors::OnlyDeathEnds)
+                    .unwrap(),
+                starting_points: vec![ConnectorId(3), ConnectorId(12)],
+                random_seed: hand_size,
+                starting_hand: starting_hand,
+                winning_condition: WinningConditionHighscoreV2 {
+                    min_velocity: HashMap::new(),
+                    min_distance: HashMap::new(),
+                    target: [(PlayerId(1), ConnectorId(32))].into(),
+                },
+            })
+            .into(),
+        ),
+    };
+    db.upsert_mission(&mission).await.unwrap();
+}
+
+async fn upsert_mission_9(db: &DB) {
+    let mission_id = Uuid::from_u128(9);
+
+    let hand_size = 3;
+    let random_seed = 9876556;
+
+    let mut rng = RandomNumberGenerator::new(random_seed);
+    let starting_hand = (0..hand_size)
+        .map(|_| Tile::create_fully_connected(&mut rng))
+        .collect();
+
+    let mission = MissionEntry {
+        id: mission_id,
+        kind: hexagon_db::MissionKind::HighScore,
+        name: "Tutorial #9".into(),
+        description: "Move the red player to the red target arrow".into(),
+        number: 9u32,
+        json: hexagon_types::Mission::HighScore(
+            hexagon_types::MissionHighscore::V2(MissionHighscoreV2 {
+                board: Board::create_board(3, hexagon_types::OuterConnectors::OnlyDeathEnds)
+                    .unwrap(),
+                starting_points: vec![ConnectorId(3), ConnectorId(7)],
+                random_seed: hand_size,
+                starting_hand: starting_hand,
+                winning_condition: WinningConditionHighscoreV2 {
+                    min_velocity: HashMap::new(),
+                    min_distance: HashMap::new(),
+                    target: [(PlayerId(1), ConnectorId(25))].into(),
+                },
+            })
+            .into(),
+        ),
+    };
+    db.upsert_mission(&mission).await.unwrap();
+}
+
+async fn upsert_mission_delivery_1(db: &DB) {
+    let mission_id = Uuid::from_u128(11);
+
+    let hand_size = 3;
+    let random_seed = 35363;
+
+    let mut rng = RandomNumberGenerator::new(random_seed);
+    let starting_hand = (0..hand_size)
+        .map(|_| Tile::create_fully_connected(&mut rng))
+        .collect();
+
+    let mission = MissionEntry {
+        id: mission_id,
+        kind: hexagon_db::MissionKind::HighScore,
+        name: "Delivery #1".into(),
+        description: "Move green and red to their targets".into(),
+        number: 101u32,
+        json: hexagon_types::Mission::HighScore(
+            hexagon_types::MissionHighscore::V2(MissionHighscoreV2 {
+                board: Board::create_board(3, hexagon_types::OuterConnectors::OnlyDeathEnds)
+                    .unwrap(),
+                starting_points: vec![ConnectorId(2), ConnectorId(5)],
+                random_seed: hand_size,
+                starting_hand: starting_hand,
+                winning_condition: WinningConditionHighscoreV2 {
+                    min_velocity: HashMap::new(),
+                    min_distance: HashMap::new(),
+                    target: [
+                        (PlayerId(0), ConnectorId(28)),
+                        (PlayerId(1), ConnectorId(18)),
+                    ]
+                    .into(),
+                },
+            })
+            .into(),
+        ),
+    };
+    db.upsert_mission(&mission).await.unwrap();
+}
+
+async fn upsert_mission_delivery_5(db: &DB) {
+    let mission_id = Uuid::from_u128(10);
+
+    let hand_size = 3;
+    let random_seed = 57521;
+
+    let mut rng = RandomNumberGenerator::new(random_seed);
+    let starting_hand = (0..hand_size)
+        .map(|_| Tile::create_fully_connected(&mut rng))
+        .collect();
+
+    let mission = MissionEntry {
+        id: mission_id,
+        kind: hexagon_db::MissionKind::HighScore,
+        name: "Delivery #5".into(),
+        description: "Move green and red to their targets".into(),
+        number: 105u32,
+        json: hexagon_types::Mission::HighScore(
+            hexagon_types::MissionHighscore::V2(MissionHighscoreV2 {
+                board: Board::create_board(3, hexagon_types::OuterConnectors::OnlyDeathEnds)
+                    .unwrap(),
+                starting_points: vec![ConnectorId(3), ConnectorId(4)],
+                random_seed: hand_size,
+                starting_hand: starting_hand,
+                winning_condition: WinningConditionHighscoreV2 {
+                    min_velocity: HashMap::new(),
+                    min_distance: HashMap::new(),
+                    target: [
+                        (PlayerId(0), ConnectorId(22)),
+                        (PlayerId(1), ConnectorId(8)),
+                    ]
+                    .into(),
                 },
             })
             .into(),

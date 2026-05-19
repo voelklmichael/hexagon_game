@@ -1,7 +1,8 @@
 use hexagon_types::{
-    DBHighscore, DBHighscorePeak, LoginResponse, MeResponse, MissionEntry, MissionKind,
+    DBHighscorePeak, LoginResponse, MeResponse, MissionEntry, MissionKind, PlayerStats,
     PreviousGame, SavePreviousGameRequest,
 };
+use std::collections::HashMap;
 use uuid::Uuid;
 
 #[derive(Debug, thiserror::Error)]
@@ -93,11 +94,6 @@ impl ApiClient {
     }
 
     // --- highscore ---
-    pub async fn upsert_highscore(&self, score: &DBHighscore) -> Result<(), ApiError> {
-        let res = self.post(self.url("/highscore")).json(score).send().await?;
-        Self::expect_no_content(res).await
-    }
-
     pub async fn fetch_highscore_user(
         &self,
         user_id: Uuid,
@@ -153,6 +149,7 @@ impl ApiClient {
         user_id: Uuid,
         mission_id: Uuid,
         game_state: &serde_json::Value,
+        players: HashMap<u8, PlayerStats>,
     ) -> Result<i64, ApiError> {
         let res = self
             .post(self.url("/previous_games"))
@@ -160,6 +157,7 @@ impl ApiClient {
                 user_id,
                 mission_id,
                 game_state: game_state.clone(),
+                players,
             })
             .send()
             .await?;

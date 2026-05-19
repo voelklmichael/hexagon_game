@@ -19,6 +19,7 @@ async fn main() {
     db.upsert_highscore(&DBHighscore {
         user_id,
         mission_id,
+        game_id: 0,
         players: [
             (
                 0u8,
