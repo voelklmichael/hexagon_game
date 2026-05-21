@@ -95,7 +95,7 @@ fn edge_inward_normal(edge: &Edge) -> (f64, f64) {
     }
 }
 
-fn draw_tile_preview(
+pub(crate) fn draw_tile_preview(
     ui: &mut egui::Ui,
     r: f64,
     connectors: &[ConnectorEdgeSub],

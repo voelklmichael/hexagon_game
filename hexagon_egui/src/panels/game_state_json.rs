@@ -1,5 +1,7 @@
+#[cfg(debug_assertions)]
 use hexagon_engine::GameState;
 
+#[cfg(debug_assertions)]
 pub fn show(ui: &mut egui::Ui, game: Option<&GameState>) {
     let json = match game {
         Some(g) => serde_json::to_string_pretty(g).unwrap_or_else(|e| e.to_string()),

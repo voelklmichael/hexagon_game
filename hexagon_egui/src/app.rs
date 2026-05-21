@@ -14,11 +14,11 @@ use hexagon_engine::{
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Copy, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum LeftTab {
-    #[default]
     Missions,
     Multiplayer,
     Hand,
-    Help,
+    #[default]
+    Introduction,
     Options,
     Statistics,
     Controls,
@@ -34,7 +34,7 @@ impl LeftTab {
             LeftTab::Options => "Options",
             LeftTab::Hand => "Player Hand",
             LeftTab::Controls => "Controls",
-            LeftTab::Help => "Help / Tutorial",
+            LeftTab::Introduction => "Introduction",
             LeftTab::Rendering => "Rendering",
             LeftTab::Statistics => "Statistics",
             LeftTab::GameStateJson => "Game State JSON",
@@ -219,9 +219,40 @@ pub struct HexApp {
     pub cached_user_bests: HashMap<Uuid, DBHighscorePeak>,
     /// Cached global highscores keyed by mission id, persisted for offline display.
     pub cached_overall_bests: HashMap<Uuid, DBHighscorePeak>,
+    #[serde(skip, default = "default_true")]
+    pub show_introduction_screen: bool,
+    #[serde(skip)]
+    pub slideshow: crate::panels::introduction_central_panel::SlideshowState,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 impl HexApp {
+    fn start_intro_mission(&mut self) {
+        let idx = 0;
+        let prev_game = self.game.take();
+        crate::panels::missions::start_mission(&self.missions, idx, &mut self.game);
+        if self.game.is_none() {
+            self.game = prev_game;
+        } else {
+            self.history.undo_stack.clear();
+            self.history.redo_stack.clear();
+            self.current_mission = Some(idx);
+            self.left_tab = LeftTab::Hand;
+            self.show_introduction_screen = false;
+            if let Some(mission_uuid) = crate::panels::missions::mission_id(&self.missions, idx) {
+                self.backend_reqwest
+                    .fetch_mission_overall_best(mission_uuid);
+                if let Some((user_id, _)) = &self.user_login.logged_in_as {
+                    self.backend_reqwest
+                        .fetch_mission_user_best(*user_id, mission_uuid);
+                }
+            }
+        }
+    }
+
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let mut app: Self = if let Some(storage) = cc.storage {
             eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
@@ -390,7 +421,7 @@ impl eframe::App for HexApp {
                                 LeftTab::Options,
                                 LeftTab::Hand,
                                 LeftTab::Controls,
-                                LeftTab::Help,
+                                LeftTab::Introduction,
                                 LeftTab::Rendering,
                                 LeftTab::Statistics,
                                 LeftTab::GameStateJson,
@@ -416,6 +447,7 @@ impl eframe::App for HexApp {
                             self.history.redo_stack.clear();
                             self.current_mission = Some(idx);
                             self.left_tab = LeftTab::Hand;
+                            self.show_introduction_screen = false;
                             if let Some(mission_uuid) =
                                 crate::panels::missions::mission_id(&self.missions, idx)
                             {
@@ -441,6 +473,7 @@ impl eframe::App for HexApp {
                                     self.history.redo_stack.clear();
                                     self.current_mission = None;
                                     self.left_tab = LeftTab::Hand;
+                                    self.show_introduction_screen = false;
                                 }
                                 Err(e) => eprintln!("Failed to start game: {e}"),
                             }
@@ -468,6 +501,7 @@ impl eframe::App for HexApp {
                                     self.history.redo_stack.clear();
                                     self.current_mission = None;
                                     self.left_tab = LeftTab::Hand;
+                                    self.show_introduction_screen = false;
                                 }
                                 Err(e) => eprintln!("Failed to start game: {e}"),
                             }
@@ -479,6 +513,7 @@ impl eframe::App for HexApp {
                             self.history.redo_stack.clear();
                             self.current_mission = None;
                             self.left_tab = LeftTab::Hand;
+                            self.show_introduction_screen = false;
                         }
                     }
                     LeftTab::Hand => crate::panels::hand::show(
@@ -524,8 +559,14 @@ impl eframe::App for HexApp {
                         #[cfg(debug_assertions)]
                         crate::panels::game_state_json::show(ui, self.game.as_ref());
                     }
-                    LeftTab::Help => {
-                        crate::panels::help::show(ui);
+                    LeftTab::Introduction => {
+                        if crate::panels::introduction::show(
+                            ui,
+                            &mut self.show_introduction_screen,
+                            !self.missions.is_empty(),
+                        ) {
+                            self.start_intro_mission();
+                        }
                     }
                 });
             });
@@ -581,13 +622,21 @@ impl eframe::App for HexApp {
                             }
                             let logged_in = self.user_login.logged_in_as.is_some();
                             let bust_label = if logged_in { "👤✔" } else { "👤✘" };
-                            if ui.button(bust_label).on_hover_text("Open side panel").clicked() {
+                            if ui
+                                .button(bust_label)
+                                .on_hover_text("Open side panel")
+                                .clicked()
+                            {
                                 self.right_panel_open = true;
                             }
                         });
                     });
             }
-            if let Some(step) = replay_step {
+            if self.show_introduction_screen {
+                if self.slideshow.show(ui, !self.missions.is_empty()) {
+                    self.start_intro_mission();
+                }
+            } else if let Some(step) = replay_step {
                 if let Some(game) = self.replay.as_ref().and_then(|r| r.states.get(step)) {
                     crate::panels::game_board::show(
                         ui,
