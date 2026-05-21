@@ -219,6 +219,12 @@ pub struct HexApp {
     pub cached_user_bests: HashMap<Uuid, DBHighscorePeak>,
     /// Cached global highscores keyed by mission id, persisted for offline display.
     pub cached_overall_bests: HashMap<Uuid, DBHighscorePeak>,
+    #[serde(skip, default = "default_true")]
+    pub show_introduction_screen: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 impl HexApp {
@@ -416,6 +422,7 @@ impl eframe::App for HexApp {
                             self.history.redo_stack.clear();
                             self.current_mission = Some(idx);
                             self.left_tab = LeftTab::Hand;
+                            self.show_introduction_screen = false;
                             if let Some(mission_uuid) =
                                 crate::panels::missions::mission_id(&self.missions, idx)
                             {
@@ -441,6 +448,7 @@ impl eframe::App for HexApp {
                                     self.history.redo_stack.clear();
                                     self.current_mission = None;
                                     self.left_tab = LeftTab::Hand;
+                                    self.show_introduction_screen = false;
                                 }
                                 Err(e) => eprintln!("Failed to start game: {e}"),
                             }
@@ -468,6 +476,7 @@ impl eframe::App for HexApp {
                                     self.history.redo_stack.clear();
                                     self.current_mission = None;
                                     self.left_tab = LeftTab::Hand;
+                                    self.show_introduction_screen = false;
                                 }
                                 Err(e) => eprintln!("Failed to start game: {e}"),
                             }
@@ -479,6 +488,7 @@ impl eframe::App for HexApp {
                             self.history.redo_stack.clear();
                             self.current_mission = None;
                             self.left_tab = LeftTab::Hand;
+                            self.show_introduction_screen = false;
                         }
                     }
                     LeftTab::Hand => crate::panels::hand::show(
@@ -525,7 +535,7 @@ impl eframe::App for HexApp {
                         crate::panels::game_state_json::show(ui, self.game.as_ref());
                     }
                     LeftTab::Introduction => {
-                        crate::panels::introduction::show(ui);
+                        crate::panels::introduction::show(ui, &mut self.show_introduction_screen);
                     }
                 });
             });
@@ -591,7 +601,11 @@ impl eframe::App for HexApp {
                         });
                     });
             }
-            if let Some(step) = replay_step {
+            if self.show_introduction_screen {
+                ui.centered_and_justified(|ui| {
+                    ui.label(egui::RichText::new("Introduction").size(48.0));
+                });
+            } else if let Some(step) = replay_step {
                 if let Some(game) = self.replay.as_ref().and_then(|r| r.states.get(step)) {
                     crate::panels::game_board::show(
                         ui,

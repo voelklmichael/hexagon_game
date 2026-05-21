@@ -1,4 +1,14 @@
-pub fn show(ui: &mut egui::Ui) {
+pub fn show(ui: &mut egui::Ui, show_introduction_screen: &mut bool) {
+    let label = if *show_introduction_screen {
+        "Hide Introduction"
+    } else {
+        "Introduction"
+    };
+    if ui.button(label).clicked() {
+        *show_introduction_screen = !*show_introduction_screen;
+    }
+    ui.separator();
+
     ui.collapsing("How to play", |ui| {
         ui.add(egui::Label::new("Select a tile from your hand, rotate it if needed, then press \"Play selected tile\".").wrap());
         ui.add(egui::Label::new("Players move automatically along the connected path after each tile is placed.").wrap());
