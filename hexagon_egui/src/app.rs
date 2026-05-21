@@ -138,7 +138,6 @@ pub struct RenderingData {
     pub hex_stroke: Color,
     pub highlighted_hex_fill: Color,
     pub highlighted_hex_stroke: Color,
-    pub background: Color,
 }
 
 impl Default for RenderingData {
@@ -161,10 +160,6 @@ impl Default for RenderingData {
             hex_stroke: Color::DarkGray,
             highlighted_hex_fill: Color::Moccasin,
             highlighted_hex_stroke: Color::DarkOrange,
-            #[cfg(not(target_arch = "wasm32"))]
-            background: Color::Black,
-            #[cfg(target_arch = "wasm32")]
-            background: Color::White,
         }
     }
 }
@@ -569,16 +564,25 @@ impl eframe::App for HexApp {
                 let avail = ui.available_rect_before_wrap();
                 let ctx = ui.ctx().clone();
                 egui::Area::new(egui::Id::new("right_panel_btn"))
-                    .fixed_pos(avail.right_top() + egui::vec2(-32.0, 4.0))
+                    .fixed_pos(avail.right_top() + egui::vec2(-72.0, 4.0))
                     .order(egui::Order::Foreground)
                     .show(&ctx, |ui| {
-                        if ui
-                            .button("👤")
-                            .on_hover_text("Open side panel")
-                            .clicked()
-                        {
-                            self.right_panel_open = true;
-                        }
+                        ui.horizontal(|ui| {
+                            let dark = ui.visuals().dark_mode;
+                            if ui.button(if dark { "☀" } else { "🌙" })
+                                .on_hover_text(if dark { "Switch to light mode" } else { "Switch to dark mode" })
+                                .clicked()
+                            {
+                                ui.ctx().set_visuals(if dark {
+                                    egui::Visuals::light()
+                                } else {
+                                    egui::Visuals::dark()
+                                });
+                            }
+                            if ui.button("👤").on_hover_text("Open side panel").clicked() {
+                                self.right_panel_open = true;
+                            }
+                        });
                     });
             }
             if let Some(step) = replay_step {
