@@ -579,7 +579,9 @@ impl eframe::App for HexApp {
                                     egui::Visuals::dark()
                                 });
                             }
-                            if ui.button("👤").on_hover_text("Open side panel").clicked() {
+                            let logged_in = self.user_login.logged_in_as.is_some();
+                            let bust_label = if logged_in { "👤✔" } else { "👤✘" };
+                            if ui.button(bust_label).on_hover_text("Open side panel").clicked() {
                                 self.right_panel_open = true;
                             }
                         });
