@@ -1,7 +1,13 @@
 use std::time::Duration;
 
-use hexagon_engine::{ConnectorEdgeSub, Edge, EdgeSub, Sub};
+use hexagon_engine::{
+    CollisionMode, ConnectorEdgeSub, Edge, EdgeSub, GameOptions, GameOptionsStandard, GameState,
+    OuterConnectors, Sub, WinningCondition,
+};
+use hexagon_types::Tile;
 use strum::VariantArray;
+
+use crate::panels::hand::draw_tile_preview;
 
 const AUTO_CYCLE_SECS: f64 = 5.0;
 const DOT_RADIUS: f32 = 5.0;
@@ -12,9 +18,6 @@ enum Slide {
     Welcome,
     PlacingTilesRotating,
     PlacingTilesPlaying,
-    ConnectorTypes,
-    WinningConditions,
-    Controls,
 }
 
 impl Slide {
@@ -23,13 +26,10 @@ impl Slide {
             Self::Welcome => "Hexagon - The Game",
             Self::PlacingTilesRotating => "Placing Tiles",
             Self::PlacingTilesPlaying => "Placing Tiles",
-            Self::ConnectorTypes => "Connector Types",
-            Self::WinningConditions => "Winning Conditions",
-            Self::Controls => "Controls",
         }
     }
 
-    fn show(self, ui: &mut egui::Ui) {
+    fn show(self, ui: &mut egui::Ui, demo_game: Option<&GameState>) {
         let title_color = ui.visuals().strong_text_color();
         ui.add_space(14.0);
         ui.label(
@@ -40,6 +40,9 @@ impl Slide {
         );
         ui.add_space(8.0);
 
+        let hex_fill = ui.visuals().extreme_bg_color;
+        let hex_stroke = ui.visuals().text_color();
+        let available_rect = ui.available_rect_before_wrap();
         match self {
             Self::Welcome => {
                 ui.label(
@@ -50,9 +53,6 @@ impl Slide {
                     .italics(),
                 );
                 ui.add_space(6.0);
-                let hex_fill = ui.visuals().extreme_bg_color;
-                let available_rect = ui.available_rect_before_wrap();
-                let hex_stroke = ui.visuals().text_color();
                 let tiles = demo_tiles();
                 let body_h = available_rect.height().max(1.0);
                 let r_from_h = (body_h / 2.4) as f64;
@@ -66,7 +66,7 @@ impl Slide {
                 ui.horizontal(|ui| {
                     ui.add_space(left_pad);
                     for (connectors, color) in &tiles {
-                        crate::panels::hand::draw_tile_preview(
+                        draw_tile_preview(
                             ui, tile_r, connectors, false, hex_fill, hex_stroke, *color,
                         );
                     }
@@ -77,43 +77,105 @@ impl Slide {
                     "Select a tile from your hand, rotate it with ↺ / ↻, then press ➡ to play it.\n\
                      All players advance along the path after each tile.",
                 ).size(14.5));
+                let tiles = demo_tiles();
+                let body_h = available_rect.height().max(1.0);
+                let r_from_h = (body_h / 2.4) as f64;
+                let spacing = ui.spacing().item_spacing.x;
+                let body_w = (available_rect.width() - 48.0).max(1.0);
+                let r_from_w = ((body_w - 2.0 * spacing) / (tiles.len() as f32 * 2.4)) as f64;
+                let tile_r = r_from_h.min(r_from_w).max(10.0);
+                let tile_side = tile_r as f32 * 2.4;
+                let total_w = 2. * tile_side + (tiles.len() - 1) as f32 * spacing;
+                let left_pad = (available_rect.width() - total_w).max(0.0) / 2.0;
+                ui.centered_and_justified(|ui| {
+                    ui.horizontal(|ui| {
+                        ui.add_space(left_pad);
+                        let (tile, color) = tiles[2].clone();
+                        let mut rotated = Tile {
+                            inner_connectors: tile.clone(),
+                        };
+                        rotated.rotate(hexagon_types::TileRotationDirection::CounterClockwise);
+                        draw_tile_preview(ui, tile_r, &tile, false, hex_fill, hex_stroke, color);
+                        ui.label("Click rotate ↺");
+                        draw_tile_preview(
+                            ui,
+                            tile_r,
+                            &rotated.inner_connectors,
+                            false,
+                            hex_fill,
+                            hex_stroke,
+                            color,
+                        );
+                    });
+                });
             }
             Self::PlacingTilesPlaying => {
                 ui.label(egui::RichText::new(
                     "Select a tile from your hand, rotate it with ↺ / ↻, then press ➡ to play it.\n\
                      All players advance along the path after each tile.",
                 ).size(14.5));
-            }
-            Self::ConnectorTypes => {
-                ui.label(
-                    egui::RichText::new(
-                        "OnHex — a curve inside one hexagon.\n\
-                     HexToHex — a passage between two adjacent hexagons.\n\
-                     Outside — connects two non-adjacent outer edges.\n\
-                     DeadEnd — no continuation; players stop here.",
-                    )
-                    .size(14.5),
+                let Some(before) = demo_game else {
+                    return;
+                };
+                let mut after = before.clone();
+                after.play_tile(0);
+
+                let rendering_data = crate::app::RenderingData::default();
+                let board_h = available_rect.height().max(10.0);
+                let middle_w = (available_rect.width() * 0.26).max(50.0);
+                let board_w = ((available_rect.width() - middle_w) / 2.0).max(10.0);
+
+                // Tile to be played: current player's first hand tile
+                let tile_connectors: &[ConnectorEdgeSub] = before
+                    .players
+                    .iter()
+                    .find(|p| p.id == before.current_player)
+                    .and_then(|p| p.hand.first())
+                    .map(|t| t.inner_connectors.as_slice())
+                    .unwrap_or(&[]);
+                let tile_color = crate::panels::color_to_egui(
+                    rendering_data
+                        .player_colors
+                        .get(&before.current_player)
+                        .copied()
+                        .unwrap_or(hexagon_engine::Color::Green),
                 );
-            }
-            Self::WinningConditions => {
-                ui.label(
-                    egui::RichText::new(
-                        "Last Man Standing — the last active player wins.\n\
-                     Longest Way — greatest total path weight wins.\n\
-                     Highest Velocity — greatest single-turn speed wins.",
-                    )
-                    .size(14.5),
-                );
-            }
-            Self::Controls => {
-                ui.label(
-                    egui::RichText::new(
-                        "Click a tile to select it  ·  ↺ / ↻ to rotate  ·  ➡ to play it\n\
-                     Undo / Redo to step through placements\n\
-                     Restart replays with the same seed  ·  New Game starts fresh",
-                    )
-                    .size(14.5),
-                );
+                let label_h = 32.0;
+                let tile_r = ((middle_w - 8.0) / 2.4 / 1.5)
+                    .min((board_h - label_h) / 2.4)
+                    .max(8.0) as f64;
+
+                ui.horizontal(|ui| {
+                    ui.allocate_ui(egui::vec2(board_w, board_h), |ui| {
+                        let mut bi = crate::app::BoardInteraction::default();
+                        crate::panels::game_board::show(ui, before, &rendering_data, &mut bi);
+                    });
+                    ui.allocate_ui(egui::vec2(middle_w, board_h), |ui| {
+                        ui.vertical_centered(|ui| {
+                            let top_pad = (board_h - tile_r as f32 * 2.4 - label_h).max(0.0) / 2.0;
+                            ui.add_space(top_pad);
+                            draw_tile_preview(
+                                ui,
+                                tile_r,
+                                tile_connectors,
+                                true,
+                                hex_fill,
+                                hex_stroke,
+                                tile_color,
+                            );
+                            ui.add_space(4.0);
+                            ui.label(
+                                egui::RichText::new("play by pressing ➡")
+                                    .size(14.5)
+                                    .color(ui.visuals().weak_text_color()),
+                            );
+                        });
+                    });
+                    ui.allocate_ui(egui::vec2(board_w, board_h), |ui| {
+                        let mut bi = crate::app::BoardInteraction::default();
+                        crate::panels::game_board::show(ui, &after, &rendering_data, &mut bi);
+                    });
+                });
             }
         }
     }
@@ -183,10 +245,31 @@ fn demo_tiles() -> [(Vec<ConnectorEdgeSub>, egui::Color32); 3] {
         (spiral, egui::Color32::from_rgb(60, 160, 90)),
     ]
 }
+fn init_demo_game() -> GameState {
+    let mut game = GameOptions::Standard(GameOptionsStandard {
+        board_radius: 2,
+        outer_connectors: OuterConnectors::ReducedDeathEnds,
+        random_seed: 35646,
+        player_count: 1,
+        collision_mode: CollisionMode::PassThrough,
+        winning_condition: WinningCondition::LongestWay,
+        hand_size: 3,
+    })
+    .start_game()
+    .expect("demo game");
+    for _ in 0..1 {
+        if game.result.is_none() {
+            game.play_tile(0);
+        }
+    }
+    game
+}
+
 pub struct SlideshowState {
     current: usize,
     last_changed: Option<f64>,
     auto_cycle: bool,
+    demo_game: Option<GameState>,
 }
 
 impl Default for SlideshowState {
@@ -195,12 +278,16 @@ impl Default for SlideshowState {
             current: 0,
             last_changed: None,
             auto_cycle: true,
+            demo_game: None,
         }
     }
 }
 
 impl SlideshowState {
     pub fn show(&mut self, ui: &mut egui::Ui, missions_available: bool) -> bool {
+        if self.demo_game.is_none() {
+            self.demo_game = Some(init_demo_game());
+        }
         let now = ui.ctx().input(|i| i.time);
         if self.last_changed.is_none() {
             self.last_changed = Some(now);
@@ -242,7 +329,7 @@ impl SlideshowState {
 
                     ui.with_layout(
                         egui::Layout::top_down(egui::Align::Center).with_cross_justify(true),
-                        |ui| Slide::VARIANTS[self.current].show(ui),
+                        |ui| Slide::VARIANTS[self.current].show(ui, self.demo_game.as_ref()),
                     );
                 },
             );
