@@ -10,7 +10,8 @@ const DOT_SPACING: f32 = 22.0;
 #[derive(Clone, Copy, strum::VariantArray)]
 enum Slide {
     Welcome,
-    PlacingTiles,
+    PlacingTilesRotating,
+    PlacingTilesPlaying,
     ConnectorTypes,
     WinningConditions,
     Controls,
@@ -20,7 +21,8 @@ impl Slide {
     fn title(self) -> &'static str {
         match self {
             Self::Welcome => "Hexagon - The Game",
-            Self::PlacingTiles => "Placing Tiles",
+            Self::PlacingTilesRotating => "Placing Tiles",
+            Self::PlacingTilesPlaying => "Placing Tiles",
             Self::ConnectorTypes => "Connector Types",
             Self::WinningConditions => "Winning Conditions",
             Self::Controls => "Controls",
@@ -70,7 +72,13 @@ impl Slide {
                     }
                 });
             }
-            Self::PlacingTiles => {
+            Self::PlacingTilesRotating => {
+                ui.label(egui::RichText::new(
+                    "Select a tile from your hand, rotate it with ↺ / ↻, then press ➡ to play it.\n\
+                     All players advance along the path after each tile.",
+                ).size(14.5));
+            }
+            Self::PlacingTilesPlaying => {
                 ui.label(egui::RichText::new(
                     "Select a tile from your hand, rotate it with ↺ / ↻, then press ➡ to play it.\n\
                      All players advance along the path after each tile.",
@@ -204,7 +212,7 @@ impl SlideshowState {
                 self.current = (self.current + 1) % Slide::VARIANTS.len();
                 self.last_changed = Some(now);
             }
-            ui.ctx().request_repaint_after(Duration::from_millis(200));
+            ui.ctx().request_repaint_after(Duration::from_millis(500));
         }
 
         let mut start_clicked = false;
@@ -272,23 +280,17 @@ impl SlideshowState {
 
     fn show_slide(&mut self, now: f64, ui: &mut egui::Ui) {
         if self.auto_cycle {
+            let bar_h = DOT_RADIUS * 0.6;
             let available_width = ui.available_width();
-            let available_height = ui.available_height();
-            let slide_rect = ui
-                .allocate_space(egui::vec2(available_width, available_height))
-                .1;
-
-            ui.painter()
-                .rect_filled(slide_rect, 10.0, ui.visuals().faint_bg_color);
+            let slide_rect = ui.allocate_space(egui::vec2(available_width, bar_h)).1;
 
             let elapsed = now - self.last_changed.unwrap_or(now);
             let progress = (elapsed / AUTO_CYCLE_SECS).clamp(0.0, 1.0) as f32;
-            let bar_rect = egui::Rect::from_min_size(
-                egui::pos2(slide_rect.left(), slide_rect.bottom() - 3.0),
-                egui::vec2(slide_rect.width() * progress, 3.0),
-            );
+            let (filled, empty) = slide_rect.split_left_right_at_fraction(progress);
             ui.painter()
-                .rect_filled(bar_rect, 0.0, ui.visuals().selection.bg_fill);
+                .rect_filled(empty, 10.0, ui.visuals().faint_bg_color);
+            ui.painter()
+                .rect_filled(filled, 0.0, ui.visuals().selection.bg_fill);
         }
     }
 }
