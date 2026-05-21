@@ -288,17 +288,18 @@ impl SlideshowState {
         Slide::VARIANTS[self.current].show(&mut child, slide_rect);
 
         if slide_response.drag_stopped()
-            && let Some(delta) = slide_response.total_drag_delta() {
-                let n = Slide::VARIANTS.len();
-                if delta.x > SWIPE_THRESHOLD {
-                    self.current = (self.current + n - 1) % n;
-                    self.auto_cycle = false;
-                    self.last_changed = Some(now);
-                } else if delta.x < -SWIPE_THRESHOLD {
-                    self.current = (self.current + 1) % n;
-                    self.auto_cycle = false;
-                    self.last_changed = Some(now);
-                }
+            && let Some(delta) = slide_response.total_drag_delta()
+        {
+            let n = Slide::VARIANTS.len();
+            if delta.x > SWIPE_THRESHOLD {
+                self.current = (self.current + n - 1) % n;
+                self.auto_cycle = false;
+                self.last_changed = Some(now);
+            } else if delta.x < -SWIPE_THRESHOLD {
+                self.current = (self.current + 1) % n;
+                self.auto_cycle = false;
+                self.last_changed = Some(now);
             }
+        }
     }
 }
