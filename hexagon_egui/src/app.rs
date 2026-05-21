@@ -376,9 +376,6 @@ impl eframe::App for HexApp {
             ReplayPhase::Animating | ReplayPhase::LoopWait => Some(r.step),
         });
 
-        let total_width = ui.available_width();
-        let max_side = total_width * 0.20;
-
         // Left panel — always visible, burger menu tabs
         egui::Panel::left("left_panel")
             .resizable(true)
@@ -547,7 +544,7 @@ impl eframe::App for HexApp {
         if right_open {
             egui::Panel::right("right_panel")
                 .resizable(true)
-                .max_size(max_side)
+
                 .show_inside(ui, |ui| {
                     ui.horizontal(|ui| {
                         if ui.button("➡").clicked() {
