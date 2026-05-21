@@ -437,7 +437,11 @@ impl eframe::App for HexApp {
                         }
                     }
                     LeftTab::Multiplayer => {
-                        if crate::panels::options::multiplayer_game(ui, &mut self.options, &mut self.rng) {
+                        if crate::panels::options::multiplayer_game(
+                            ui,
+                            &mut self.options,
+                            &mut self.rng,
+                        ) {
                             match self.options.standard.clone().start_game() {
                                 Ok(game) => {
                                     self.game = Some(game);
@@ -565,15 +569,20 @@ impl eframe::App for HexApp {
         // Centre — game board, fills all remaining space
         egui::CentralPanel::default().show_inside(ui, |ui| {
             if !right_open {
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::TOP), |ui| {
-                    if ui
-                        .small_button("☰")
-                        .on_hover_text("Open side panel")
-                        .clicked()
-                    {
-                        self.right_panel_open = true;
-                    }
-                });
+                let avail = ui.available_rect_before_wrap();
+                let ctx = ui.ctx().clone();
+                egui::Area::new(egui::Id::new("right_panel_btn"))
+                    .fixed_pos(avail.right_top() + egui::vec2(-32.0, 4.0))
+                    .order(egui::Order::Foreground)
+                    .show(&ctx, |ui| {
+                        if ui
+                            .button("👤")
+                            .on_hover_text("Open side panel")
+                            .clicked()
+                        {
+                            self.right_panel_open = true;
+                        }
+                    });
             }
             if let Some(step) = replay_step {
                 if let Some(game) = self.replay.as_ref().and_then(|r| r.states.get(step)) {
