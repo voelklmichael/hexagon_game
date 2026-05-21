@@ -1,9 +1,14 @@
+#[cfg(debug_assertions)]
 use hexagon_engine::Color;
+#[cfg(debug_assertions)]
 use strum::VariantArray;
 
+#[cfg(debug_assertions)]
 use crate::app::RenderingData;
+#[cfg(debug_assertions)]
 use crate::panels::color_to_egui;
 
+#[cfg(debug_assertions)]
 fn color_selector(ui: &mut egui::Ui, label: &str, color: &mut Color) {
     ui.horizontal(|ui| {
         let (rect, _) = ui.allocate_exact_size(egui::vec2(20.0, 16.0), egui::Sense::hover());
@@ -18,6 +23,7 @@ fn color_selector(ui: &mut egui::Ui, label: &str, color: &mut Color) {
     });
 }
 
+#[cfg(debug_assertions)]
 pub fn show(ui: &mut egui::Ui, data: &mut RenderingData) {
     ui.label("Board Colors");
     color_selector(ui, "Hex Fill", &mut data.hex_fill);
