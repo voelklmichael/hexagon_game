@@ -631,21 +631,12 @@ impl eframe::App for HexApp {
                     });
             }
             if self.show_introduction_screen {
-                ui.vertical_centered(|ui| {
-                    ui.add_space(ui.available_height() / 3.0);
-                    ui.label(egui::RichText::new("Introduction").size(48.0));
-                    ui.add_space(24.0);
-                    if ui
-                        .add_enabled(
-                            !self.missions.is_empty(),
-                            egui::Button::new(egui::RichText::new("Start game").size(20.0))
-                                .min_size(egui::vec2(160.0, 40.0)),
-                        )
-                        .clicked()
-                    {
-                        self.start_intro_mission();
-                    }
-                });
+                if crate::panels::introduction_central_panel::show(
+                    ui,
+                    !self.missions.is_empty(),
+                ) {
+                    self.start_intro_mission();
+                }
             } else if let Some(step) = replay_step {
                 if let Some(game) = self.replay.as_ref().and_then(|r| r.states.get(step)) {
                     crate::panels::game_board::show(
