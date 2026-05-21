@@ -1,9 +1,9 @@
 pub mod controls;
-pub mod introduction_central_panel;
 pub mod game_board;
 pub mod game_state_json;
 pub mod hand;
 pub mod introduction;
+pub mod introduction_central_panel;
 pub mod missions;
 pub mod music;
 pub mod options;
