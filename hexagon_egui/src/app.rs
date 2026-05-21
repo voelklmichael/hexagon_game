@@ -18,7 +18,7 @@ pub enum LeftTab {
     Missions,
     Multiplayer,
     Hand,
-    Help,
+    Introduction,
     Options,
     Statistics,
     Controls,
@@ -34,7 +34,7 @@ impl LeftTab {
             LeftTab::Options => "Options",
             LeftTab::Hand => "Player Hand",
             LeftTab::Controls => "Controls",
-            LeftTab::Help => "Help / Tutorial",
+            LeftTab::Introduction => "Introduction",
             LeftTab::Rendering => "Rendering",
             LeftTab::Statistics => "Statistics",
             LeftTab::GameStateJson => "Game State JSON",
@@ -390,7 +390,7 @@ impl eframe::App for HexApp {
                                 LeftTab::Options,
                                 LeftTab::Hand,
                                 LeftTab::Controls,
-                                LeftTab::Help,
+                                LeftTab::Introduction,
                                 LeftTab::Rendering,
                                 LeftTab::Statistics,
                                 LeftTab::GameStateJson,
@@ -524,8 +524,8 @@ impl eframe::App for HexApp {
                         #[cfg(debug_assertions)]
                         crate::panels::game_state_json::show(ui, self.game.as_ref());
                     }
-                    LeftTab::Help => {
-                        crate::panels::help::show(ui);
+                    LeftTab::Introduction => {
+                        crate::panels::introduction::show(ui);
                     }
                 });
             });
@@ -581,7 +581,11 @@ impl eframe::App for HexApp {
                             }
                             let logged_in = self.user_login.logged_in_as.is_some();
                             let bust_label = if logged_in { "👤✔" } else { "👤✘" };
-                            if ui.button(bust_label).on_hover_text("Open side panel").clicked() {
+                            if ui
+                                .button(bust_label)
+                                .on_hover_text("Open side panel")
+                                .clicked()
+                            {
                                 self.right_panel_open = true;
                             }
                         });
