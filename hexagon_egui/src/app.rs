@@ -455,7 +455,7 @@ impl eframe::App for HexApp {
                         }
                     }
                     LeftTab::Multiplayer => {
-                        if crate::panels::options::multiplayer_game(ui, &mut self.options) {
+                        if crate::panels::options::multiplayer_game(ui, &mut self.options, &mut self.rng) {
                             match self.options.standard.clone().start_game() {
                                 Ok(game) => {
                                     self.game = Some(game);
@@ -469,7 +469,7 @@ impl eframe::App for HexApp {
                         }
                     }
                     LeftTab::Options => {
-                        if crate::panels::options::show(ui, &mut self.options) {
+                        if crate::panels::options::show(ui, &mut self.options, &mut self.rng) {
                             let result = match self.options.selected {
                                 hexagon_engine::GameOptionsDiscriminants::Standard => {
                                     self.options.standard.clone().start_game()
