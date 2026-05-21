@@ -16,43 +16,35 @@ use hexagon_engine::{
 pub enum LeftTab {
     #[default]
     Missions,
-    Options,
+    Multiplayer,
     Hand,
+    Help,
+    Options,
+    Statistics,
     Controls,
-    Music,
     Rendering,
+    GameStateJson,
 }
 
 impl LeftTab {
     fn label(self) -> &'static str {
         match self {
             LeftTab::Missions => "Missions",
+            LeftTab::Multiplayer => "Multiplayer",
             LeftTab::Options => "Options",
             LeftTab::Hand => "Player Hand",
             LeftTab::Controls => "Controls",
-            LeftTab::Music => "Music",
+            LeftTab::Help => "Help / Tutorial",
             LeftTab::Rendering => "Rendering",
+            LeftTab::Statistics => "Statistics",
+            LeftTab::GameStateJson => "Game State JSON",
         }
     }
-}
 
-#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Copy, Default)]
-#[serde(rename_all = "camelCase")]
-pub enum RightTab {
-    #[default]
-    Help,
-    Statistics,
-    GameStateJson,
-    UserLogin,
-}
-
-impl RightTab {
-    fn label(self) -> &'static str {
+    fn visible(self) -> bool {
         match self {
-            RightTab::Help => "Help / Tutorial",
-            RightTab::Statistics => "Statistics",
-            RightTab::GameStateJson => "Game State JSON",
-            RightTab::UserLogin => "User Login",
+            LeftTab::Rendering | LeftTab::GameStateJson => cfg!(debug_assertions),
+            _ => true,
         }
     }
 }
@@ -146,7 +138,6 @@ pub struct RenderingData {
     pub hex_stroke: Color,
     pub highlighted_hex_fill: Color,
     pub highlighted_hex_stroke: Color,
-    pub background: Color,
 }
 
 impl Default for RenderingData {
@@ -169,10 +160,6 @@ impl Default for RenderingData {
             hex_stroke: Color::DarkGray,
             highlighted_hex_fill: Color::Moccasin,
             highlighted_hex_stroke: Color::DarkOrange,
-            #[cfg(not(target_arch = "wasm32"))]
-            background: Color::Black,
-            #[cfg(target_arch = "wasm32")]
-            background: Color::White,
         }
     }
 }
@@ -215,7 +202,6 @@ pub struct HexApp {
     pub music: MusicState,
     pub left_tab: LeftTab,
     pub right_panel_open: bool,
-    pub right_tab: RightTab,
     #[serde(skip)]
     pub replay: Option<ReplayPlayer>,
     #[serde(skip)]
@@ -385,14 +371,14 @@ impl eframe::App for HexApp {
             ReplayPhase::Animating | ReplayPhase::LoopWait => Some(r.step),
         });
 
-        let total_width = ui.available_width();
-        let max_side = total_width * 0.20;
-
         // Left panel — always visible, burger menu tabs
         egui::Panel::left("left_panel")
             .resizable(true)
             .show_inside(ui, |ui| {
                 // Burger menu header — copy tab to local so closure doesn't hold &mut self
+                if !self.left_tab.visible() {
+                    self.left_tab = LeftTab::default();
+                }
                 let mut left_tab = self.left_tab;
                 ui.horizontal(|ui| {
                     egui::ComboBox::from_id_salt("left_tab_select")
@@ -400,13 +386,18 @@ impl eframe::App for HexApp {
                         .show_ui(ui, |ui| {
                             for tab in [
                                 LeftTab::Missions,
+                                LeftTab::Multiplayer,
                                 LeftTab::Options,
                                 LeftTab::Hand,
                                 LeftTab::Controls,
-                                LeftTab::Music,
+                                LeftTab::Help,
                                 LeftTab::Rendering,
+                                LeftTab::Statistics,
+                                LeftTab::GameStateJson,
                             ] {
-                                ui.selectable_value(&mut left_tab, tab, tab.label());
+                                if tab.visible() {
+                                    ui.selectable_value(&mut left_tab, tab, tab.label());
+                                }
                             }
                         });
                 });
@@ -425,7 +416,6 @@ impl eframe::App for HexApp {
                             self.history.redo_stack.clear();
                             self.current_mission = Some(idx);
                             self.left_tab = LeftTab::Hand;
-                            self.right_tab = RightTab::Statistics;
                             if let Some(mission_uuid) =
                                 crate::panels::missions::mission_id(&self.missions, idx)
                             {
@@ -438,8 +428,26 @@ impl eframe::App for HexApp {
                             }
                         }
                     }
+                    LeftTab::Multiplayer => {
+                        if crate::panels::options::multiplayer_game(
+                            ui,
+                            &mut self.options,
+                            &mut self.rng,
+                        ) {
+                            match self.options.standard.clone().start_game() {
+                                Ok(game) => {
+                                    self.game = Some(game);
+                                    self.history.undo_stack.clear();
+                                    self.history.redo_stack.clear();
+                                    self.current_mission = None;
+                                    self.left_tab = LeftTab::Hand;
+                                }
+                                Err(e) => eprintln!("Failed to start game: {e}"),
+                            }
+                        }
+                    }
                     LeftTab::Options => {
-                        if crate::panels::options::show(ui, &mut self.options) {
+                        if crate::panels::options::show(ui, &mut self.options, &mut self.rng) {
                             let result = match self.options.selected {
                                 hexagon_engine::GameOptionsDiscriminants::Standard => {
                                     self.options.standard.clone().start_game()
@@ -460,7 +468,6 @@ impl eframe::App for HexApp {
                                     self.history.redo_stack.clear();
                                     self.current_mission = None;
                                     self.left_tab = LeftTab::Hand;
-                                    self.right_tab = RightTab::Statistics;
                                 }
                                 Err(e) => eprintln!("Failed to start game: {e}"),
                             }
@@ -472,99 +479,76 @@ impl eframe::App for HexApp {
                             self.history.redo_stack.clear();
                             self.current_mission = None;
                             self.left_tab = LeftTab::Hand;
-                            self.right_tab = RightTab::Statistics;
                         }
                     }
-                    LeftTab::Hand => {
-                        if crate::panels::hand::show(
-                            ui,
-                            &mut self.game,
-                            &self.rendering_data,
-                            &mut self.interaction,
-                            &mut self.history,
-                            &mut self.current_mission,
-                            &self.missions,
-                            &mut self.missions_won,
-                            &mut self.music,
-                            self.music_player.as_ref(),
-                        ) {
-                            self.right_tab = RightTab::Statistics;
-                        }
-                    }
+                    LeftTab::Hand => crate::panels::hand::show(
+                        ui,
+                        &mut self.game,
+                        &self.rendering_data,
+                        &mut self.interaction,
+                        &mut self.history,
+                        &mut self.current_mission,
+                        &self.missions,
+                        &mut self.missions_won,
+                        &mut self.music,
+                        self.music_player.as_ref(),
+                    ),
                     LeftTab::Controls => {
                         if crate::panels::controls::show(ui, &mut self.game, &mut self.history) {
                             self.left_tab = LeftTab::Hand;
-                            self.right_tab = RightTab::Statistics;
                         }
-                    }
-                    LeftTab::Music => {
+                        ui.separator();
                         crate::panels::music::show(ui, &mut self.music, self.music_player.as_ref());
                     }
                     LeftTab::Rendering => {
+                        #[cfg(debug_assertions)]
                         crate::panels::rendering::show(ui, &mut self.rendering_data);
+                    }
+                    LeftTab::Statistics => {
+                        let active_id = self.current_mission.and_then(|idx| {
+                            crate::panels::missions::mission_id(&self.missions, idx)
+                        });
+                        let user_best = active_id.and_then(|id| self.cached_user_bests.get(&id));
+                        let overall_best =
+                            active_id.and_then(|id| self.cached_overall_bests.get(&id));
+                        crate::panels::statistics::show(
+                            ui,
+                            &self.rendering_data,
+                            self.game.as_ref().map(|g| &g.statistics),
+                            self.game.as_ref().map(|g| &g.options),
+                            user_best,
+                            overall_best,
+                        );
+                    }
+                    LeftTab::GameStateJson => {
+                        #[cfg(debug_assertions)]
+                        crate::panels::game_state_json::show(ui, self.game.as_ref());
+                    }
+                    LeftTab::Help => {
+                        crate::panels::help::show(ui);
                     }
                 });
             });
 
-        // Right panel — collapsible, burger menu tabs
+        // Right panel — collapsible, shows User Login
         let right_open = self.right_panel_open;
         if right_open {
             egui::Panel::right("right_panel")
                 .resizable(true)
-                .max_size(max_side)
                 .show_inside(ui, |ui| {
-                    let mut right_tab = self.right_tab;
                     ui.horizontal(|ui| {
                         if ui.button("➡").clicked() {
                             self.right_panel_open = false;
                         }
-                        egui::ComboBox::from_id_salt("right_tab_select")
-                            .selected_text(format!("☰  {}", right_tab.label()))
-                            .show_ui(ui, |ui| {
-                                for tab in [
-                                    RightTab::Help,
-                                    RightTab::Statistics,
-                                    RightTab::GameStateJson,
-                                    RightTab::UserLogin,
-                                ] {
-                                    ui.selectable_value(&mut right_tab, tab, tab.label());
-                                }
-                            });
+                        ui.label("User Login");
                     });
-                    self.right_tab = right_tab;
                     ui.separator();
-
-                    egui::ScrollArea::vertical().show(ui, |ui| match self.right_tab {
-                        RightTab::Help => {
-                            crate::panels::help::show(ui);
-                        }
-                        RightTab::Statistics => {
-                            let active_id = self.current_mission.and_then(|idx| {
-                                crate::panels::missions::mission_id(&self.missions, idx)
-                            });
-                            let user_best =
-                                active_id.and_then(|id| self.cached_user_bests.get(&id));
-                            let overall_best =
-                                active_id.and_then(|id| self.cached_overall_bests.get(&id));
-                            crate::panels::statistics::show(
-                                ui,
-                                &self.rendering_data,
-                                self.game.as_ref().map(|g| &g.statistics),
-                                self.game.as_ref().map(|g| &g.options),
-                                user_best,
-                                overall_best,
-                            );
-                        }
-                        RightTab::GameStateJson => {
-                            crate::panels::game_state_json::show(ui, self.game.as_ref());
-                        }
-                        RightTab::UserLogin => {
-                            crate::panels::user_login::show(
-                                ui,
-                                &mut self.user_login,
-                                &mut self.backend_reqwest,
-                            );
-                        }
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        crate::panels::user_login::show(
+                            ui,
+                            &mut self.user_login,
+                            &mut self.backend_reqwest,
+                        );
                     });
                 });
         }
@@ -572,15 +556,36 @@ impl eframe::App for HexApp {
         // Centre — game board, fills all remaining space
         egui::CentralPanel::default().show_inside(ui, |ui| {
             if !right_open {
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::TOP), |ui| {
-                    if ui
-                        .small_button("☰")
-                        .on_hover_text("Open side panel")
-                        .clicked()
-                    {
-                        self.right_panel_open = true;
-                    }
-                });
+                let avail = ui.available_rect_before_wrap();
+                let ctx = ui.ctx().clone();
+                egui::Area::new(egui::Id::new("right_panel_btn"))
+                    .fixed_pos(avail.right_top() + egui::vec2(-72.0, 4.0))
+                    .order(egui::Order::Foreground)
+                    .show(&ctx, |ui| {
+                        ui.horizontal(|ui| {
+                            let dark = ui.visuals().dark_mode;
+                            if ui
+                                .button(if dark { "☀" } else { "🌙" })
+                                .on_hover_text(if dark {
+                                    "Switch to light mode"
+                                } else {
+                                    "Switch to dark mode"
+                                })
+                                .clicked()
+                            {
+                                ui.ctx().set_visuals(if dark {
+                                    egui::Visuals::light()
+                                } else {
+                                    egui::Visuals::dark()
+                                });
+                            }
+                            let logged_in = self.user_login.logged_in_as.is_some();
+                            let bust_label = if logged_in { "👤✔" } else { "👤✘" };
+                            if ui.button(bust_label).on_hover_text("Open side panel").clicked() {
+                                self.right_panel_open = true;
+                            }
+                        });
+                    });
             }
             if let Some(step) = replay_step {
                 if let Some(game) = self.replay.as_ref().and_then(|r| r.states.get(step)) {

@@ -253,7 +253,6 @@ pub fn show(
     };
 
     let painter = ui.painter_at(rect);
-    painter.rect_filled(rect, 0.0, color_to_egui(rendering_data.background));
 
     // Step 1: hexagons
     for hex in &render_task.hexagons {
@@ -288,6 +287,30 @@ pub fn show(
             verts,
             fill,
             egui::Stroke::new(2.0 * scale, stroke_color),
+        ));
+    }
+
+    // Redraw highlighted hex border on top so neighbors don't paint over its edges
+    if let Some(hl_hex) = &render_task.hexagon_to_highlight {
+        let (cx, cy) = hex_center(hl_hex);
+        let verts: Vec<egui::Pos2> = [
+            (cx + R, cy),
+            (cx + R / 2.0, cy + h),
+            (cx - R / 2.0, cy + h),
+            (cx - R, cy),
+            (cx - R / 2.0, cy - h),
+            (cx + R / 2.0, cy - h),
+        ]
+        .iter()
+        .map(|&(x, y)| to_screen(x, y))
+        .collect();
+        painter.add(egui::Shape::convex_polygon(
+            verts,
+            egui::Color32::TRANSPARENT,
+            egui::Stroke::new(
+                2.0 * scale,
+                color_to_egui(player_data.highlighted_hex_stroke),
+            ),
         ));
     }
 

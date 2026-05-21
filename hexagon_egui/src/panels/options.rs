@@ -1,9 +1,16 @@
-use hexagon_engine::{CollisionMode, GameOptionsDiscriminants, OuterConnectors, WinningCondition};
+use hexagon_engine::{
+    CollisionMode, GameOptionsDiscriminants, OuterConnectors, RandomNumberGenerator,
+    WinningCondition,
+};
 use hexagon_types::WinningConditionHighscoreV1;
 
 use crate::app::OptionsState;
 
-pub fn show(ui: &mut egui::Ui, options: &mut OptionsState) -> bool {
+pub fn show(
+    ui: &mut egui::Ui,
+    options: &mut OptionsState,
+    rng: &mut RandomNumberGenerator,
+) -> bool {
     ui.horizontal(|ui| {
         ui.selectable_value(
             &mut options.selected,
@@ -20,11 +27,21 @@ pub fn show(ui: &mut egui::Ui, options: &mut OptionsState) -> bool {
     ui.separator();
 
     match options.selected {
-        GameOptionsDiscriminants::Standard => show_standard(ui, options),
-        GameOptionsDiscriminants::Delivery => show_delivery(ui, options),
+        GameOptionsDiscriminants::Standard => show_standard(ui, options, rng),
+        GameOptionsDiscriminants::Delivery => show_delivery(ui, options, rng),
         GameOptionsDiscriminants::Highscore | GameOptionsDiscriminants::HighscoreV2 => {}
     }
 
+    ui.separator();
+    ui.button("Start New Game").clicked()
+}
+
+pub fn multiplayer_game(
+    ui: &mut egui::Ui,
+    options: &mut OptionsState,
+    rng: &mut RandomNumberGenerator,
+) -> bool {
+    show_standard(ui, options, rng);
     ui.separator();
     ui.button("Start New Game").clicked()
 }
@@ -59,7 +76,7 @@ fn outer_connectors_combo(ui: &mut egui::Ui, id: &str, value: &mut OuterConnecto
         });
 }
 
-fn show_standard(ui: &mut egui::Ui, options: &mut OptionsState) {
+fn show_standard(ui: &mut egui::Ui, options: &mut OptionsState, rng: &mut RandomNumberGenerator) {
     let s = &mut options.standard;
     egui::Grid::new("options_standard")
         .num_columns(2)
@@ -71,10 +88,6 @@ fn show_standard(ui: &mut egui::Ui, options: &mut OptionsState) {
 
             ui.label("Outer connectors");
             outer_connectors_combo(ui, "outer_connectors_standard", &mut s.outer_connectors);
-            ui.end_row();
-
-            ui.label("Random seed");
-            ui.add(egui::DragValue::new(&mut s.random_seed));
             ui.end_row();
 
             ui.label("Player count");
@@ -127,10 +140,16 @@ fn show_standard(ui: &mut egui::Ui, options: &mut OptionsState) {
             ui.label("Hand size");
             int_buttons(ui, &mut s.hand_size, 1);
             ui.end_row();
+
+            if ui.button("Random seed").clicked() {
+                s.random_seed = (rng.next_f64().abs() * u32::MAX as f64) as u32;
+            }
+            ui.add(egui::DragValue::new(&mut s.random_seed));
+            ui.end_row();
         });
 }
 
-fn show_delivery(ui: &mut egui::Ui, options: &mut OptionsState) {
+fn show_delivery(ui: &mut egui::Ui, options: &mut OptionsState, rng: &mut RandomNumberGenerator) {
     let d = &mut options.delivery;
     egui::Grid::new("options_delivery")
         .num_columns(2)
@@ -144,10 +163,6 @@ fn show_delivery(ui: &mut egui::Ui, options: &mut OptionsState) {
             outer_connectors_combo(ui, "outer_connectors_delivery", &mut d.outer_connectors);
             ui.end_row();
 
-            ui.label("Random seed");
-            ui.add(egui::DragValue::new(&mut d.random_seed));
-            ui.end_row();
-
             ui.label("NPC count");
             int_buttons(ui, &mut d.npc_count, 0);
             ui.end_row();
@@ -158,6 +173,12 @@ fn show_delivery(ui: &mut egui::Ui, options: &mut OptionsState) {
 
             ui.label("Hand size");
             int_buttons(ui, &mut d.hand_size, 1);
+            ui.end_row();
+
+            if ui.button("Random seed").clicked() {
+                d.random_seed = (rng.next_f64().abs() * u32::MAX as f64) as u32;
+            }
+            ui.add(egui::DragValue::new(&mut d.random_seed));
             ui.end_row();
         });
 }
