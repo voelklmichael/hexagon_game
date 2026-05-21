@@ -18,10 +18,10 @@ pub enum LeftTab {
     Missions,
     Multiplayer,
     Hand,
+    Help,
     Options,
     Statistics,
     Controls,
-    Music,
     Rendering,
     GameStateJson,
 }
@@ -34,7 +34,7 @@ impl LeftTab {
             LeftTab::Options => "Options",
             LeftTab::Hand => "Player Hand",
             LeftTab::Controls => "Controls",
-            LeftTab::Music => "Music",
+            LeftTab::Help => "Help / Tutorial",
             LeftTab::Rendering => "Rendering",
             LeftTab::Statistics => "Statistics",
             LeftTab::GameStateJson => "Game State JSON",
@@ -45,23 +45,6 @@ impl LeftTab {
         match self {
             LeftTab::Rendering | LeftTab::GameStateJson => cfg!(debug_assertions),
             _ => true,
-        }
-    }
-}
-
-#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Copy, Default)]
-#[serde(rename_all = "camelCase")]
-pub enum RightTab {
-    #[default]
-    Help,
-    UserLogin,
-}
-
-impl RightTab {
-    fn label(self) -> &'static str {
-        match self {
-            RightTab::Help => "Help / Tutorial",
-            RightTab::UserLogin => "User Login",
         }
     }
 }
@@ -224,7 +207,6 @@ pub struct HexApp {
     pub music: MusicState,
     pub left_tab: LeftTab,
     pub right_panel_open: bool,
-    pub right_tab: RightTab,
     #[serde(skip)]
     pub replay: Option<ReplayPlayer>,
     #[serde(skip)]
@@ -416,7 +398,7 @@ impl eframe::App for HexApp {
                                 LeftTab::Options,
                                 LeftTab::Hand,
                                 LeftTab::Controls,
-                                LeftTab::Music,
+                                LeftTab::Help,
                                 LeftTab::Rendering,
                                 LeftTab::Statistics,
                                 LeftTab::GameStateJson,
@@ -523,8 +505,7 @@ impl eframe::App for HexApp {
                         if crate::panels::controls::show(ui, &mut self.game, &mut self.history) {
                             self.left_tab = LeftTab::Hand;
                         }
-                    }
-                    LeftTab::Music => {
+                        ui.separator();
                         crate::panels::music::show(ui, &mut self.music, self.music_player.as_ref());
                     }
                     LeftTab::Rendering => {
@@ -551,43 +532,32 @@ impl eframe::App for HexApp {
                         #[cfg(debug_assertions)]
                         crate::panels::game_state_json::show(ui, self.game.as_ref());
                     }
+                    LeftTab::Help => {
+                        crate::panels::help::show(ui);
+                    }
                 });
             });
 
-        // Right panel — collapsible, burger menu tabs
+        // Right panel — collapsible, shows User Login
         let right_open = self.right_panel_open;
         if right_open {
             egui::Panel::right("right_panel")
                 .resizable(true)
                 .max_size(max_side)
                 .show_inside(ui, |ui| {
-                    let mut right_tab = self.right_tab;
                     ui.horizontal(|ui| {
                         if ui.button("➡").clicked() {
                             self.right_panel_open = false;
                         }
-                        egui::ComboBox::from_id_salt("right_tab_select")
-                            .selected_text(format!("☰  {}", right_tab.label()))
-                            .show_ui(ui, |ui| {
-                                for tab in [RightTab::Help, RightTab::UserLogin] {
-                                    ui.selectable_value(&mut right_tab, tab, tab.label());
-                                }
-                            });
+                        ui.label("User Login");
                     });
-                    self.right_tab = right_tab;
                     ui.separator();
-
-                    egui::ScrollArea::vertical().show(ui, |ui| match self.right_tab {
-                        RightTab::Help => {
-                            crate::panels::help::show(ui);
-                        }
-                        RightTab::UserLogin => {
-                            crate::panels::user_login::show(
-                                ui,
-                                &mut self.user_login,
-                                &mut self.backend_reqwest,
-                            );
-                        }
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        crate::panels::user_login::show(
+                            ui,
+                            &mut self.user_login,
+                            &mut self.backend_reqwest,
+                        );
                     });
                 });
         }
