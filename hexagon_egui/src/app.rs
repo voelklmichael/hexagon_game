@@ -221,6 +221,8 @@ pub struct HexApp {
     pub cached_overall_bests: HashMap<Uuid, DBHighscorePeak>,
     #[serde(skip, default = "default_true")]
     pub show_introduction_screen: bool,
+    #[serde(skip)]
+    pub slideshow: crate::panels::introduction_central_panel::SlideshowState,
 }
 
 fn default_true() -> bool {
@@ -631,10 +633,7 @@ impl eframe::App for HexApp {
                     });
             }
             if self.show_introduction_screen {
-                if crate::panels::introduction_central_panel::show(
-                    ui,
-                    !self.missions.is_empty(),
-                ) {
+                if self.slideshow.show(ui, !self.missions.is_empty()) {
                     self.start_intro_mission();
                 }
             } else if let Some(step) = replay_step {
