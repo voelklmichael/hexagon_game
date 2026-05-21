@@ -29,6 +29,12 @@ pub fn show(ui: &mut egui::Ui, options: &mut OptionsState) -> bool {
     ui.button("Start New Game").clicked()
 }
 
+pub fn multiplayer_game(ui: &mut egui::Ui, options: &mut OptionsState) -> bool {
+    show_standard(ui, options);
+    ui.separator();
+    ui.button("Start New Game").clicked()
+}
+
 fn int_buttons(ui: &mut egui::Ui, value: &mut usize, min: usize) {
     ui.horizontal(|ui| {
         for i in min..=7usize {
@@ -71,10 +77,6 @@ fn show_standard(ui: &mut egui::Ui, options: &mut OptionsState) {
 
             ui.label("Outer connectors");
             outer_connectors_combo(ui, "outer_connectors_standard", &mut s.outer_connectors);
-            ui.end_row();
-
-            ui.label("Random seed");
-            ui.add(egui::DragValue::new(&mut s.random_seed));
             ui.end_row();
 
             ui.label("Player count");
@@ -127,6 +129,10 @@ fn show_standard(ui: &mut egui::Ui, options: &mut OptionsState) {
             ui.label("Hand size");
             int_buttons(ui, &mut s.hand_size, 1);
             ui.end_row();
+
+            ui.label("Random seed");
+            ui.add(egui::DragValue::new(&mut s.random_seed));
+            ui.end_row();
         });
 }
 
@@ -144,10 +150,6 @@ fn show_delivery(ui: &mut egui::Ui, options: &mut OptionsState) {
             outer_connectors_combo(ui, "outer_connectors_delivery", &mut d.outer_connectors);
             ui.end_row();
 
-            ui.label("Random seed");
-            ui.add(egui::DragValue::new(&mut d.random_seed));
-            ui.end_row();
-
             ui.label("NPC count");
             int_buttons(ui, &mut d.npc_count, 0);
             ui.end_row();
@@ -158,6 +160,10 @@ fn show_delivery(ui: &mut egui::Ui, options: &mut OptionsState) {
 
             ui.label("Hand size");
             int_buttons(ui, &mut d.hand_size, 1);
+            ui.end_row();
+
+            ui.label("Random seed");
+            ui.add(egui::DragValue::new(&mut d.random_seed));
             ui.end_row();
         });
 }
