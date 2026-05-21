@@ -290,6 +290,30 @@ pub fn show(
         ));
     }
 
+    // Redraw highlighted hex border on top so neighbors don't paint over its edges
+    if let Some(hl_hex) = &render_task.hexagon_to_highlight {
+        let (cx, cy) = hex_center(hl_hex);
+        let verts: Vec<egui::Pos2> = [
+            (cx + R, cy),
+            (cx + R / 2.0, cy + h),
+            (cx - R / 2.0, cy + h),
+            (cx - R, cy),
+            (cx - R / 2.0, cy - h),
+            (cx + R / 2.0, cy - h),
+        ]
+        .iter()
+        .map(|&(x, y)| to_screen(x, y))
+        .collect();
+        painter.add(egui::Shape::convex_polygon(
+            verts,
+            egui::Color32::TRANSPARENT,
+            egui::Stroke::new(
+                2.0 * scale,
+                color_to_egui(player_data.highlighted_hex_stroke),
+            ),
+        ));
+    }
+
     // Step 2: connectors
     for uc in &render_task.connectors {
         let player_color = |pid: &hexagon_types::player::PlayerId| -> Color {

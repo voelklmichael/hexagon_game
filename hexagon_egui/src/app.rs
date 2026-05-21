@@ -481,22 +481,18 @@ impl eframe::App for HexApp {
                             self.left_tab = LeftTab::Hand;
                         }
                     }
-                    LeftTab::Hand => {
-                        if crate::panels::hand::show(
-                            ui,
-                            &mut self.game,
-                            &self.rendering_data,
-                            &mut self.interaction,
-                            &mut self.history,
-                            &mut self.current_mission,
-                            &self.missions,
-                            &mut self.missions_won,
-                            &mut self.music,
-                            self.music_player.as_ref(),
-                        ) {
-                            self.left_tab = LeftTab::Statistics;
-                        }
-                    }
+                    LeftTab::Hand => crate::panels::hand::show(
+                        ui,
+                        &mut self.game,
+                        &self.rendering_data,
+                        &mut self.interaction,
+                        &mut self.history,
+                        &mut self.current_mission,
+                        &self.missions,
+                        &mut self.missions_won,
+                        &mut self.music,
+                        self.music_player.as_ref(),
+                    ),
                     LeftTab::Controls => {
                         if crate::panels::controls::show(ui, &mut self.game, &mut self.history) {
                             self.left_tab = LeftTab::Hand;
@@ -539,7 +535,6 @@ impl eframe::App for HexApp {
         if right_open {
             egui::Panel::right("right_panel")
                 .resizable(true)
-
                 .show_inside(ui, |ui| {
                     ui.horizontal(|ui| {
                         if ui.button("➡").clicked() {
@@ -569,8 +564,13 @@ impl eframe::App for HexApp {
                     .show(&ctx, |ui| {
                         ui.horizontal(|ui| {
                             let dark = ui.visuals().dark_mode;
-                            if ui.button(if dark { "☀" } else { "🌙" })
-                                .on_hover_text(if dark { "Switch to light mode" } else { "Switch to dark mode" })
+                            if ui
+                                .button(if dark { "☀" } else { "🌙" })
+                                .on_hover_text(if dark {
+                                    "Switch to light mode"
+                                } else {
+                                    "Switch to dark mode"
+                                })
                                 .clicked()
                             {
                                 ui.ctx().set_visuals(if dark {

@@ -6,7 +6,11 @@ use hexagon_types::WinningConditionHighscoreV1;
 
 use crate::app::OptionsState;
 
-pub fn show(ui: &mut egui::Ui, options: &mut OptionsState, rng: &mut RandomNumberGenerator) -> bool {
+pub fn show(
+    ui: &mut egui::Ui,
+    options: &mut OptionsState,
+    rng: &mut RandomNumberGenerator,
+) -> bool {
     ui.horizontal(|ui| {
         ui.selectable_value(
             &mut options.selected,
@@ -32,7 +36,11 @@ pub fn show(ui: &mut egui::Ui, options: &mut OptionsState, rng: &mut RandomNumbe
     ui.button("Start New Game").clicked()
 }
 
-pub fn multiplayer_game(ui: &mut egui::Ui, options: &mut OptionsState, rng: &mut RandomNumberGenerator) -> bool {
+pub fn multiplayer_game(
+    ui: &mut egui::Ui,
+    options: &mut OptionsState,
+    rng: &mut RandomNumberGenerator,
+) -> bool {
     show_standard(ui, options, rng);
     ui.separator();
     ui.button("Start New Game").clicked()

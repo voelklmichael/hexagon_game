@@ -172,7 +172,7 @@ pub fn show(
     missions_won: &mut std::collections::HashSet<uuid::Uuid>,
     music: &mut MusicState,
     music_player: Option<&crate::music::MusicPlayer>,
-) -> bool {
+) {
     let mut started = false;
 
     let btn_font_size = egui::TextStyle::Body.resolve(ui.style()).size * 1.4;
@@ -180,7 +180,7 @@ pub fn show(
 
     if game.is_none() {
         ui.label("No game in progress.");
-        return false;
+        return;
     }
 
     // Game-over section: collect all data from a scoped borrow so the borrow
@@ -449,7 +449,7 @@ pub fn show(
                 ui.ctx().request_repaint();
             }
         }
-        return started;
+        return;
     }
 
     // Normal hand display — borrow game mutably for the rest of the function.
@@ -457,7 +457,7 @@ pub fn show(
     let current_id = game_state.current_player;
 
     let Some(player) = game_state.players.iter().find(|p| p.id == current_id) else {
-        return false;
+        return;
     };
 
     let player_color = rendering_data
@@ -723,7 +723,6 @@ pub fn show(
             });
         }
     });
-    false
 }
 
 #[allow(clippy::too_many_arguments)]
