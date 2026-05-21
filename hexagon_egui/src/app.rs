@@ -14,10 +14,10 @@ use hexagon_engine::{
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Copy, Default)]
 #[serde(rename_all = "camelCase")]
 pub enum LeftTab {
-    #[default]
     Missions,
     Multiplayer,
     Hand,
+    #[default]
     Introduction,
     Options,
     Statistics,
@@ -228,6 +228,29 @@ fn default_true() -> bool {
 }
 
 impl HexApp {
+    fn start_intro_mission(&mut self) {
+        let idx = 0;
+        let prev_game = self.game.take();
+        crate::panels::missions::start_mission(&self.missions, idx, &mut self.game);
+        if self.game.is_none() {
+            self.game = prev_game;
+        } else {
+            self.history.undo_stack.clear();
+            self.history.redo_stack.clear();
+            self.current_mission = Some(idx);
+            self.left_tab = LeftTab::Hand;
+            self.show_introduction_screen = false;
+            if let Some(mission_uuid) = crate::panels::missions::mission_id(&self.missions, idx) {
+                self.backend_reqwest
+                    .fetch_mission_overall_best(mission_uuid);
+                if let Some((user_id, _)) = &self.user_login.logged_in_as {
+                    self.backend_reqwest
+                        .fetch_mission_user_best(*user_id, mission_uuid);
+                }
+            }
+        }
+    }
+
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let mut app: Self = if let Some(storage) = cc.storage {
             eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default()
@@ -535,7 +558,13 @@ impl eframe::App for HexApp {
                         crate::panels::game_state_json::show(ui, self.game.as_ref());
                     }
                     LeftTab::Introduction => {
-                        crate::panels::introduction::show(ui, &mut self.show_introduction_screen);
+                        if crate::panels::introduction::show(
+                            ui,
+                            &mut self.show_introduction_screen,
+                            !self.missions.is_empty(),
+                        ) {
+                            self.start_intro_mission();
+                        }
                     }
                 });
             });
@@ -602,8 +631,20 @@ impl eframe::App for HexApp {
                     });
             }
             if self.show_introduction_screen {
-                ui.centered_and_justified(|ui| {
+                ui.vertical_centered(|ui| {
+                    ui.add_space(ui.available_height() / 3.0);
                     ui.label(egui::RichText::new("Introduction").size(48.0));
+                    ui.add_space(24.0);
+                    if ui
+                        .add_enabled(
+                            !self.missions.is_empty(),
+                            egui::Button::new(egui::RichText::new("Start game").size(20.0))
+                                .min_size(egui::vec2(160.0, 40.0)),
+                        )
+                        .clicked()
+                    {
+                        self.start_intro_mission();
+                    }
                 });
             } else if let Some(step) = replay_step {
                 if let Some(game) = self.replay.as_ref().and_then(|r| r.states.get(step)) {

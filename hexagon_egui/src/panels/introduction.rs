@@ -1,4 +1,5 @@
-pub fn show(ui: &mut egui::Ui, show_introduction_screen: &mut bool) {
+/// Returns true when the "Start game" button is clicked.
+pub fn show(ui: &mut egui::Ui, show_introduction_screen: &mut bool, has_missions: bool) -> bool {
     let label = if *show_introduction_screen {
         "Hide Introduction"
     } else {
@@ -105,4 +106,15 @@ pub fn show(ui: &mut egui::Ui, show_introduction_screen: &mut bool) {
                 ui.end_row();
             });
     });
+
+    ui.add_space(8.0);
+    ui.vertical_centered(|ui| {
+        ui.add_enabled(
+            has_missions,
+            egui::Button::new(egui::RichText::new("Start game").size(20.0))
+                .min_size(egui::vec2(160.0, 40.0)),
+        )
+        .clicked()
+    })
+    .inner
 }
