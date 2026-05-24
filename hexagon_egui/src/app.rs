@@ -402,86 +402,87 @@ impl eframe::App for HexApp {
             ReplayPhase::Animating | ReplayPhase::LoopWait => Some(r.step),
         });
 
-        // Left panel — always visible, burger menu tabs
-        egui::Panel::left("left_panel")
-            .resizable(true)
-            .show_inside(ui, |ui| {
-                // Burger menu header — copy tab to local so closure doesn't hold &mut self
-                if !self.left_tab.visible() {
-                    self.left_tab = LeftTab::default();
-                }
-                let mut left_tab = self.left_tab;
-                ui.horizontal(|ui| {
-                    egui::ComboBox::from_id_salt("left_tab_select")
-                        .selected_text(format!("☰  {}", left_tab.label()))
-                        .show_ui(ui, |ui| {
-                            for tab in [
-                                LeftTab::Missions,
-                                LeftTab::Multiplayer,
-                                LeftTab::Options,
-                                LeftTab::Hand,
-                                LeftTab::Controls,
-                                LeftTab::Introduction,
-                                LeftTab::Rendering,
-                                LeftTab::Statistics,
-                                LeftTab::GameStateJson,
-                            ] {
-                                if tab.visible() {
-                                    ui.selectable_value(&mut left_tab, tab, tab.label());
+        // Left panel — hidden during introduction
+        if !self.show_introduction_screen {
+            egui::Panel::left("left_panel")
+                .resizable(true)
+                .show_inside(ui, |ui| {
+                    // Burger menu header — copy tab to local so closure doesn't hold &mut self
+                    if !self.left_tab.visible() {
+                        self.left_tab = LeftTab::default();
+                    }
+                    let mut left_tab = self.left_tab;
+                    ui.horizontal(|ui| {
+                        egui::ComboBox::from_id_salt("left_tab_select")
+                            .selected_text(format!("☰  {}", left_tab.label()))
+                            .show_ui(ui, |ui| {
+                                for tab in [
+                                    LeftTab::Missions,
+                                    LeftTab::Multiplayer,
+                                    LeftTab::Options,
+                                    LeftTab::Hand,
+                                    LeftTab::Controls,
+                                    LeftTab::Introduction,
+                                    LeftTab::Rendering,
+                                    LeftTab::Statistics,
+                                    LeftTab::GameStateJson,
+                                ] {
+                                    if tab.visible() {
+                                        ui.selectable_value(&mut left_tab, tab, tab.label());
+                                    }
                                 }
-                            }
-                        });
-                });
-                self.left_tab = left_tab;
-                ui.separator();
+                            });
+                    });
+                    self.left_tab = left_tab;
+                    ui.separator();
 
-                egui::ScrollArea::vertical().show(ui, |ui| match self.left_tab {
-                    LeftTab::Missions => {
-                        if let Some(idx) = crate::panels::missions::show(
-                            ui,
-                            &self.missions,
-                            &mut self.game,
-                            &self.missions_won,
-                        ) {
-                            self.history.undo_stack.clear();
-                            self.history.redo_stack.clear();
-                            self.current_mission = Some(idx);
-                            self.left_tab = LeftTab::Hand;
-                            self.show_introduction_screen = false;
-                            if let Some(mission_uuid) =
-                                crate::panels::missions::mission_id(&self.missions, idx)
-                            {
-                                self.backend_reqwest
-                                    .fetch_mission_overall_best(mission_uuid);
-                                if let Some((user_id, _)) = &self.user_login.logged_in_as {
+                    egui::ScrollArea::vertical().show(ui, |ui| match self.left_tab {
+                        LeftTab::Missions => {
+                            if let Some(idx) = crate::panels::missions::show(
+                                ui,
+                                &self.missions,
+                                &mut self.game,
+                                &self.missions_won,
+                            ) {
+                                self.history.undo_stack.clear();
+                                self.history.redo_stack.clear();
+                                self.current_mission = Some(idx);
+                                self.left_tab = LeftTab::Hand;
+                                self.show_introduction_screen = false;
+                                if let Some(mission_uuid) =
+                                    crate::panels::missions::mission_id(&self.missions, idx)
+                                {
                                     self.backend_reqwest
-                                        .fetch_mission_user_best(*user_id, mission_uuid);
+                                        .fetch_mission_overall_best(mission_uuid);
+                                    if let Some((user_id, _)) = &self.user_login.logged_in_as {
+                                        self.backend_reqwest
+                                            .fetch_mission_user_best(*user_id, mission_uuid);
+                                    }
                                 }
                             }
                         }
-                    }
-                    LeftTab::Multiplayer => {
-                        if crate::panels::options::multiplayer_game(
-                            ui,
-                            &mut self.options,
-                            &mut self.rng,
-                        ) {
-                            match self.options.standard.clone().start_game() {
-                                Ok(game) => {
-                                    self.game = Some(game);
-                                    self.history.undo_stack.clear();
-                                    self.history.redo_stack.clear();
-                                    self.current_mission = None;
-                                    self.left_tab = LeftTab::Hand;
-                                    self.show_introduction_screen = false;
+                        LeftTab::Multiplayer => {
+                            if crate::panels::options::multiplayer_game(
+                                ui,
+                                &mut self.options,
+                                &mut self.rng,
+                            ) {
+                                match self.options.standard.clone().start_game() {
+                                    Ok(game) => {
+                                        self.game = Some(game);
+                                        self.history.undo_stack.clear();
+                                        self.history.redo_stack.clear();
+                                        self.current_mission = None;
+                                        self.left_tab = LeftTab::Hand;
+                                        self.show_introduction_screen = false;
+                                    }
+                                    Err(e) => eprintln!("Failed to start game: {e}"),
                                 }
-                                Err(e) => eprintln!("Failed to start game: {e}"),
                             }
                         }
-                    }
-                    LeftTab::Options => {
-                        if crate::panels::options::show(ui, &mut self.options, &mut self.rng) {
-                            let result = match self.options.selected {
+                        LeftTab::Options => {
+                            if crate::panels::options::show(ui, &mut self.options, &mut self.rng) {
+                                let result = match self.options.selected {
                                 hexagon_engine::GameOptionsDiscriminants::Standard => {
                                     self.options.standard.clone().start_game()
                                 }
@@ -494,82 +495,92 @@ impl eframe::App for HexApp {
                                         .to_string(),
                                 ),
                             };
-                            match result {
-                                Ok(game) => {
-                                    self.game = Some(game);
-                                    self.history.undo_stack.clear();
-                                    self.history.redo_stack.clear();
-                                    self.current_mission = None;
-                                    self.left_tab = LeftTab::Hand;
-                                    self.show_introduction_screen = false;
+                                match result {
+                                    Ok(game) => {
+                                        self.game = Some(game);
+                                        self.history.undo_stack.clear();
+                                        self.history.redo_stack.clear();
+                                        self.current_mission = None;
+                                        self.left_tab = LeftTab::Hand;
+                                        self.show_introduction_screen = false;
+                                    }
+                                    Err(e) => eprintln!("Failed to start game: {e}"),
                                 }
-                                Err(e) => eprintln!("Failed to start game: {e}"),
+                            }
+                            ui.separator();
+                            if crate::panels::predefined_games::show(
+                                ui,
+                                &mut self.game,
+                                &mut self.rng,
+                            ) {
+                                self.history.undo_stack.clear();
+                                self.history.redo_stack.clear();
+                                self.current_mission = None;
+                                self.left_tab = LeftTab::Hand;
+                                self.show_introduction_screen = false;
                             }
                         }
-                        ui.separator();
-                        if crate::panels::predefined_games::show(ui, &mut self.game, &mut self.rng)
-                        {
-                            self.history.undo_stack.clear();
-                            self.history.redo_stack.clear();
-                            self.current_mission = None;
-                            self.left_tab = LeftTab::Hand;
-                            self.show_introduction_screen = false;
-                        }
-                    }
-                    LeftTab::Hand => crate::panels::hand::show(
-                        ui,
-                        &mut self.game,
-                        &self.rendering_data,
-                        &mut self.interaction,
-                        &mut self.history,
-                        &mut self.current_mission,
-                        &self.missions,
-                        &mut self.missions_won,
-                        &mut self.music,
-                        self.music_player.as_ref(),
-                    ),
-                    LeftTab::Controls => {
-                        if crate::panels::controls::show(ui, &mut self.game, &mut self.history) {
-                            self.left_tab = LeftTab::Hand;
-                        }
-                        ui.separator();
-                        crate::panels::music::show(ui, &mut self.music, self.music_player.as_ref());
-                    }
-                    LeftTab::Rendering => {
-                        #[cfg(debug_assertions)]
-                        crate::panels::rendering::show(ui, &mut self.rendering_data);
-                    }
-                    LeftTab::Statistics => {
-                        let active_id = self.current_mission.and_then(|idx| {
-                            crate::panels::missions::mission_id(&self.missions, idx)
-                        });
-                        let user_best = active_id.and_then(|id| self.cached_user_bests.get(&id));
-                        let overall_best =
-                            active_id.and_then(|id| self.cached_overall_bests.get(&id));
-                        crate::panels::statistics::show(
+                        LeftTab::Hand => crate::panels::hand::show(
                             ui,
+                            &mut self.game,
                             &self.rendering_data,
-                            self.game.as_ref().map(|g| &g.statistics),
-                            self.game.as_ref().map(|g| &g.options),
-                            user_best,
-                            overall_best,
-                        );
-                    }
-                    LeftTab::GameStateJson => {
-                        #[cfg(debug_assertions)]
-                        crate::panels::game_state_json::show(ui, self.game.as_ref());
-                    }
-                    LeftTab::Introduction => {
-                        if crate::panels::introduction::show(
-                            ui,
-                            &mut self.show_introduction_screen,
-                            !self.missions.is_empty(),
-                        ) {
-                            self.start_intro_mission();
+                            &mut self.interaction,
+                            &mut self.history,
+                            &mut self.current_mission,
+                            &self.missions,
+                            &mut self.missions_won,
+                            &mut self.music,
+                            self.music_player.as_ref(),
+                        ),
+                        LeftTab::Controls => {
+                            if crate::panels::controls::show(ui, &mut self.game, &mut self.history)
+                            {
+                                self.left_tab = LeftTab::Hand;
+                            }
+                            ui.separator();
+                            crate::panels::music::show(
+                                ui,
+                                &mut self.music,
+                                self.music_player.as_ref(),
+                            );
                         }
-                    }
+                        LeftTab::Rendering => {
+                            #[cfg(debug_assertions)]
+                            crate::panels::rendering::show(ui, &mut self.rendering_data);
+                        }
+                        LeftTab::Statistics => {
+                            let active_id = self.current_mission.and_then(|idx| {
+                                crate::panels::missions::mission_id(&self.missions, idx)
+                            });
+                            let user_best =
+                                active_id.and_then(|id| self.cached_user_bests.get(&id));
+                            let overall_best =
+                                active_id.and_then(|id| self.cached_overall_bests.get(&id));
+                            crate::panels::statistics::show(
+                                ui,
+                                &self.rendering_data,
+                                self.game.as_ref().map(|g| &g.statistics),
+                                self.game.as_ref().map(|g| &g.options),
+                                user_best,
+                                overall_best,
+                            );
+                        }
+                        LeftTab::GameStateJson => {
+                            #[cfg(debug_assertions)]
+                            crate::panels::game_state_json::show(ui, self.game.as_ref());
+                        }
+                        LeftTab::Introduction => {
+                            if crate::panels::introduction::show(
+                                ui,
+                                &mut self.show_introduction_screen,
+                                !self.missions.is_empty(),
+                            ) {
+                                self.start_intro_mission();
+                            }
+                        }
+                    });
                 });
-            });
+        } // end left panel visibility guard
 
         // Right panel — collapsible, shows User Login
         let right_open = self.right_panel_open;
