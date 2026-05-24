@@ -13,11 +13,41 @@ const AUTO_CYCLE_SECS: f64 = 5.0;
 const DOT_RADIUS: f32 = 5.0;
 const DOT_SPACING: f32 = 22.0;
 
-#[derive(Clone, Copy, strum::VariantArray)]
+pub struct AnimSlideTiming {
+    /// Pause showing the board before bringing in the next tile
+    pub board_show_secs: f64,
+    /// How long the tile preview is shown on the left before playing
+    pub tile_show_secs: f64,
+    /// How long the player movement animation runs after the tile is placed
+    pub play_secs: f64,
+    /// Hold time after the player has reached the new position
+    pub player_anim_secs: f64,
+}
+
+const ANIM_TIMING: AnimSlideTiming = AnimSlideTiming {
+    board_show_secs: 0.6,
+    tile_show_secs: 1.0,
+    play_secs: 1.4,
+    player_anim_secs: 0.8,
+};
+
+const ANIM_TILE_COUNT: usize = 4;
+
+const PHASE_TEXTS: [&str; 5] = [
+    "Ready for the next tile",
+    "Select a tile from your hand to play",
+    "Tile placed — player follows the new path!",
+    "Player reached a new position",
+    "Player reaches target - game won!",
+];
+
+#[derive(Clone, Copy, strum::VariantArray, PartialEq)]
 enum Slide {
     Welcome,
+    AnimatingGame,
     PlacingTilesRotating,
     PlacingTilesPlaying,
+    Acknowledgments,
 }
 
 impl Slide {
@@ -26,10 +56,18 @@ impl Slide {
             Self::Welcome => "Hexagon - The Game",
             Self::PlacingTilesRotating => "Placing Tiles",
             Self::PlacingTilesPlaying => "Placing Tiles",
+            Self::AnimatingGame => "Playing a Game",
+            Self::Acknowledgments => "Acknowledgments",
         }
     }
 
-    fn show(self, ui: &mut egui::Ui, demo_game: Option<&GameState>) {
+    fn show(
+        self,
+        ui: &mut egui::Ui,
+        demo_game: Option<&GameState>,
+        animating_game_states: &mut Option<(Vec<GameState>, Vec<usize>)>,
+        slide_elapsed: f64,
+    ) {
         let title_color = ui.visuals().strong_text_color();
         ui.add_space(14.0);
         ui.label(
@@ -109,6 +147,56 @@ impl Slide {
                     });
                 });
             }
+            Self::Acknowledgments => {
+                let text_color = ui.visuals().text_color();
+                let normal = egui::TextFormat {
+                    font_id: egui::FontId::proportional(14.5),
+                    color: text_color,
+                    ..Default::default()
+                };
+                let italic = egui::TextFormat {
+                    font_id: egui::FontId::proportional(14.5),
+                    italics: true,
+                    color: text_color,
+                    ..Default::default()
+                };
+                let mut job = egui::text::LayoutJob::default();
+                job.append("This game is inspired by ", 0.0, normal.clone());
+                job.append("Tsuro — The Game of the Path", 0.0, italic);
+                job.append(
+                    ",\nadapted for hexagonal tiles and single player.",
+                    0.0,
+                    normal,
+                );
+                ui.label(job);
+                ui.add_space(10.0);
+                ui.label(
+                    egui::RichText::new("Music")
+                        .size(14.5)
+                        .strong()
+                        .color(ui.visuals().strong_text_color()),
+                );
+                ui.add_space(4.0);
+                ui.label(
+                    egui::RichText::new(
+                        "All tracks from Pixabay (pixabay.com/music) — artists:\n\
+                         \u{2022} Alex Zavesa\n\
+                         \u{2022} LightBeatsMusic\n\
+                         \u{2022} MagpieMusic\n\
+                         \u{2022} Starostin\n\
+                         \u{2022} MiroMaxMusic\n\
+                         \u{2022} KornevMusic\n\
+                         \u{2022} FreeMusicLab",
+                    )
+                    .size(14.5),
+                );
+            }
+            Self::AnimatingGame => {
+                let (states, played) = animating_game_states
+                    .as_ref()
+                    .map_or((&[][..], &[][..]), |(s, p)| (s.as_slice(), p.as_slice()));
+                show_animating_game_slide(ui, &ANIM_TIMING, states, played, slide_elapsed);
+            }
             Self::PlacingTilesPlaying => {
                 ui.label(egui::RichText::new(
                     "Select a tile from your hand, rotate it with ↺ / ↻, then press ➡ to play it.\n\
@@ -147,7 +235,10 @@ impl Slide {
 
                 ui.horizontal(|ui| {
                     ui.allocate_ui(egui::vec2(board_w, board_h), |ui| {
-                        let mut bi = crate::app::BoardInteraction::default();
+                        let mut bi = crate::app::BoardInteraction {
+                            animation_t: 1.0,
+                            ..Default::default()
+                        };
                         crate::panels::game_board::show(ui, before, &rendering_data, &mut bi);
                     });
                     ui.allocate_ui(egui::vec2(middle_w, board_h), |ui| {
@@ -172,7 +263,10 @@ impl Slide {
                         });
                     });
                     ui.allocate_ui(egui::vec2(board_w, board_h), |ui| {
-                        let mut bi = crate::app::BoardInteraction::default();
+                        let mut bi = crate::app::BoardInteraction {
+                            animation_t: 1.0,
+                            ..Default::default()
+                        };
                         crate::panels::game_board::show(ui, &after, &rendering_data, &mut bi);
                     });
                 });
@@ -265,11 +359,148 @@ fn init_demo_game() -> GameState {
     game
 }
 
+fn init_animating_game_states() -> (Vec<GameState>, Vec<usize>) {
+    const ANIM_TILE_PICKS: [usize; ANIM_TILE_COUNT] = [1, 2, 1, 0];
+    let json = include_str!("full_game_start.json");
+    let mut game: GameState = serde_json::from_str(json).expect("full_game_start.json");
+
+    let mut states = vec![game.clone()];
+    let mut played_indices: Vec<usize> = Vec::new();
+    for &pick in &ANIM_TILE_PICKS {
+        let hand_len = game
+            .players
+            .iter()
+            .find(|p| p.id == game.current_player)
+            .map_or(1, |p| p.hand.len().max(1));
+        let idx = pick % hand_len;
+        played_indices.push(idx);
+        game.play_tile(idx);
+        states.push(game.clone());
+    }
+    (states, played_indices)
+}
+
+fn show_animating_game_slide(
+    ui: &mut egui::Ui,
+    timing: &AnimSlideTiming,
+    states: &[GameState],
+    played_indices: &[usize],
+    elapsed: f64,
+) {
+    let num_tiles = states.len().saturating_sub(1);
+    if num_tiles == 0 {
+        return;
+    }
+
+    let per_tile =
+        timing.board_show_secs + timing.tile_show_secs + timing.play_secs + timing.player_anim_secs;
+    let total = per_tile * num_tiles as f64 + timing.board_show_secs;
+    let t = elapsed % total;
+
+    // Determine phase: (board state index, tile to show from which state index, animation_t, text)
+    let (board_idx, show_tile_from, anim_t, status_text): (usize, Option<usize>, f32, &str) =
+        if t >= total - timing.board_show_secs {
+            (num_tiles, None, 1.0, PHASE_TEXTS[4])
+        } else {
+            let tile_idx = ((t / per_tile) as usize).min(num_tiles - 1);
+            let t_in = t - tile_idx as f64 * per_tile;
+
+            if t_in < timing.board_show_secs {
+                (tile_idx, None, 1.0, PHASE_TEXTS[0])
+            } else if t_in < timing.board_show_secs + timing.tile_show_secs {
+                (tile_idx, Some(tile_idx), 1.0, PHASE_TEXTS[1])
+            } else if t_in < timing.board_show_secs + timing.tile_show_secs + timing.play_secs {
+                let progress = ((t_in - timing.board_show_secs - timing.tile_show_secs)
+                    / timing.play_secs) as f32;
+                (tile_idx + 1, Some(tile_idx), progress, PHASE_TEXTS[2])
+            } else {
+                (tile_idx + 1, None, 1.0, PHASE_TEXTS[3])
+            }
+        };
+
+    // Collect tile connectors now (owned) to avoid borrow conflicts with board_state below
+    let tile_preview: Option<Vec<ConnectorEdgeSub>> = show_tile_from.and_then(|idx| {
+        let s = &states[idx];
+        let hand_idx = played_indices.get(idx).copied().unwrap_or(0);
+        s.players
+            .iter()
+            .find(|p| p.id == s.current_player)
+            .and_then(|p| p.hand.get(hand_idx))
+            .map(|t| t.inner_connectors.clone())
+    });
+
+    let board_state = &states[board_idx];
+    let rendering_data = crate::app::RenderingData::default();
+    let hex_fill = ui.visuals().extreme_bg_color;
+    let hex_stroke = ui.visuals().text_color();
+    let available_rect = ui.available_rect_before_wrap();
+    let board_h = available_rect.height().max(10.0);
+
+    let tile_color = crate::panels::color_to_egui(
+        rendering_data
+            .player_colors
+            .get(&board_state.current_player)
+            .copied()
+            .unwrap_or(hexagon_engine::Color::Green),
+    );
+
+    const CENTER_W: f32 = 150.0;
+    let side_w = (available_rect.width() - CENTER_W).max(0.0) / 2.0;
+
+    let tile_r = ((side_w - 8.0) / 2.4).min(board_h / 2.4).max(8.0) as f64;
+    let top_pad = (board_h - tile_r as f32 * 2.4).max(0.0) / 2.0;
+
+    egui_extras::StripBuilder::new(ui)
+        .size(egui_extras::Size::exact(side_w))
+        .size(egui_extras::Size::exact(CENTER_W))
+        .size(egui_extras::Size::exact(side_w))
+        .horizontal(|mut strip| {
+            strip.cell(|ui| {
+                ui.vertical_centered(|ui| {
+                    ui.add_space(top_pad);
+                    if let Some(connectors) = &tile_preview {
+                        draw_tile_preview(
+                            ui, tile_r, connectors, true, hex_fill, hex_stroke, tile_color,
+                        );
+                    }
+                });
+            });
+            strip.cell(|ui| {
+                let active = ui.visuals().strong_text_color();
+                let dim = ui.visuals().weak_text_color();
+                let text_h: f32 = PHASE_TEXTS.len() as f32 * (12.5 + 6.0);
+                let top_pad = (board_h - text_h).max(0.0) / 2.0;
+                ui.add_space(top_pad);
+                ui.vertical_centered(|ui| {
+                    for &label in &PHASE_TEXTS {
+                        let is_active = label == status_text;
+                        let text = egui::RichText::new(label).size(12.5).color(if is_active {
+                            active
+                        } else {
+                            dim
+                        });
+                        let text = if is_active { text.strong() } else { text };
+                        ui.label(text);
+                        ui.add_space(6.0);
+                    }
+                });
+            });
+            strip.cell(|ui| {
+                let mut bi = crate::app::BoardInteraction {
+                    animation_t: anim_t,
+                    ..Default::default()
+                };
+                crate::panels::game_board::show(ui, board_state, &rendering_data, &mut bi);
+            });
+        });
+}
+
 pub struct SlideshowState {
     current: usize,
     last_changed: Option<f64>,
     auto_cycle: bool,
     demo_game: Option<GameState>,
+    animating_game_states: Option<(Vec<GameState>, Vec<usize>)>,
 }
 
 impl Default for SlideshowState {
@@ -279,6 +510,7 @@ impl Default for SlideshowState {
             last_changed: None,
             auto_cycle: true,
             demo_game: None,
+            animating_game_states: None,
         }
     }
 }
@@ -288,18 +520,41 @@ impl SlideshowState {
         if self.demo_game.is_none() {
             self.demo_game = Some(init_demo_game());
         }
+        if self.animating_game_states.is_none() {
+            self.animating_game_states = Some(init_animating_game_states());
+        }
         let now = ui.ctx().input(|i| i.time);
         if self.last_changed.is_none() {
             self.last_changed = Some(now);
         }
 
+        let is_anim_slide = [Slide::AnimatingGame].contains(&Slide::VARIANTS[self.current]);
+
+        ui.ctx().request_repaint_after(if is_anim_slide {
+            Duration::from_millis(33)
+        } else {
+            Duration::from_millis(500)
+        });
+
         if self.auto_cycle {
             let elapsed = now - self.last_changed.unwrap_or(now);
-            if elapsed >= AUTO_CYCLE_SECS {
+            let cycle_secs = if is_anim_slide {
+                let n = self
+                    .animating_game_states
+                    .as_ref()
+                    .map_or(ANIM_TILE_COUNT, |s| s.0.len().saturating_sub(1));
+                let per = ANIM_TIMING.board_show_secs
+                    + ANIM_TIMING.tile_show_secs
+                    + ANIM_TIMING.play_secs
+                    + ANIM_TIMING.player_anim_secs;
+                n as f64 * per + ANIM_TIMING.board_show_secs
+            } else {
+                AUTO_CYCLE_SECS
+            };
+            if elapsed >= cycle_secs {
                 self.current = (self.current + 1) % Slide::VARIANTS.len();
                 self.last_changed = Some(now);
             }
-            ui.ctx().request_repaint_after(Duration::from_millis(500));
         }
 
         let mut start_clicked = false;
@@ -329,7 +584,14 @@ impl SlideshowState {
 
                     ui.with_layout(
                         egui::Layout::top_down(egui::Align::Center).with_cross_justify(true),
-                        |ui| Slide::VARIANTS[self.current].show(ui, self.demo_game.as_ref()),
+                        |ui| {
+                            Slide::VARIANTS[self.current].show(
+                                ui,
+                                self.demo_game.as_ref(),
+                                &mut self.animating_game_states,
+                                now - self.last_changed.unwrap_or(now),
+                            )
+                        },
                     );
                 },
             );
