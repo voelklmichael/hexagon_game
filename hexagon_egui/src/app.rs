@@ -4,6 +4,7 @@ pub use backend_reqwest::BackendReqwest;
 use hexagon_types::{DBHighscorePeak, MissionEntry, player::PlayerId};
 use indexmap::IndexMap;
 use std::collections::{HashMap, HashSet};
+use strum::VariantArray;
 use uuid::Uuid;
 
 use hexagon_engine::{
@@ -11,7 +12,7 @@ use hexagon_engine::{
     GameResult, GameState, OuterConnectors, RandomNumberGenerator, WinningCondition,
 };
 
-#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Copy, Default)]
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Copy, Default, VariantArray)]
 #[serde(rename_all = "camelCase")]
 pub enum LeftTab {
     Missions,
@@ -416,19 +417,9 @@ impl eframe::App for HexApp {
                         egui::ComboBox::from_id_salt("left_tab_select")
                             .selected_text(format!("☰  {}", left_tab.label()))
                             .show_ui(ui, |ui| {
-                                for tab in [
-                                    LeftTab::Missions,
-                                    LeftTab::Multiplayer,
-                                    LeftTab::Options,
-                                    LeftTab::Hand,
-                                    LeftTab::Controls,
-                                    LeftTab::Introduction,
-                                    LeftTab::Rendering,
-                                    LeftTab::Statistics,
-                                    LeftTab::GameStateJson,
-                                ] {
+                                for tab in LeftTab::VARIANTS {
                                     if tab.visible() {
-                                        ui.selectable_value(&mut left_tab, tab, tab.label());
+                                        ui.selectable_value(&mut left_tab, *tab, tab.label());
                                     }
                                 }
                             });
