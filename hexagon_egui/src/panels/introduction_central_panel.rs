@@ -18,6 +18,7 @@ enum Slide {
     Welcome,
     PlacingTilesRotating,
     PlacingTilesPlaying,
+    Acknowledgments,
 }
 
 impl Slide {
@@ -26,6 +27,7 @@ impl Slide {
             Self::Welcome => "Hexagon - The Game",
             Self::PlacingTilesRotating => "Placing Tiles",
             Self::PlacingTilesPlaying => "Placing Tiles",
+            Self::Acknowledgments => "Acknowledgments",
         }
     }
 
@@ -108,6 +110,50 @@ impl Slide {
                         );
                     });
                 });
+            }
+            Self::Acknowledgments => {
+                let text_color = ui.visuals().text_color();
+                let normal = egui::TextFormat {
+                    font_id: egui::FontId::proportional(14.5),
+                    color: text_color,
+                    ..Default::default()
+                };
+                let italic = egui::TextFormat {
+                    font_id: egui::FontId::proportional(14.5),
+                    italics: true,
+                    color: text_color,
+                    ..Default::default()
+                };
+                let mut job = egui::text::LayoutJob::default();
+                job.append("This game is inspired by ", 0.0, normal.clone());
+                job.append("Tsuro — The Game of the Path", 0.0, italic);
+                job.append(
+                    ",\nadapted for hexagonal tiles and single player.",
+                    0.0,
+                    normal,
+                );
+                ui.label(job);
+                ui.add_space(10.0);
+                ui.label(
+                    egui::RichText::new("Music")
+                        .size(14.5)
+                        .strong()
+                        .color(ui.visuals().strong_text_color()),
+                );
+                ui.add_space(4.0);
+                ui.label(
+                    egui::RichText::new(
+                        "All tracks from Pixabay (pixabay.com/music) — artists:\n\
+                         \u{2022} Alex Zavesa\n\
+                         \u{2022} LightBeatsMusic\n\
+                         \u{2022} MagpieMusic\n\
+                         \u{2022} Starostin\n\
+                         \u{2022} MiroMaxMusic\n\
+                         \u{2022} KornevMusic\n\
+                         \u{2022} FreeMusicLab",
+                    )
+                    .size(14.5),
+                );
             }
             Self::PlacingTilesPlaying => {
                 ui.label(egui::RichText::new(
