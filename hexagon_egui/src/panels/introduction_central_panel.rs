@@ -111,41 +111,58 @@ impl Slide {
                 });
             }
             Self::PlacingTilesRotating => {
-                ui.label(egui::RichText::new(
-                    "Select a tile from your hand, rotate it with ↺ / ↻, then press ➡ to play it.\n\
-                     All players advance along the path after each tile.",
-                ).size(14.5));
-                let tiles = demo_tiles();
-                let body_h = available_rect.height().max(1.0);
-                let r_from_h = (body_h / 2.4) as f64;
-                let spacing = ui.spacing().item_spacing.x;
-                let body_w = (available_rect.width() - 48.0).max(1.0);
-                let r_from_w = ((body_w - 2.0 * spacing) / (tiles.len() as f32 * 2.4)) as f64;
-                let tile_r = r_from_h.min(r_from_w).max(10.0);
-                let tile_side = tile_r as f32 * 2.4;
-                let total_w = 2. * tile_side + (tiles.len() - 1) as f32 * spacing;
-                let left_pad = (available_rect.width() - total_w).max(0.0) / 2.0;
-                ui.centered_and_justified(|ui| {
-                    ui.horizontal(|ui| {
-                        ui.add_space(left_pad);
-                        let (tile, color) = tiles[2].clone();
-                        let mut rotated = Tile {
-                            inner_connectors: tile.clone(),
-                        };
-                        rotated.rotate(hexagon_types::TileRotationDirection::CounterClockwise);
-                        draw_tile_preview(ui, tile_r, &tile, false, hex_fill, hex_stroke, color);
-                        ui.label("Click rotate ↺");
-                        draw_tile_preview(
-                            ui,
-                            tile_r,
-                            &rotated.inner_connectors,
-                            false,
-                            hex_fill,
-                            hex_stroke,
-                            color,
-                        );
+                let (tile, color) = demo_tiles()[2].clone();
+                let mut rotated = Tile {
+                    inner_connectors: tile.clone(),
+                };
+                rotated.rotate(hexagon_types::TileRotationDirection::CounterClockwise);
+
+                let body_h = available_rect.height().max(10.0);
+                const CENTER_W: f32 = 150.0;
+                let side_w = (available_rect.width() - CENTER_W).max(0.0) / 2.0;
+                let tile_r = ((side_w - 8.0) / 2.4).min(body_h / 2.4).max(8.0) as f64;
+                let top_pad = (body_h - tile_r as f32 * 2.4).max(0.0) / 2.0;
+
+                egui_extras::StripBuilder::new(ui)
+                    .size(egui_extras::Size::exact(side_w))
+                    .size(egui_extras::Size::exact(CENTER_W))
+                    .size(egui_extras::Size::exact(side_w))
+                    .horizontal(|mut strip| {
+                        strip.cell(|ui| {
+                            ui.vertical_centered(|ui| {
+                                ui.add_space(top_pad);
+                                draw_tile_preview(
+                                    ui, tile_r, &tile, false, hex_fill, hex_stroke, color,
+                                );
+                            });
+                        });
+                        strip.cell(|ui| {
+                            let lines = ["You can rotate the tile", "by clicking ↺"];
+                            let line_h = 14.5 + 6.0;
+                            let text_h = lines.len() as f32 * line_h;
+                            ui.add_space((body_h - text_h).max(0.0) / 2.0);
+                            ui.vertical_centered_justified(|ui| {
+                                for line in lines {
+                                    ui.label(egui::RichText::new(line).size(14.5));
+                                    ui.add_space(6.0);
+                                }
+                            });
+                        });
+                        strip.cell(|ui| {
+                            ui.vertical_centered(|ui| {
+                                ui.add_space(top_pad);
+                                draw_tile_preview(
+                                    ui,
+                                    tile_r,
+                                    &rotated.inner_connectors,
+                                    false,
+                                    hex_fill,
+                                    hex_stroke,
+                                    color,
+                                );
+                            });
+                        });
                     });
-                });
             }
             Self::Acknowledgments => {
                 let text_color = ui.visuals().text_color();
@@ -414,7 +431,12 @@ fn show_animating_game_slide(
                     / timing.play_secs) as f32;
                 (tile_idx + 1, Some(tile_idx), progress, PHASE_TEXTS[2])
             } else {
-                (tile_idx + 1, None, 1.0, PHASE_TEXTS[3])
+                let text = if tile_idx == num_tiles - 1 {
+                    PHASE_TEXTS[4]
+                } else {
+                    PHASE_TEXTS[3]
+                };
+                (tile_idx + 1, None, 1.0, text)
             }
         };
 
