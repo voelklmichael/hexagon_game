@@ -193,7 +193,7 @@ impl Slide {
 
                 ui.horizontal(|ui| {
                     ui.allocate_ui(egui::vec2(board_w, board_h), |ui| {
-                        let mut bi = crate::app::BoardInteraction::default();
+                        let mut bi = crate::app::BoardInteraction { animation_t: 1.0, ..Default::default() };
                         crate::panels::game_board::show(ui, before, &rendering_data, &mut bi);
                     });
                     ui.allocate_ui(egui::vec2(middle_w, board_h), |ui| {
@@ -218,7 +218,7 @@ impl Slide {
                         });
                     });
                     ui.allocate_ui(egui::vec2(board_w, board_h), |ui| {
-                        let mut bi = crate::app::BoardInteraction::default();
+                        let mut bi = crate::app::BoardInteraction { animation_t: 1.0, ..Default::default() };
                         crate::panels::game_board::show(ui, &after, &rendering_data, &mut bi);
                     });
                 });
