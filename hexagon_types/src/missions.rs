@@ -1,29 +1,9 @@
 use uuid::Uuid;
 
 use crate::board_types::{Board, ConnectorId, Tile};
-use crate::game_options::OuterConnectors;
 use crate::{WinningConditionHighscoreV1, WinningConditionHighscoreV2};
 
-// --- delivery ---
-
-#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
-#[serde(default)]
-pub struct MissionDeliveryV1 {
-    pub board_radius: u32,
-    pub outer_connectors: OuterConnectors,
-    pub random_seed: u32,
-    pub npc_count: u32,
-    pub player_has_target: bool,
-    pub hand_size: u32,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub enum MissionDelivery {
-    V1(MissionDeliveryV1),
-}
-
 // --- highscore ---
-
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct MissionHighscoreV1 {
     pub board: Board,
@@ -52,7 +32,6 @@ pub enum MissionHighscore {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum Mission {
     HighScore(Box<MissionHighscore>),
-    Delivery(MissionDelivery),
 }
 
 #[derive(

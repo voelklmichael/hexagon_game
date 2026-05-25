@@ -1,7 +1,5 @@
-use hexagon_engine::{
-    GameOptionsDelivery, GameState, start_highscore_game_v1, start_highscore_game_v2,
-};
-use hexagon_types::{Mission, MissionDelivery, MissionEntry, MissionTag};
+use hexagon_engine::{GameState, start_highscore_game_v1, start_highscore_game_v2};
+use hexagon_types::{Mission, MissionEntry, MissionTag};
 use std::collections::HashSet;
 use strum::VariantArray as _;
 use uuid::Uuid;
@@ -19,20 +17,6 @@ pub(crate) fn start_mission(missions: &[MissionEntry], index: usize, game: &mut 
         return;
     };
     match &entry.json {
-        Mission::Delivery(MissionDelivery::V1(v1)) => {
-            let opts = GameOptionsDelivery {
-                board_radius: v1.board_radius as usize,
-                outer_connectors: v1.outer_connectors.clone(),
-                random_seed: v1.random_seed,
-                npc_count: v1.npc_count as usize,
-                player_has_target: v1.player_has_target,
-                hand_size: v1.hand_size as usize,
-            };
-            match opts.start_game() {
-                Ok(new_game) => *game = Some(new_game),
-                Err(e) => tracing::error!("Failed to start mission '{}': {e}", entry.name),
-            }
-        }
         Mission::HighScore(hs) => match hs.as_ref() {
             hexagon_types::MissionHighscore::V1(v1) => match start_highscore_game_v1(v1.clone()) {
                 Ok(new_game) => *game = Some(new_game),
