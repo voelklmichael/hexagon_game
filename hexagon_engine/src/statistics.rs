@@ -25,7 +25,25 @@ impl Statistics {
             let mut weight = 0u32;
             let mut max_vel = 0u32;
             for turn in moves {
-                let turn_weight: u32 = turn.connectors.iter().map(|hc| hc.weight).sum();
+                // For the turn where the player crashed, multiply the last connector's weight
+                // by the hit-point fraction stored in current_position.
+                let turn_weight: u32 = if let Some(frac) = p.current_position.hit_fraction {
+                    let n = turn.connectors.len();
+                    if n == 0 {
+                        0
+                    } else {
+                        let last = &turn.connectors[n - 1];
+                        if last.id == p.current_position.connector {
+                            let before: u32 =
+                                turn.connectors[..n - 1].iter().map(|hc| hc.weight).sum();
+                            before + (last.weight as f32 * frac) as u32
+                        } else {
+                            turn.connectors.iter().map(|hc| hc.weight).sum()
+                        }
+                    }
+                } else {
+                    turn.connectors.iter().map(|hc| hc.weight).sum()
+                };
                 segments += turn.connectors.len() as u32;
                 weight += turn_weight;
                 max_vel = max_vel.max(turn_weight);

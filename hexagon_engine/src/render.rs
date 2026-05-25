@@ -199,12 +199,27 @@ fn compute_player_position(animation: f32, board: &Board, p: &Player) -> Current
     };
     let (connector, step) = {
         if last.connectors.is_empty() {
-            if let Some(last) = p.history.iter().rev().find(|c| !c.connectors.is_empty()) {
-                let hc = last.connectors.last().unwrap();
-                let step = if hc.end == ConnectorEnd::StartedAtA {
-                    1.0
-                } else {
-                    0.0
+            if let Some(last_non_empty) =
+                p.history.iter().rev().find(|c| !c.connectors.is_empty())
+            {
+                let hc = last_non_empty.connectors.last().unwrap();
+                // If the player crashed, show them at the hit-point fraction rather than the
+                // exit end of the connector.
+                let step = match p.current_position.hit_fraction {
+                    Some(frac) => {
+                        if hc.end == ConnectorEnd::StartedAtA {
+                            frac
+                        } else {
+                            1.0 - frac
+                        }
+                    }
+                    None => {
+                        if hc.end == ConnectorEnd::StartedAtA {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    }
                 };
                 (lookup(&hc.id), step)
             } else {
@@ -215,18 +230,30 @@ fn compute_player_position(animation: f32, board: &Board, p: &Player) -> Current
                 )
             }
         } else {
-            // TODO: this needs to be improved
             let total_weight: u32 = last.connectors.iter().map(|hc| hc.weight).sum();
             let mut remaining = (animation * total_weight as f32).clamp(0.0, total_weight as f32);
+            let n = last.connectors.len();
             let mut chosen = last.connectors.last().unwrap();
-            for hc in &last.connectors {
+            let mut chosen_is_last = true;
+            for (i, hc) in last.connectors.iter().enumerate() {
                 if remaining <= hc.weight as f32 {
                     chosen = hc;
+                    chosen_is_last = i == n - 1;
                     break;
                 }
                 remaining -= hc.weight as f32;
             }
-            let progress = (remaining / chosen.weight as f32).clamp(0.0, 1.0);
+            // When the player is on their last connector and has a hit-point fraction,
+            // scale the within-connector progress so they stop at the crash point.
+            let progress = if chosen_is_last {
+                let raw = (remaining / chosen.weight as f32).clamp(0.0, 1.0);
+                match p.current_position.hit_fraction {
+                    Some(frac) => raw * frac,
+                    None => raw,
+                }
+            } else {
+                (remaining / chosen.weight as f32).clamp(0.0, 1.0)
+            };
             let step = if chosen.end == ConnectorEnd::StartedAtA {
                 progress
             } else {
@@ -241,6 +268,7 @@ fn compute_player_position(animation: f32, board: &Board, p: &Player) -> Current
         step,
         is_active: p.is_active,
         is_at_start: p.history.iter().skip(1).all(|x| x.connectors.is_empty()),
+        hit_fraction: p.current_position.hit_fraction,
     }
 }
 
@@ -263,6 +291,8 @@ pub struct CurrentPlayerPosition {
     pub step: f32,
     pub is_active: bool,
     pub is_at_start: bool,
+    /// Set when this player stopped mid-connector due to a collision.
+    pub hit_fraction: Option<f32>,
 }
 
 #[derive(
@@ -1099,6 +1129,7 @@ mod tests {
                     step: i as f32 / 9.0,
                     is_active: true,
                     is_at_start: true,
+                    hit_fraction: None,
                 })
                 .collect(),
         };

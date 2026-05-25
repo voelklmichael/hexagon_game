@@ -339,7 +339,7 @@ pub fn show(
                     let player = saved.players.first();
                     let target_met = wc
                         .target
-                        .map(|t| player.is_some_and(|p| p.current_position.0 == t));
+                        .map(|t| player.is_some_and(|p| p.current_position.connector == t));
                     show_highscore_conditions(
                         ui,
                         wc.min_distance,
@@ -360,7 +360,7 @@ pub fn show(
                         let min_dist = wc.min_distance.get(&id).copied();
                         let min_vel = wc.min_velocity.get(&id).copied();
                         let target_met =
-                            wc.target.get(&id).map(|&t| player.current_position.0 == t);
+                            wc.target.get(&id).map(|&t| player.current_position.connector == t);
                         if min_dist.is_none() && min_vel.is_none() && target_met.is_none() {
                             continue;
                         }

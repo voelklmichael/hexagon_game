@@ -456,15 +456,64 @@ pub fn show(
     }
 
     // Step 3: player positions
-    for cpp in &render_task.current_player_position {
-        let (px, py) = point_on_connector(&cpp.connector, cpp.step);
-        let color = color_to_egui(
+    //
+    // Crashed players (hit_fraction.is_some()) share the same screen position.
+    // Build a map from quantized position → (pos, colors) for those players.
+    // Groups with ≥ 2 members get a single cross in the mixed color; their
+    // individual circles are suppressed.
+    let player_color = |cpp: &hexagon_engine::CurrentPlayerPosition| -> egui::Color32 {
+        color_to_egui(
             player_data
                 .colors
                 .get(&cpp.player_id)
                 .copied()
                 .unwrap_or(player_data.unused_color),
-        );
+        )
+    };
+
+    let player_engine_color = |cpp: &hexagon_engine::CurrentPlayerPosition| -> Color {
+        player_data
+            .colors
+            .get(&cpp.player_id)
+            .copied()
+            .unwrap_or(player_data.unused_color)
+    };
+
+    // key → (representative screen pos, per-player colors)
+    let mut crash_groups: std::collections::HashMap<(i32, i32), (egui::Pos2, Vec<Color>)> =
+        std::collections::HashMap::new();
+    for cpp in &render_task.current_player_position {
+        if cpp.hit_fraction.is_none() {
+            continue;
+        }
+        let (px, py) = point_on_connector(&cpp.connector, cpp.step);
+        let pos = to_screen(px, py);
+        let key = (pos.x.round() as i32, pos.y.round() as i32);
+        let entry = crash_groups.entry(key).or_insert_with(|| (pos, Vec::new()));
+        entry.1.push(player_engine_color(cpp));
+    }
+
+    // IDs whose crash group has ≥ 2 players → suppress individual circle
+    let mut in_crash_group: std::collections::HashSet<hexagon_types::player::PlayerId> =
+        std::collections::HashSet::new();
+    for cpp in &render_task.current_player_position {
+        if cpp.hit_fraction.is_none() {
+            continue;
+        }
+        let (px, py) = point_on_connector(&cpp.connector, cpp.step);
+        let pos = to_screen(px, py);
+        let key = (pos.x.round() as i32, pos.y.round() as i32);
+        if crash_groups.get(&key).is_some_and(|(_, c)| c.len() >= 2) {
+            in_crash_group.insert(cpp.player_id);
+        }
+    }
+
+    for cpp in &render_task.current_player_position {
+        if in_crash_group.contains(&cpp.player_id) {
+            continue;
+        }
+        let (px, py) = point_on_connector(&cpp.connector, cpp.step);
+        let color = player_color(cpp);
         let pos = to_screen(px, py);
 
         if !cpp.is_active
@@ -487,6 +536,24 @@ pub fn show(
             pos,
             7.0 * scale,
             egui::Stroke::new(1.5 * scale, egui::Color32::WHITE),
+        );
+    }
+
+    // Draw one X per crash group (≥ 2 players) in the mixed-players color.
+    for (_, (pos, colors)) in &crash_groups {
+        if colors.len() < 2 {
+            continue;
+        }
+        let mixed = mix_colors(colors);
+        let arm = 8.0 * scale;
+        let stroke = egui::Stroke::new(3.0 * scale, mixed);
+        painter.line_segment(
+            [*pos + egui::vec2(-arm, -arm), *pos + egui::vec2(arm, arm)],
+            stroke,
+        );
+        painter.line_segment(
+            [*pos + egui::vec2(arm, -arm), *pos + egui::vec2(-arm, arm)],
+            stroke,
         );
     }
 }

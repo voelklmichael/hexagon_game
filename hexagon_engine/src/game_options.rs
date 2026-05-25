@@ -8,7 +8,7 @@ pub use hexagon_types::missions::MissionHighscoreV1;
 use crate::{
     Board, ConnectorEnd, RandomNumberGenerator, Tile,
     game_state::{GameResult, GameState},
-    player_types::{Player, PlayerHistorySingleTurn},
+    player_types::{Player, PlayerHistorySingleTurn, PlayerPosition},
     statistics::Statistics,
 };
 
@@ -75,7 +75,7 @@ impl GameOptionsDelivery {
             .collect();
         let mut players = [Player {
             id: PlayerId(0),
-            current_position: (start_id, ConnectorEnd::StartedAtA),
+            current_position: PlayerPosition::new(start_id, ConnectorEnd::StartedAtA),
             target,
             history: PlayerHistorySingleTurn::new_from_start(&start_id),
             is_npc: false,
@@ -93,7 +93,7 @@ impl GameOptionsDelivery {
                 .ok_or(format!("No start found for NPC#{i}"))?;
             players.push(Player {
                 id: PlayerId(1 + i as u32),
-                current_position: (start_id, ConnectorEnd::StartedAtA),
+                current_position: PlayerPosition::new(start_id, ConnectorEnd::StartedAtA),
                 target: Some(target),
                 history: PlayerHistorySingleTurn::new_from_start(&start_id),
                 is_npc: true,
@@ -133,10 +133,10 @@ impl GameOptionsDelivery {
 
         let all_npc_targets_reached = npc_with_target
             .iter()
-            .all(|p| p.target.is_some_and(|t| t == p.current_position.0));
+            .all(|p| p.target.is_some_and(|t| t == p.current_position.connector));
         let all_human_targets_reached = humans_with_target
             .iter()
-            .all(|p| !p.is_active && p.target.is_some_and(|t| t == p.current_position.0));
+            .all(|p| !p.is_active && p.target.is_some_and(|t| t == p.current_position.connector));
 
         // Win: all targets (NPC and human) reached — checked before loss so simultaneous
         // arrival on the same turn counts as a win.
@@ -183,7 +183,7 @@ impl GameOptionsStandard {
                 .collect();
             players.push(Player {
                 id: PlayerId(i as u32),
-                current_position: (start_id, ConnectorEnd::StartedAtA),
+                current_position: PlayerPosition::new(start_id, ConnectorEnd::StartedAtA),
                 target: None,
                 history: PlayerHistorySingleTurn::new_from_start(&start_id),
                 is_npc: false,
@@ -294,7 +294,7 @@ impl GameOptionsStandard {
                         let dist_ok = min_distance.is_none_or(|d| {
                             stats.total_path_weight.get(&p.id).copied().unwrap_or(0) >= d
                         });
-                        let target_ok = target.is_none_or(|t| p.current_position.0 == t);
+                        let target_ok = target.is_none_or(|t| p.current_position.connector == t);
                         vel_ok && dist_ok && target_ok
                     })
                     .map(|p| p.id)
@@ -324,7 +324,7 @@ pub fn start_highscore_game_v1(mission: MissionHighscoreV1) -> Result<GameState,
 
     let player = Player {
         id: PlayerId(0),
-        current_position: (start_id, ConnectorEnd::StartedAtA),
+        current_position: PlayerPosition::new(start_id, ConnectorEnd::StartedAtA),
         target: *target,
         history: PlayerHistorySingleTurn::new_from_start(&start_id),
         is_npc: false,
@@ -355,7 +355,7 @@ pub fn start_highscore_game_v2(mission: MissionHighscoreV2) -> Result<GameState,
             Player {
                 id,
                 history: PlayerHistorySingleTurn::new_from_start(start),
-                current_position: (*start, ConnectorEnd::StartedAtA),
+                current_position: PlayerPosition::new(*start, ConnectorEnd::StartedAtA),
                 target: mission.winning_condition.target.get(&id).cloned(),
                 is_npc: i > 0,
                 is_active: true,
@@ -408,7 +408,7 @@ pub(crate) fn check_winning_condition_for_highscore_v2(
         let target_ok = wc
             .target
             .get(&p.id)
-            .is_none_or(|&t| p.current_position.0 == t);
+            .is_none_or(|&t| p.current_position.connector == t);
         vel_ok && dist_ok && target_ok
     });
     if is_won {
