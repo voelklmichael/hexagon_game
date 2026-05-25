@@ -9,6 +9,7 @@ pub struct PlayerPosition {
     pub end: ConnectorEnd,
     /// Fraction [0, 1] along the connector from the entry end where the player stopped due to a
     /// collision. `None` when the player is at the normal exit of the connector.
+    #[serde(default)]
     pub hit_fraction: Option<f32>,
 }
 
