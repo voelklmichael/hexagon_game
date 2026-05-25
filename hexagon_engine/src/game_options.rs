@@ -6,7 +6,7 @@ pub use hexagon_types::game_options::{CollisionMode, OuterConnectors, WinningCon
 pub use hexagon_types::missions::MissionHighscoreV1;
 
 use crate::{
-    board_types::{Board, ConnectorEnd, Tile},
+    Board, ConnectorEnd, Tile,
     game_state::{GameResult, GameState},
     player_types::{Player, PlayerHistorySingleTurn},
     random_number_generator::RandomNumberGenerator,
