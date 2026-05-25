@@ -26,6 +26,16 @@ pub fn login_router() -> Router<AppState> {
 }
 
 use hexagon_types::LoginResponse;
+fn password_validity_check(password: &str) -> Result<(), &'static str> {
+    if password.len() < 8 {
+        return Err("Password must be at least 8 characters");
+    }
+    if password.contains(char::is_whitespace) {
+        return Err("Password must not contain whitespace");
+    }
+    Ok(())
+}
+
 mod post {
     use axum::{Form, Json, extract::State};
     use serde::Deserialize;
@@ -45,12 +55,8 @@ mod post {
     ) -> impl IntoResponse {
         tracing::info!("POST /user_login/password_reset");
 
-        if form.password.len() < 5 {
-            return (
-                StatusCode::UNPROCESSABLE_ENTITY,
-                "Password must be at least 5 characters",
-            )
-                .into_response();
+        if let Err(msg) = password_validity_check(&form.password) {
+            return (StatusCode::UNPROCESSABLE_ENTITY, msg).into_response();
         }
 
         let password_hash = {
@@ -86,7 +92,7 @@ mod post {
     ) -> StatusCode {
         tracing::info!("POST /user_login/request_password_reset for {}", req.email);
 
-        match state.db.create_password_reset_token(&req.email).await {
+        match state.db.create_password_reset_token(&req.email.to_ascii_lowercase()).await {
             Ok(_) => StatusCode::NO_CONTENT, // worker picks it up; don't reveal whether user exists
             Err(e) => {
                 tracing::warn!("create_password_reset_token failed: {e}");
@@ -143,21 +149,19 @@ mod post {
         let UserCreation {
             password,
             name,
-            email,
+            email: email_raw,
         } = user;
+        let email = email_raw.to_ascii_lowercase();
 
         let valid = |s: &str| s.len() >= 5 && !s.contains(char::is_whitespace);
-        if !valid(&name) || !valid(&email) {
+        if !valid(&name) || !valid(&email)  {
             return Err((
                 StatusCode::UNPROCESSABLE_ENTITY,
                 "Name and email must be at least 5 characters and contain no whitespace",
             ));
         }
-        if password.len() < 5 {
-            return Err((
-                StatusCode::UNPROCESSABLE_ENTITY,
-                "Password must be at least 5 characters",
-            ));
+        if let Err(msg) = password_validity_check(&password) {
+            return Err((StatusCode::UNPROCESSABLE_ENTITY, msg));
         }
         let password_hash = {
             let salt = argon2::password_hash::SaltString::generate(

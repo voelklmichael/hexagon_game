@@ -53,7 +53,7 @@ impl AuthnBackend for AppState {
         creds: Self::Credentials,
     ) -> Result<Option<Self::User>, Self::Error> {
         tracing::info!("User auth for email: {}", &creds.email);
-        let Some(user) = self.db.fetch_user_by_email(&creds.email).await? else {
+        let Some(user) = self.db.fetch_user_by_email(&creds.email.to_ascii_lowercase()).await? else {
             return Ok(None);
         };
         let DBUser {
