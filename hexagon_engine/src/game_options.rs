@@ -9,7 +9,7 @@ use crate::{
     Board, ConnectorEnd, Tile,
     game_state::{GameResult, GameState},
     player_types::{Player, PlayerHistorySingleTurn},
-    random_number_generator::RandomNumberGenerator,
+    RandomNumberGenerator,
     statistics::Statistics,
 };
 
