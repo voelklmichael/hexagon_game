@@ -664,15 +664,19 @@ pub fn show(
             }
 
             ui.vertical(|ui| {
-                let resp = draw_tile_preview(
-                    ui,
-                    r,
-                    connectors,
-                    is_selected,
-                    hex_fill,
-                    hex_stroke,
-                    connector_color,
-                );
+                let resp = ui
+                    .with_layout(egui::Layout::top_down(egui::Align::Center), |ui| {
+                        draw_tile_preview(
+                            ui,
+                            r,
+                            connectors,
+                            is_selected,
+                            hex_fill,
+                            hex_stroke,
+                            connector_color,
+                        )
+                    })
+                    .inner;
                 if resp.clicked() {
                     interaction.selected_tile = if is_selected { None } else { Some(i) };
                     interaction.animation_t = 1.0;
