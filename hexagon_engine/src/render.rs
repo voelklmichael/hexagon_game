@@ -1418,4 +1418,38 @@ mod tests {
             std::fs::write(path, svg.to_string()).unwrap();
         }
     }
+
+    #[test]
+    pub fn test_render_collision_asymmetric() {
+        use hexagon_types::player::PlayerId;
+
+        let json_path = format!("{}/../target/collision_game", env!("CARGO_MANIFEST_DIR"));
+        let json = std::fs::read_to_string(&json_path).expect("collision_game file missing");
+        let game: GameState = serde_json::from_str(&json).expect("failed to deserialize collision_game");
+
+        let player_data = PlayerData {
+            colors: HashMap::from([
+                (PlayerId(0), Color::Green),
+                (PlayerId(1), Color::Red),
+            ]),
+            dead_end_color: Color::Gray,
+            closed_loop_color: Color::Teal,
+            unused_color: Color::Golden,
+            hex_fill: Color::Beige,
+            hex_stroke: Color::DarkGray,
+            highlighted_hex_fill: Color::Moccasin,
+            highlighted_hex_stroke: Color::DarkOrange,
+        };
+
+        for i in 0..=10 {
+            let t = i as f32 / 10.0;
+            let rendertask = game.render_task(None, t);
+            let svg = rendertask.render(&player_data).unwrap();
+            let path = format!(
+                "{}/../target/collision_asymmetric_t{i:02}.svg",
+                env!("CARGO_MANIFEST_DIR")
+            );
+            std::fs::write(path, svg.to_string()).unwrap();
+        }
+    }
 }
