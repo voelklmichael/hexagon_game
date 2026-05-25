@@ -216,43 +216,11 @@ impl GameState {
                 )
             }
             GameOptions::HighscoreV2(m) => {
-                let wc = &m.winning_condition;
-                let all_done = self
-                    .players
-                    .iter()
-                    .filter(|p| !p.is_npc)
-                    .all(|p| !p.is_active);
-                if !all_done {
-                    return;
-                }
-                let is_won = self.players.iter().all(|p| {
-                    let vel_ok = wc.min_velocity.get(&p.id).is_none_or(|&v| {
-                        self.statistics
-                            .max_velocity
-                            .get(&p.id)
-                            .copied()
-                            .unwrap_or(0)
-                            >= v
-                    });
-                    let dist_ok = wc.min_distance.get(&p.id).is_none_or(|&d| {
-                        self.statistics
-                            .total_path_weight
-                            .get(&p.id)
-                            .copied()
-                            .unwrap_or(0)
-                            >= d
-                    });
-                    let target_ok = wc
-                        .target
-                        .get(&p.id)
-                        .is_none_or(|&t| p.current_position.0 == t);
-                    vel_ok && dist_ok && target_ok
-                });
-                if is_won {
-                    Some(GameResult::Win([PlayerId(0)].into()))
-                } else {
-                    Some(GameResult::Loss)
-                }
+                crate::game_options::check_winning_condition_for_highscore_v2(
+                    &m.winning_condition,
+                    &self.players,
+                    &self.statistics,
+                )
             }
         };
         self.result = result;

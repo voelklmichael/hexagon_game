@@ -1,5 +1,5 @@
 use hexagon_types::player::PlayerId;
-use hexagon_types::{MissionHighscoreV2, WinningConditionHighscoreV1};
+use hexagon_types::{MissionHighscoreV2, WinningConditionHighscoreV1, WinningConditionHighscoreV2};
 use serde::{Deserialize, Serialize};
 
 pub use hexagon_types::game_options::{CollisionMode, OuterConnectors, WinningCondition};
@@ -377,6 +377,45 @@ pub fn start_highscore_game_v2(mission: MissionHighscoreV2) -> Result<GameState,
         rng: RandomNumberGenerator::new(mission.random_seed),
         options: GameOptions::HighscoreV2(mission),
     })
+}
+
+pub(crate) fn check_winning_condition_for_highscore_v2(
+    wc: &WinningConditionHighscoreV2,
+    players: &[Player],
+    stats: &Statistics,
+) -> Option<GameResult> {
+    let all_done = players.iter().filter(|p| !p.is_npc).all(|p| !p.is_active);
+    if !all_done {
+        return None;
+    }
+    let is_won = players.iter().all(|p| {
+        let vel_ok = wc.min_velocity.get(&p.id).is_none_or(|&v| {
+            stats
+                .max_velocity
+                .get(&p.id)
+                .copied()
+                .unwrap_or(0)
+                >= v
+        });
+        let dist_ok = wc.min_distance.get(&p.id).is_none_or(|&d| {
+            stats
+                .total_path_weight
+                .get(&p.id)
+                .copied()
+                .unwrap_or(0)
+                >= d
+        });
+        let target_ok = wc
+            .target
+            .get(&p.id)
+            .is_none_or(|&t| p.current_position.0 == t);
+        vel_ok && dist_ok && target_ok
+    });
+    if is_won {
+        Some(GameResult::Win([PlayerId(0)].into()))
+    } else {
+        Some(GameResult::Loss)
+    }
 }
 
 impl GameOptions {
