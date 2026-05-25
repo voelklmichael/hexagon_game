@@ -14,13 +14,17 @@ pub struct UserLogin {
     pub login_error: Option<String>,
     #[serde(skip)]
     pub create_error: Option<String>,
+    /// `Ok(())` = request sent successfully, `Err(msg)` = server error.
+    #[serde(skip)]
+    pub reset_message: Option<Result<(), String>>,
 }
 
 pub fn show(ui: &mut egui::Ui, user: &mut UserLogin, client: &mut BackendReqwest) {
     let checking_session = client.is_session_pending();
     let logging_in = client.login_user_task.is_pending();
     let creating = client.create_user_task.is_pending();
-    let busy = checking_session || logging_in || creating;
+    let resetting = client.reset_password_task.is_pending();
+    let busy = checking_session || logging_in || creating || resetting;
 
     // --- Status ---
     if let Some((_id, name)) = &user.logged_in_as {
@@ -87,5 +91,39 @@ pub fn show(ui: &mut egui::Ui, user: &mut UserLogin, client: &mut BackendReqwest
     });
     if let Some(err) = &user.create_error {
         ui.colored_label(egui::Color32::RED, err);
+    }
+
+    ui.add_space(8.0);
+    ui.separator();
+    ui.add_space(8.0);
+
+    // --- Password Reset ---
+    ui.heading("Password Reset");
+    ui.add_space(4.0);
+    ui.label("Email");
+    ui.text_edit_singleline(&mut user.email_textbox);
+    ui.add_space(8.0);
+    ui.add_enabled_ui(!busy, |ui| {
+        let label = if resetting {
+            "Sending…"
+        } else {
+            "Send Reset Email"
+        };
+        if ui.button(label).clicked() {
+            user.reset_message = None;
+            client.request_password_reset(user.email_textbox.clone());
+        }
+    });
+    match &user.reset_message {
+        Some(Ok(())) => {
+            ui.colored_label(
+                egui::Color32::GREEN,
+                "If the user existed, they receive an email.",
+            );
+        }
+        Some(Err(err)) => {
+            ui.colored_label(egui::Color32::RED, err);
+        }
+        None => {}
     }
 }

@@ -23,3 +23,6 @@ tower-http = { version = "0.6", features = ["cors"] }
 axum-messages = "0.8.0"
 password-auth = "1.0.0"
 argon2 = "0.5.3"
+secrecy.workspace = true
+resend-rs = "0.25"
+tokio-util.workspace = true

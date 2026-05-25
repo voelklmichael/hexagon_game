@@ -2,6 +2,13 @@ use crate::HexApp;
 
 impl HexApp {
     pub(super) fn process_backend_responses(&mut self, current_time: f64) {
+        if let Some(result) = self.backend_reqwest.reset_password_task.take() {
+            self.user_login.reset_message = Some(match result {
+                Ok(()) => Ok(()),
+                Err(e) => Err(e.to_string()),
+            });
+        }
+
         if let Some(result) = self.backend_reqwest.create_user_task.take() {
             match result {
                 Ok(()) => {

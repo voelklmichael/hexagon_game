@@ -92,6 +92,8 @@ pub struct BackendReqwest {
     fetch_overall_best_retry: RetryState,
     fetch_overall_best_mid: Option<uuid::Uuid>,
 
+    pub reset_password_task: Bind<(), ApiError>,
+
     // --- write queue ---
     mission_write_task: Bind<(), ApiError>,
     pending_mission_results: Vec<PendingMissionResult>,
@@ -155,6 +157,14 @@ impl BackendReqwest {
                 .await
                 .map(|_| ())
         });
+    }
+
+    pub(crate) fn request_password_reset(&mut self, email: String) {
+        let Some(client) = self.get_client() else {
+            return;
+        };
+        self.reset_password_task
+            .request(async move { client.request_password_reset(&email).await });
     }
 
     pub(crate) fn log_in(&mut self, email: String, password: String) {

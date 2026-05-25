@@ -12,6 +12,11 @@ pub mod missions;
 pub use missions::*;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct PasswordResetRequest {
+    pub email: String,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct LoginResponse {
     pub next: Option<String>,
     pub user_id: Uuid,

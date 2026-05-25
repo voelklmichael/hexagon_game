@@ -1,6 +1,6 @@
 use hexagon_types::{
-    DBHighscorePeak, LoginResponse, MeResponse, MissionEntry, PlayerStats, PreviousGame,
-    SavePreviousGameRequest,
+    DBHighscorePeak, LoginResponse, MeResponse, MissionEntry, PasswordResetRequest, PlayerStats,
+    PreviousGame, SavePreviousGameRequest,
 };
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -201,6 +201,17 @@ impl ApiClient {
 
     pub async fn logout(&self) -> Result<(), ApiError> {
         let res = self.get(self.url("/user_login/logout")).send().await?;
+        Self::expect_no_content(res).await
+    }
+
+    pub async fn request_password_reset(&self, email: &str) -> Result<(), ApiError> {
+        let res = self
+            .post(self.url("/user_login/request_password_reset"))
+            .json(&PasswordResetRequest {
+                email: email.to_owned(),
+            })
+            .send()
+            .await?;
         Self::expect_no_content(res).await
     }
 
