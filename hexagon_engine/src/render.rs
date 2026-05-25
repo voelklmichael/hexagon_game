@@ -751,53 +751,113 @@ impl RenderTask {
         }
 
         // Step3: render current player positions
-        for cpp in current_player_position {
-            let (px, py) = point_on_connector(&cpp.connector, cpp.step, r, h);
-            let color = player_data
-                .colors
-                .get(&cpp.player_id)
-                .copied()
-                .unwrap_or(player_data.unused_color)
-                .to_svg_string();
-            if !cpp.is_active
-                && let ConnectorKind::DeadEnd(ConnectorDeadEnd { position }) = &cpp.connector
-            {
-                let (nx, ny) = edge_inward_normal(&position.edge_sub.edge);
-                let tip = (px - nx * r * 0.5, py - ny * r * 0.5);
-                let (dx, dy) = (tip.0 - px, tip.1 - py);
-                let len = (dx * dx + dy * dy).sqrt();
-                let (dx, dy) = (dx / len, dy / len);
-                let (perp_x, perp_y) = (-dy, dx);
-                let head = r * 0.2;
-                let data = Data::new()
-                    .move_to((px, py))
-                    .line_to(tip)
-                    .move_to((
-                        tip.0 - dx * head + perp_x * head,
-                        tip.1 - dy * head + perp_y * head,
-                    ))
-                    .line_to(tip)
-                    .line_to((
-                        tip.0 - dx * head - perp_x * head,
-                        tip.1 - dy * head - perp_y * head,
-                    ));
-                let arrow = Path::new()
-                    .set("fill", "none")
-                    .set("stroke", color)
-                    .set("stroke-width", 3)
-                    .set("stroke-linecap", "round")
-                    .set("d", data);
-                document = document.add(arrow);
-                continue;
+        // Crashed players sharing the same spot are replaced by a single X in the mixed color.
+        {
+            // Build crash groups keyed by quantized world position.
+            let mut crash_groups: std::collections::HashMap<
+                (i64, i64),
+                ((f64, f64), Vec<Color>),
+            > = std::collections::HashMap::new();
+            for cpp in current_player_position.iter() {
+                if cpp.hit_fraction.is_none() {
+                    continue;
+                }
+                let (px, py) = point_on_connector(&cpp.connector, cpp.step, r, h);
+                let key = ((px * 10.0).round() as i64, (py * 10.0).round() as i64);
+                let color = player_data
+                    .colors
+                    .get(&cpp.player_id)
+                    .copied()
+                    .unwrap_or(player_data.unused_color);
+                crash_groups
+                    .entry(key)
+                    .or_insert_with(|| ((px, py), Vec::new()))
+                    .1
+                    .push(color);
             }
-            let circle = Circle::new()
-                .set("cx", px)
-                .set("cy", py)
-                .set("r", 7)
-                .set("fill", color)
-                .set("stroke", "white")
-                .set("stroke-width", 1.5);
-            document = document.add(circle);
+            let in_crash_group: std::collections::HashSet<PlayerId> = current_player_position
+                .iter()
+                .filter(|cpp| cpp.hit_fraction.is_some())
+                .filter(|cpp| {
+                    let (px, py) = point_on_connector(&cpp.connector, cpp.step, r, h);
+                    let key = ((px * 10.0).round() as i64, (py * 10.0).round() as i64);
+                    crash_groups.get(&key).is_some_and(|(_, c)| c.len() >= 2)
+                })
+                .map(|cpp| cpp.player_id)
+                .collect();
+
+            for cpp in current_player_position {
+                if in_crash_group.contains(&cpp.player_id) {
+                    continue;
+                }
+                let (px, py) = point_on_connector(&cpp.connector, cpp.step, r, h);
+                let color = player_data
+                    .colors
+                    .get(&cpp.player_id)
+                    .copied()
+                    .unwrap_or(player_data.unused_color)
+                    .to_svg_string();
+                if !cpp.is_active
+                    && let ConnectorKind::DeadEnd(ConnectorDeadEnd { position }) = &cpp.connector
+                {
+                    let (nx, ny) = edge_inward_normal(&position.edge_sub.edge);
+                    let tip = (px - nx * r * 0.5, py - ny * r * 0.5);
+                    let (dx, dy) = (tip.0 - px, tip.1 - py);
+                    let len = (dx * dx + dy * dy).sqrt();
+                    let (dx, dy) = (dx / len, dy / len);
+                    let (perp_x, perp_y) = (-dy, dx);
+                    let head = r * 0.2;
+                    let data = Data::new()
+                        .move_to((px, py))
+                        .line_to(tip)
+                        .move_to((
+                            tip.0 - dx * head + perp_x * head,
+                            tip.1 - dy * head + perp_y * head,
+                        ))
+                        .line_to(tip)
+                        .line_to((
+                            tip.0 - dx * head - perp_x * head,
+                            tip.1 - dy * head - perp_y * head,
+                        ));
+                    let arrow = Path::new()
+                        .set("fill", "none")
+                        .set("stroke", color)
+                        .set("stroke-width", 3)
+                        .set("stroke-linecap", "round")
+                        .set("d", data);
+                    document = document.add(arrow);
+                    continue;
+                }
+                let circle = Circle::new()
+                    .set("cx", px)
+                    .set("cy", py)
+                    .set("r", 7)
+                    .set("fill", color)
+                    .set("stroke", "white")
+                    .set("stroke-width", 1.5);
+                document = document.add(circle);
+            }
+
+            // Draw × for each crash group with ≥ 2 players.
+            for (_, ((px, py), colors)) in &crash_groups {
+                if colors.len() < 2 {
+                    continue;
+                }
+                let mixed = mix_colors(colors);
+                let arm = 8.0_f64;
+                let data = Data::new()
+                    .move_to((px - arm, py - arm))
+                    .line_to((px + arm, py + arm))
+                    .move_to((px + arm, py - arm))
+                    .line_to((px - arm, py + arm));
+                let path_elem = Path::new()
+                    .set("d", data)
+                    .set("fill", "none")
+                    .set("stroke", mixed)
+                    .set("stroke-width", 3)
+                    .set("stroke-linecap", "round");
+                document = document.add(path_elem);
+            }
         }
 
         if !hexagons.is_empty() {
@@ -1264,6 +1324,98 @@ mod tests {
             );
             std::fs::write(json_path, serde_json::to_string_pretty(&game).unwrap()).unwrap();
             game.play_tile(0);
+        }
+    }
+
+    #[test]
+    pub fn test_render_collision_symmetric() {
+        use Edge::*;
+        use crate::game_options::{
+            CollisionMode, GameOptionsStandard, OuterConnectors, WinningCondition,
+        };
+
+        let options = GameOptionsStandard {
+            board_radius: 1,
+            outer_connectors: OuterConnectors::ReducedDeathEnds,
+            random_seed: 0,
+            player_count: 2,
+            collision_mode: CollisionMode::BothDie,
+            winning_condition: WinningCondition::HighestVelocity,
+            hand_size: 1,
+        };
+        let mut game = options.start_game().unwrap();
+
+        let es_a = {
+            let id = game.players[0].current_position.connector;
+            game.board
+                .connectors
+                .iter()
+                .find(|c| c.id == id)
+                .map(|c| match &c.kind {
+                    ConnectorKind::DeadEnd(d) => d.position.edge_sub.clone(),
+                    _ => panic!("expected dead-end"),
+                })
+                .unwrap()
+        };
+        let es_b = {
+            let id = game.players[1].current_position.connector;
+            game.board
+                .connectors
+                .iter()
+                .find(|c| c.id == id)
+                .map(|c| match &c.kind {
+                    ConnectorKind::DeadEnd(d) => d.position.edge_sub.clone(),
+                    _ => panic!("expected dead-end"),
+                })
+                .unwrap()
+        };
+
+        let all_edges: Vec<EdgeSub> =
+            [Top, TopLeft, BottomLeft, Bottom, BottomRight, TopRight]
+                .iter()
+                .flat_map(|&e| {
+                    [
+                        EdgeSub { edge: e, sub: Sub::Left },
+                        EdgeSub { edge: e, sub: Sub::Right },
+                    ]
+                })
+                .collect();
+
+        let mut remaining: Vec<EdgeSub> = all_edges
+            .into_iter()
+            .filter(|es| es != &es_a && es != &es_b)
+            .collect();
+
+        let mut inner_connectors = vec![ConnectorEdgeSub { a: es_a, b: es_b }];
+        while remaining.len() >= 2 {
+            let a = remaining.pop().unwrap();
+            let b = remaining.pop().unwrap();
+            inner_connectors.push(ConnectorEdgeSub { a, b });
+        }
+        game.players[0].hand = vec![Tile { inner_connectors }];
+
+        game.play_tile(0);
+
+        let player_data = PlayerData {
+            colors: HashMap::from([(P0, Color::Green), (P1, Color::Red)]),
+            dead_end_color: Color::Gray,
+            closed_loop_color: Color::Teal,
+            unused_color: Color::Golden,
+            hex_fill: Color::Beige,
+            hex_stroke: Color::DarkGray,
+            highlighted_hex_fill: Color::Moccasin,
+            highlighted_hex_stroke: Color::DarkOrange,
+        };
+
+        for i in 0..=10 {
+            let t = i as f32 / 10.0;
+            let rendertask = game.render_task(None, t);
+            let svg = rendertask.render(&player_data).unwrap();
+            let path = format!(
+                "{}/../target/collision_symmetric_t{i:02}.svg",
+                env!("CARGO_MANIFEST_DIR")
+            );
+            std::fs::write(path, svg.to_string()).unwrap();
         }
     }
 }
