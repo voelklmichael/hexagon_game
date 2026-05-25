@@ -32,10 +32,7 @@ impl Edge {
     }
     pub fn opposites() -> Vec<(Self, Self)> {
         use strum::IntoEnumIterator;
-        Self::iter()
-            .enumerate()
-            .map(|(i, edge)| (edge, Self::iter().cycle().nth(i + 3).unwrap()))
-            .collect()
+        Self::iter().map(|edge| (edge, edge.opposite())).collect()
     }
 }
 
@@ -259,7 +256,7 @@ impl Board {
                 if !hex_set.contains(&pb) || pa >= pb {
                     continue;
                 }
-                let opp = Self::opposite_edge(edge_e);
+                let opp = edge_e.opposite();
                 for (sub_a, sub_b) in [(Sub::Left, Sub::Right), (Sub::Right, Sub::Left)] {
                     connectors.push(Connector {
                         id: ConnectorId(id),
@@ -543,17 +540,6 @@ impl Board {
             Edge::Bottom => (Edge::BottomRight, Edge::TopRight),
             Edge::BottomRight => (Edge::TopRight, Edge::Top),
             Edge::TopRight => (Edge::Top, Edge::TopLeft),
-        }
-    }
-
-    fn opposite_edge(e: Edge) -> Edge {
-        match e {
-            Edge::Top => Edge::Bottom,
-            Edge::Bottom => Edge::Top,
-            Edge::TopLeft => Edge::BottomRight,
-            Edge::BottomRight => Edge::TopLeft,
-            Edge::BottomLeft => Edge::TopRight,
-            Edge::TopRight => Edge::BottomLeft,
         }
     }
 
