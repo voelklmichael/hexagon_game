@@ -1,7 +1,7 @@
 use hexagon_types::player::PlayerId;
 use serde::{Deserialize, Serialize};
 
-use super::{ConnectorEnd, ConnectorId, ConnectorPosition, Tile};
+use super::{ConnectorEnd, ConnectorId, Tile};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Player {

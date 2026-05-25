@@ -21,9 +21,9 @@ impl GameState {
         let Self {
             board,
             players,
-            current_player,
+            current_player: _,
             rng: _,
-            options,
+            options: _,
             statistics: _,
             result: _,
         } = self;

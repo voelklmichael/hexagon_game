@@ -164,8 +164,8 @@ impl GameOptionsStandard {
             outer_connectors,
             random_seed,
             player_count,
-            collision_mode,
-            winning_condition,
+            collision_mode: _,
+            winning_condition: _,
             hand_size,
         } = self.clone();
 
@@ -323,7 +323,6 @@ pub fn start_highscore_game_v1(mission: MissionHighscoreV1) -> Result<GameState,
     let start_id = mission.starting_point;
     let target = match &mission.winning_condition {
         WinningConditionHighscoreV1 { target, .. } => *target,
-        _ => None,
     };
     let player = Player {
         id: PlayerId(0),

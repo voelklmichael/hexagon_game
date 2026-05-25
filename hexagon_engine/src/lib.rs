@@ -1,6 +1,3 @@
-#![allow(unused)]
-
-mod game;
 mod game_options;
 mod game_state;
 mod player_types;
@@ -8,9 +5,7 @@ mod random_number_generator;
 mod render;
 mod statistics;
 
-use game_state::*;
 use player_types::*;
-use statistics::*;
 
 pub use game_options::{
     CollisionMode, GameOptions, GameOptionsDelivery, GameOptionsDiscriminants, GameOptionsStandard,
