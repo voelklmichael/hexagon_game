@@ -6,10 +6,9 @@ pub use hexagon_types::game_options::{CollisionMode, OuterConnectors, WinningCon
 pub use hexagon_types::missions::MissionHighscoreV1;
 
 use crate::{
-    Board, ConnectorEnd, Tile,
+    Board, ConnectorEnd, RandomNumberGenerator, Tile,
     game_state::{GameResult, GameState},
     player_types::{Player, PlayerHistorySingleTurn},
-    RandomNumberGenerator,
     statistics::Statistics,
 };
 
@@ -321,13 +320,12 @@ fn hash_seed(seed: u32) -> u32 {
 
 pub fn start_highscore_game_v1(mission: MissionHighscoreV1) -> Result<GameState, String> {
     let start_id = mission.starting_point;
-    let target = match &mission.winning_condition {
-        WinningConditionHighscoreV1 { target, .. } => *target,
-    };
+    let WinningConditionHighscoreV1 { target, .. } = &mission.winning_condition;
+
     let player = Player {
         id: PlayerId(0),
         current_position: (start_id, ConnectorEnd::StartedAtA),
-        target,
+        target: *target,
         history: PlayerHistorySingleTurn::new_from_start(&start_id),
         is_npc: false,
         is_active: true,
