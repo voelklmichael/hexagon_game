@@ -3,33 +3,40 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use hexagon_db::DB;
-use resend_rs::types::CreateEmailBaseOptions;
+use lettre::message::header::ContentType;
+use lettre::transport::smtp::authentication::Credentials;
+use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
+use secrecy::ExposeSecret;
 use uuid::Uuid;
 
+use crate::config::SmtpConfig;
+
 const MAX_ATTEMPTS: u32 = 10;
-/// How often to re-query the DB when there is nothing ready to send.
 const POLL_INTERVAL: Duration = Duration::from_secs(5);
 
-/// Spawns a background task that polls the database for unsent password-reset
-/// tokens and delivers them via Resend, with per-token exponential backoff.
-/// The task stops cleanly when `cancellation_token` is cancelled.
 pub fn spawn_email_worker(
     db: Arc<DB>,
-    resend: Option<Arc<resend_rs::Resend>>,
-    from: Option<String>,
+    smtp: SmtpConfig,
     cancellation_token: tokio_util::sync::CancellationToken,
 ) {
-    tokio::spawn(async move { worker(db, resend, from, cancellation_token).await });
+    tokio::spawn(async move { worker(db, smtp, cancellation_token).await });
 }
 
 async fn worker(
     db: Arc<DB>,
-    resend: Option<Arc<resend_rs::Resend>>,
-    from: Option<String>,
+    smtp: SmtpConfig,
     cancellation_token: tokio_util::sync::CancellationToken,
 ) {
-    // Per-token retry state: token → (attempt_count, retry_not_before).
-    // Resets on server restart, which is fine — tokens will just be retried sooner.
+    let creds = Credentials::new(
+        smtp.smtp_username.clone(),
+        smtp.smtp_password.expose_secret().to_owned(),
+    );
+    let mailer = AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&smtp.smtp_host)
+        .unwrap()
+        .port(smtp.smtp_port)
+        .credentials(creds)
+        .build();
+
     let mut retry: HashMap<Uuid, (u32, Instant)> = HashMap::new();
 
     'outer: loop {
@@ -44,7 +51,6 @@ async fn worker(
 
         tracing::info!("Email worker: {} unsent token(s) pending", tokens.len());
 
-        // Remove stale retry entries for tokens that expired or were sent by another instance.
         let live: std::collections::HashSet<Uuid> = tokens.iter().map(|t| t.token).collect();
         retry.retain(|id, _| live.contains(id));
 
@@ -57,7 +63,6 @@ async fn worker(
             }
 
             match retry.get(&token.token) {
-                // Still in backoff — note when it becomes due.
                 Some((_, retry_at)) if *retry_at > now => {
                     earliest_next = Some(match earliest_next {
                         Some(e) => e.min(*retry_at),
@@ -65,7 +70,6 @@ async fn worker(
                     });
                     continue;
                 }
-                // Gave up on this token (attempt >= MAX_ATTEMPTS).
                 Some((attempts, _)) if *attempts >= MAX_ATTEMPTS => continue,
                 _ => {}
             }
@@ -77,10 +81,16 @@ async fn worker(
                 token.email,
                 attempt + 1
             );
-            if try_send(&resend, &from, &token.email, token.token).await {
+
+            if try_send(&mailer, &smtp.email_from, &token.email, token.token).await {
                 retry.remove(&token.token);
                 if let Err(e) = db.mark_reset_token_sent(token.token).await {
                     tracing::warn!("mark_reset_token_sent failed for {}: {e}", token.token);
+                } else {
+                    tracing::info!(
+                        "Password-reset email delivered and marked sent for {}",
+                        token.email
+                    );
                 }
             } else {
                 let next_attempt = attempt + 1;
@@ -109,8 +119,6 @@ async fn worker(
             }
         }
 
-        // Sleep until the next retry is due, but re-poll the DB at least every POLL_INTERVAL
-        // to pick up newly created tokens.
         let sleep = earliest_next
             .map(|t| t.saturating_duration_since(Instant::now()))
             .unwrap_or(POLL_INTERVAL)
@@ -127,22 +135,27 @@ async fn worker(
 }
 
 async fn try_send(
-    resend: &Option<Arc<resend_rs::Resend>>,
-    from: &Option<String>,
+    mailer: &AsyncSmtpTransport<Tokio1Executor>,
+    from: &str,
     to: &str,
     token: Uuid,
 ) -> bool {
-    let (Some(resend), Some(from)) = (resend, from) else {
-        tracing::info!("No Resend client — reset token for {to}: {token}");
-        return true;
-    };
     let body = format!("Your password reset token: {token}\n\nThis token expires in 1 hour.");
-    let email = CreateEmailBaseOptions::new(from.as_str(), [to], "Password Reset").with_text(&body);
-    match resend.emails.send(email).await {
-        Ok(_) => {
-            tracing::info!("Password-reset email sent to {to}");
-            true
+    let email = match Message::builder()
+        .from(from.parse().unwrap())
+        .to(to.parse().unwrap())
+        .subject("Password Reset")
+        .header(ContentType::TEXT_PLAIN)
+        .body(body)
+    {
+        Ok(m) => m,
+        Err(e) => {
+            tracing::warn!("Failed to build email for {to}: {e}");
+            return false;
         }
+    };
+    match mailer.send(email).await {
+        Ok(_) => true,
         Err(e) => {
             tracing::warn!("Sending password-reset email to {to} failed: {e}");
             false
