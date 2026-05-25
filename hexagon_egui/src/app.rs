@@ -220,7 +220,7 @@ pub struct HexApp {
     pub cached_user_bests: HashMap<Uuid, DBHighscorePeak>,
     /// Cached global highscores keyed by mission id, persisted for offline display.
     pub cached_overall_bests: HashMap<Uuid, DBHighscorePeak>,
-    #[serde(skip, default = "default_true")]
+    #[serde(default = "default_true")]
     pub show_introduction_screen: bool,
     #[serde(skip)]
     pub slideshow: crate::panels::introduction_central_panel::SlideshowState,
