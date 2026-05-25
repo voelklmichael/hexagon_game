@@ -624,7 +624,7 @@ impl eframe::App for HexApp {
                                 });
                             }
                             let logged_in = self.user_login.logged_in_as.is_some();
-                            let bust_label = if logged_in { "👤✔" } else { "👤✘" };
+                            let bust_label = if logged_in { "👤✔" } else { "👤❌" };
                             if ui
                                 .button(bust_label)
                                 .on_hover_text("Open side panel")
