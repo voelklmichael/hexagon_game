@@ -92,7 +92,11 @@ mod post {
     ) -> StatusCode {
         tracing::info!("POST /user_login/request_password_reset for {}", req.email);
 
-        match state.db.create_password_reset_token(&req.email.to_ascii_lowercase()).await {
+        match state
+            .db
+            .create_password_reset_token(&req.email.to_ascii_lowercase())
+            .await
+        {
             Ok(_) => StatusCode::NO_CONTENT, // worker picks it up; don't reveal whether user exists
             Err(e) => {
                 tracing::warn!("create_password_reset_token failed: {e}");
@@ -154,7 +158,7 @@ mod post {
         let email = email_raw.to_ascii_lowercase();
 
         let valid = |s: &str| s.len() >= 5 && !s.contains(char::is_whitespace);
-        if !valid(&name) || !valid(&email)  {
+        if !valid(&name) || !valid(&email) {
             return Err((
                 StatusCode::UNPROCESSABLE_ENTITY,
                 "Name and email must be at least 5 characters and contain no whitespace",
