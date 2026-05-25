@@ -6,7 +6,6 @@ use axum::{
 };
 use axum_messages::Messages;
 use hexagon_types::PasswordResetRequest;
-use serde::Deserialize;
 
 use crate::routes::AppState;
 
@@ -22,14 +21,64 @@ pub fn login_router() -> Router<AppState> {
         )
         .route("/create", post(post::create))
         .route("/me", get(get::me))
+        .route("/password_reset", get(get::password_reset_form))
+        .route("/password_reset", post(post::password_reset))
 }
 
 use hexagon_types::LoginResponse;
 mod post {
-    use axum::{Json, extract::State};
+    use axum::{Form, Json, extract::State};
+    use serde::Deserialize;
     use uuid::Uuid;
 
     use super::*;
+
+    #[derive(Deserialize)]
+    pub struct PasswordResetForm {
+        token: Uuid,
+        password: String,
+    }
+
+    pub async fn password_reset(
+        State(state): State<AppState>,
+        Form(form): Form<PasswordResetForm>,
+    ) -> impl IntoResponse {
+        tracing::info!("POST /user_login/password_reset");
+
+        if form.password.len() < 5 {
+            return (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "Password must be at least 5 characters",
+            )
+                .into_response();
+        }
+
+        let password_hash = {
+            let salt = argon2::password_hash::SaltString::generate(
+                &mut argon2::password_hash::rand_core::OsRng,
+            );
+            let argon2 = argon2::Argon2::default();
+            use argon2::PasswordHasher;
+            match argon2.hash_password(form.password.as_bytes(), &salt) {
+                Ok(hash) => hash.to_string(),
+                Err(e) => {
+                    tracing::warn!("Failed to hash password during reset: {e}");
+                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                }
+            }
+        };
+
+        match state.db.reset_password(form.token, &password_hash).await {
+            Ok(true) => (StatusCode::OK, "Password updated successfully").into_response(),
+            Ok(false) => {
+                (StatusCode::BAD_REQUEST, "Invalid or expired reset token").into_response()
+            }
+            Err(e) => {
+                tracing::warn!("reset_password db error: {e}");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        }
+    }
 
     pub async fn request_password_reset(
         State(state): State<AppState>,
@@ -136,11 +185,44 @@ mod post {
 }
 
 mod get {
-    use axum::Json;
+    use axum::{Json, extract::Query, response::Html};
     use axum_login::AuthUser;
     use hexagon_types::MeResponse;
+    use serde::Deserialize;
 
     use super::*;
+
+    #[derive(Deserialize)]
+    pub struct TokenQuery {
+        token: String,
+    }
+
+    pub async fn password_reset_form(Query(q): Query<TokenQuery>) -> Html<String> {
+        let token = html_escape(&q.token);
+        Html(format!(
+            r#"<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Reset Password</title></head>
+<body>
+  <h1>Reset your password</h1>
+  <form method="POST" action="/user_login/password_reset">
+    <input type="hidden" name="token" value="{token}">
+    <label>New password:
+      <input type="password" name="password" required minlength="5">
+    </label>
+    <button type="submit">Set new password</button>
+  </form>
+</body>
+</html>"#
+        ))
+    }
+
+    fn html_escape(s: &str) -> String {
+        s.replace('&', "&amp;")
+            .replace('"', "&quot;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;")
+    }
 
     pub async fn logout(mut auth_session: AuthSession) -> impl IntoResponse {
         tracing::info!("Logging out");

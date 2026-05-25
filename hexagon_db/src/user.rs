@@ -94,4 +94,35 @@ impl crate::DB {
             .await?;
         Ok(())
     }
+
+    /// Validates the token (must exist and not be expired), updates the user's password hash,
+    /// and deletes the token. Returns `false` if the token is invalid or expired.
+    pub async fn reset_password(
+        &self,
+        token: Uuid,
+        new_password_hash: &str,
+    ) -> Result<bool, sqlx::Error> {
+        let result = sqlx::query(
+            "UPDATE users SET password_hash = $1
+             WHERE id = (
+                 SELECT user_id FROM password_reset_tokens
+                 WHERE token = $2 AND expires_at > NOW()
+             )",
+        )
+        .bind(new_password_hash)
+        .bind(token)
+        .execute(&self.0)
+        .await?;
+
+        if result.rows_affected() == 0 {
+            return Ok(false);
+        }
+
+        sqlx::query("DELETE FROM password_reset_tokens WHERE token = $1")
+            .bind(token)
+            .execute(&self.0)
+            .await?;
+
+        Ok(true)
+    }
 }

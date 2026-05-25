@@ -72,7 +72,11 @@ async fn worker(
 
             let attempt = retry.get(&token.token).map(|(a, _)| *a).unwrap_or(0);
 
-            tracing::info!("Sending password-reset email to {} (attempt {})", token.email, attempt + 1);
+            tracing::info!(
+                "Sending password-reset email to {} (attempt {})",
+                token.email,
+                attempt + 1
+            );
             if try_send(&resend, &from, &token.email, token.token).await {
                 retry.remove(&token.token);
                 if let Err(e) = db.mark_reset_token_sent(token.token).await {
