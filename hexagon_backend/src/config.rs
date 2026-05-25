@@ -22,4 +22,6 @@ pub struct SmtpConfig {
     pub smtp_password: secrecy::SecretString,
     /// The "From" address used in outgoing emails, e.g. `"Game <noreply@example.com>"`.
     pub email_from: String,
+    /// Base URL of the app used to build links in emails, e.g. `"https://hexagon-game.no"`.
+    pub base_url: String,
 }

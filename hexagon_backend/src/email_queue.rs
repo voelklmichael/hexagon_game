@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use hexagon_db::DB;
-use lettre::message::header::ContentType;
+use lettre::message::{MultiPart, SinglePart};
 use lettre::transport::smtp::authentication::Credentials;
 use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 use secrecy::ExposeSecret;
@@ -82,7 +82,15 @@ async fn worker(
                 attempt + 1
             );
 
-            if try_send(&mailer, &smtp.email_from, &token.email, token.token).await {
+            if try_send(
+                &mailer,
+                &smtp.email_from,
+                &smtp.base_url,
+                &token.email,
+                token.token,
+            )
+            .await
+            {
                 retry.remove(&token.token);
                 if let Err(e) = db.mark_reset_token_sent(token.token).await {
                     tracing::warn!("mark_reset_token_sent failed for {}: {e}", token.token);
@@ -137,17 +145,38 @@ async fn worker(
 async fn try_send(
     mailer: &AsyncSmtpTransport<Tokio1Executor>,
     from: &str,
+    base_url: &str,
     to: &str,
     token: Uuid,
 ) -> bool {
-    let body = format!("Your password reset token: {token}\n\nThis token expires in 1 hour.");
+    let link = format!("{base_url}/user_login/password_reset?token={token}");
+    let plain = format!(
+        "Hi,
+
+a password reset was requested for Hexagon - The Game.
+If you triggered this and want to change your password, use this link:
+{link}
+
+Best regards,
+the Hexagon team"
+    );
+
+    let html = format!(
+        "<p>Hi,</p>
+<p>a password reset was requested for <em>Hexagon - The Game</em>.<br>
+If you triggered this and want to change your password,
+<a href=\"{link}\">click here</a>.</p>
+<p>Best regards,<br>the Hexagon team</p>"
+    );
     let email = match Message::builder()
         .from(from.parse().unwrap())
         .to(to.parse().unwrap())
         .subject("Password Reset")
-        .header(ContentType::TEXT_PLAIN)
-        .body(body)
-    {
+        .multipart(
+            MultiPart::alternative()
+                .singlepart(SinglePart::plain(plain))
+                .singlepart(SinglePart::html(html)),
+        ) {
         Ok(m) => m,
         Err(e) => {
             tracing::warn!("Failed to build email for {to}: {e}");
