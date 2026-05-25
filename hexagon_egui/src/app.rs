@@ -407,6 +407,7 @@ impl eframe::App for HexApp {
         if !self.show_introduction_screen {
             egui::Panel::left("left_panel")
                 .resizable(true)
+                .max_size((ui.available_width() - 20.).max(0.)) // leave space to resize
                 .show_inside(ui, |ui| {
                     // Burger menu header — copy tab to local so closure doesn't hold &mut self
                     if !self.left_tab.visible() {
