@@ -30,6 +30,16 @@ impl Edge {
         use strum::VariantArray;
         Self::VARIANTS
     }
+    pub fn opposite(self) -> Self {
+        match self {
+            Edge::Top => Edge::Bottom,
+            Edge::Bottom => Edge::Top,
+            Edge::TopLeft => Edge::BottomRight,
+            Edge::BottomRight => Edge::TopLeft,
+            Edge::BottomLeft => Edge::TopRight,
+            Edge::TopRight => Edge::BottomLeft,
+        }
+    }
     pub fn opposites() -> Vec<(Self, Self)> {
         use strum::IntoEnumIterator;
         Self::iter().map(|edge| (edge, edge.opposite())).collect()
@@ -77,7 +87,7 @@ impl Edge {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct HexagonPosition {
     pub x: i32,
     pub y: i32,
@@ -186,39 +196,25 @@ impl Board {
         hexagons: Vec<HexagonPosition>,
         outer_connectors: OuterConnectors,
     ) -> Result<Board, String> {
-        let hex_set: HashSet<(i32, i32)> = hexagons.iter().map(|h| (h.x, h.y)).collect();
+        let hex_set: HashSet<_> = hexagons.iter().map(|h| h.clone()).collect();
         let outside_pairs: Vec<(ConnectorPosition, ConnectorPosition)> = match outer_connectors {
             OuterConnectors::OnlyDeathEnds => vec![],
             OuterConnectors::ReducedDeathEnds => Self::compute_outside_pairs(&hex_set, &hexagons),
         };
-        let outside_keys: HashSet<(i32, i32, u8, u8)> = outside_pairs
-            .iter()
-            .flat_map(|(a, b)| {
-                [
-                    (
-                        a.hexagon.x,
-                        a.hexagon.y,
-                        edge_idx(a.edge_sub.edge),
-                        sub_idx(a.edge_sub.sub),
-                    ),
-                    (
-                        b.hexagon.x,
-                        b.hexagon.y,
-                        edge_idx(b.edge_sub.edge),
-                        sub_idx(b.edge_sub.sub),
-                    ),
-                ]
-            })
-            .collect();
+        let outside_connectors: HashSet<_> =
+            outside_pairs.iter().flat_map(|(a, b)| [a, b]).collect();
 
         let mut connectors = Vec::new();
         let mut id = 0u32;
 
         for hex in &hexagons {
             for (edge, neighbor) in Self::neighbors(hex) {
-                if !hex_set.contains(&(neighbor.x, neighbor.y)) {
+                if !hex_set.contains(&neighbor) {
                     for sub in [Sub::Left, Sub::Right] {
-                        if outside_keys.contains(&(hex.x, hex.y, edge_idx(edge), sub_idx(sub))) {
+                        if outside_connectors.contains(&ConnectorPosition {
+                            hexagon: hex.clone(),
+                            edge_sub: EdgeSub { edge, sub },
+                        }) {
                             continue;
                         }
                         connectors.push(Connector {
@@ -250,10 +246,8 @@ impl Board {
         }
 
         for hex_a in &hexagons {
-            let pa = (hex_a.x, hex_a.y);
             for (edge_e, hex_b) in Self::neighbors(hex_a) {
-                let pb = (hex_b.x, hex_b.y);
-                if !hex_set.contains(&pb) || pa >= pb {
+                if !hex_set.contains(&hex_b) || *hex_a >= hex_b {
                     continue;
                 }
                 let opp = edge_e.opposite();
@@ -463,20 +457,18 @@ impl Board {
     }
 
     fn compute_outside_pairs(
-        hex_set: &HashSet<(i32, i32)>,
+        hex_set: &HashSet<HexagonPosition>,
         hexagons: &[HexagonPosition],
     ) -> Vec<(ConnectorPosition, ConnectorPosition)> {
         let mut pairs = Vec::new();
         for hex_a in hexagons {
-            let pa = (hex_a.x, hex_a.y);
             for (edge_e, hex_b) in Self::neighbors(hex_a) {
-                let pb = (hex_b.x, hex_b.y);
-                if !hex_set.contains(&pb) || pa >= pb {
+                if !hex_set.contains(&hex_b) || *hex_a >= hex_b {
                     continue;
                 }
                 let (prev_a, start_b) = Self::adjacent_at_start(edge_e);
-                if !hex_set.contains(&Self::neighbor_dir(pa, prev_a))
-                    && !hex_set.contains(&Self::neighbor_dir(pb, start_b))
+                if !hex_set.contains(&Self::neighbor_dir(*hex_a, prev_a))
+                    && !hex_set.contains(&Self::neighbor_dir(hex_b, start_b))
                 {
                     pairs.push((
                         ConnectorPosition {
@@ -496,8 +488,8 @@ impl Board {
                     ));
                 }
                 let (next_a, end_b) = Self::adjacent_at_end(edge_e);
-                if !hex_set.contains(&Self::neighbor_dir(pa, next_a))
-                    && !hex_set.contains(&Self::neighbor_dir(pb, end_b))
+                if !hex_set.contains(&Self::neighbor_dir(*hex_a, next_a))
+                    && !hex_set.contains(&Self::neighbor_dir(hex_b, end_b))
                 {
                     pairs.push((
                         ConnectorPosition {
@@ -543,15 +535,15 @@ impl Board {
         }
     }
 
-    fn neighbor_dir(pos: (i32, i32), edge: Edge) -> (i32, i32) {
-        let (q, r) = pos;
+    fn neighbor_dir(pos: HexagonPosition, edge: Edge) -> HexagonPosition {
+        let HexagonPosition { x: q, y: r } = pos;
         match edge {
-            Edge::Top => (q, r - 1),
-            Edge::TopLeft => (q - 1, r),
-            Edge::BottomLeft => (q - 1, r + 1),
-            Edge::Bottom => (q, r + 1),
-            Edge::BottomRight => (q + 1, r),
-            Edge::TopRight => (q + 1, r - 1),
+            Edge::Top => HexagonPosition { x: q, y: r - 1 },
+            Edge::TopLeft => HexagonPosition { x: q - 1, y: r },
+            Edge::BottomLeft => HexagonPosition { x: q - 1, y: r + 1 },
+            Edge::Bottom => HexagonPosition { x: q, y: r + 1 },
+            Edge::BottomRight => HexagonPosition { x: q + 1, y: r },
+            Edge::TopRight => HexagonPosition { x: q + 1, y: r - 1 },
         }
     }
 
@@ -565,23 +557,5 @@ impl Board {
             (Edge::BottomRight, HexagonPosition { x: q + 1, y: r }),
             (Edge::TopRight, HexagonPosition { x: q + 1, y: r - 1 }),
         ]
-    }
-}
-
-fn edge_idx(edge: Edge) -> u8 {
-    match edge {
-        Edge::Top => 0,
-        Edge::TopLeft => 1,
-        Edge::BottomLeft => 2,
-        Edge::Bottom => 3,
-        Edge::BottomRight => 4,
-        Edge::TopRight => 5,
-    }
-}
-
-fn sub_idx(sub: Sub) -> u8 {
-    match sub {
-        Sub::Left => 0,
-        Sub::Right => 1,
     }
 }
