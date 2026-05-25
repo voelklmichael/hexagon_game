@@ -196,7 +196,7 @@ impl Board {
         hexagons: Vec<HexagonPosition>,
         outer_connectors: OuterConnectors,
     ) -> Result<Board, String> {
-        let hex_set: HashSet<_> = hexagons.iter().map(|h| h.clone()).collect();
+        let hex_set: HashSet<_> = hexagons.iter().copied().collect();
         let outside_pairs: Vec<(ConnectorPosition, ConnectorPosition)> = match outer_connectors {
             OuterConnectors::OnlyDeathEnds => vec![],
             OuterConnectors::ReducedDeathEnds => Self::compute_outside_pairs(&hex_set, &hexagons),
@@ -212,7 +212,7 @@ impl Board {
                 if !hex_set.contains(&neighbor) {
                     for sub in [Sub::Left, Sub::Right] {
                         if outside_connectors.contains(&ConnectorPosition {
-                            hexagon: hex.clone(),
+                            hexagon: *hex,
                             edge_sub: EdgeSub { edge, sub },
                         }) {
                             continue;
