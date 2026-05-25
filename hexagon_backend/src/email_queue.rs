@@ -31,7 +31,7 @@ async fn worker(
         smtp.smtp_username.clone(),
         smtp.smtp_password.expose_secret().to_owned(),
     );
-    let mailer = AsyncSmtpTransport::<Tokio1Executor>::starttls_relay(&smtp.smtp_host)
+    let mailer = AsyncSmtpTransport::<Tokio1Executor>::relay(&smtp.smtp_host)
         .unwrap()
         .port(smtp.smtp_port)
         .credentials(creds)
