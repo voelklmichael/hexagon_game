@@ -199,8 +199,7 @@ fn compute_player_position(animation: f32, board: &Board, p: &Player) -> Current
     };
     let (connector, step) = {
         if last.connectors.is_empty() {
-            if let Some(last_non_empty) =
-                p.history.iter().rev().find(|c| !c.connectors.is_empty())
+            if let Some(last_non_empty) = p.history.iter().rev().find(|c| !c.connectors.is_empty())
             {
                 let hc = last_non_empty.connectors.last().unwrap();
                 // If the player crashed, show them at the hit-point fraction rather than the
@@ -752,12 +751,14 @@ impl RenderTask {
 
         // Step3: render current player positions
         // Crashed players sharing the same spot are replaced by a single X in the mixed color.
+        struct CrashGroup {
+            pos: (f64, f64),
+            colors: Vec<Color>,
+        }
         {
             // Build crash groups keyed by quantized world position.
-            let mut crash_groups: std::collections::HashMap<
-                (i64, i64),
-                ((f64, f64), Vec<Color>),
-            > = std::collections::HashMap::new();
+            let mut crash_groups: std::collections::HashMap<(i64, i64), CrashGroup> =
+                std::collections::HashMap::new();
             for cpp in current_player_position.iter() {
                 if cpp.hit_fraction.is_none() {
                     continue;
@@ -771,8 +772,11 @@ impl RenderTask {
                     .unwrap_or(player_data.unused_color);
                 crash_groups
                     .entry(key)
-                    .or_insert_with(|| ((px, py), Vec::new()))
-                    .1
+                    .or_insert_with(|| CrashGroup {
+                        pos: (px, py),
+                        colors: Vec::new(),
+                    })
+                    .colors
                     .push(color);
             }
             let in_crash_group: std::collections::HashSet<PlayerId> = current_player_position
@@ -781,7 +785,7 @@ impl RenderTask {
                 .filter(|cpp| {
                     let (px, py) = point_on_connector(&cpp.connector, cpp.step, r, h);
                     let key = ((px * 10.0).round() as i64, (py * 10.0).round() as i64);
-                    crash_groups.get(&key).is_some_and(|(_, c)| c.len() >= 2)
+                    crash_groups.get(&key).is_some_and(|g| g.colors.len() >= 2)
                 })
                 .map(|cpp| cpp.player_id)
                 .collect();
@@ -839,7 +843,11 @@ impl RenderTask {
             }
 
             // Draw × for each crash group with ≥ 2 players.
-            for (_, ((px, py), colors)) in &crash_groups {
+            for CrashGroup {
+                pos: (px, py),
+                colors,
+            } in crash_groups.values()
+            {
                 if colors.len() < 2 {
                     continue;
                 }
@@ -1329,10 +1337,10 @@ mod tests {
 
     #[test]
     pub fn test_render_collision_symmetric() {
-        use Edge::*;
         use crate::game_options::{
             CollisionMode, GameOptionsStandard, OuterConnectors, WinningCondition,
         };
+        use Edge::*;
 
         let options = GameOptionsStandard {
             board_radius: 1,
@@ -1370,16 +1378,21 @@ mod tests {
                 .unwrap()
         };
 
-        let all_edges: Vec<EdgeSub> =
-            [Top, TopLeft, BottomLeft, Bottom, BottomRight, TopRight]
-                .iter()
-                .flat_map(|&e| {
-                    [
-                        EdgeSub { edge: e, sub: Sub::Left },
-                        EdgeSub { edge: e, sub: Sub::Right },
-                    ]
-                })
-                .collect();
+        let all_edges: Vec<EdgeSub> = [Top, TopLeft, BottomLeft, Bottom, BottomRight, TopRight]
+            .iter()
+            .flat_map(|&e| {
+                [
+                    EdgeSub {
+                        edge: e,
+                        sub: Sub::Left,
+                    },
+                    EdgeSub {
+                        edge: e,
+                        sub: Sub::Right,
+                    },
+                ]
+            })
+            .collect();
 
         let mut remaining: Vec<EdgeSub> = all_edges
             .into_iter()
@@ -1423,15 +1436,12 @@ mod tests {
     pub fn test_render_collision_asymmetric() {
         use hexagon_types::player::PlayerId;
 
-        let json_path = format!("{}/../target/collision_game", env!("CARGO_MANIFEST_DIR"));
-        let json = std::fs::read_to_string(&json_path).expect("collision_game file missing");
-        let game: GameState = serde_json::from_str(&json).expect("failed to deserialize collision_game");
+        let json = include_str!("test_data/collision_game.json");
+        let game: GameState =
+            serde_json::from_str(json).expect("failed to deserialize collision_game");
 
         let player_data = PlayerData {
-            colors: HashMap::from([
-                (PlayerId(0), Color::Green),
-                (PlayerId(1), Color::Red),
-            ]),
+            colors: HashMap::from([(PlayerId(0), Color::Green), (PlayerId(1), Color::Red)]),
             dead_end_color: Color::Gray,
             closed_loop_color: Color::Teal,
             unused_color: Color::Golden,

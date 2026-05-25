@@ -540,7 +540,7 @@ pub fn show(
     }
 
     // Draw one X per crash group (≥ 2 players) in the mixed-players color.
-    for (_, (pos, colors)) in &crash_groups {
+    for (pos, colors) in crash_groups.values() {
         if colors.len() < 2 {
             continue;
         }

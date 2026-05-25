@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::RandomNumberGenerator;
 use crate::game_options::{GameOptions, WinningCondition};
-use crate::player_types::{HistoryConnector, PlayerPosition, PlayerHistorySingleTurn};
+use crate::player_types::{HistoryConnector, PlayerHistorySingleTurn, PlayerPosition};
 use crate::statistics::Statistics;
 use crate::{
     Board, ConnectorEnd, ConnectorKind, HexagonPosition, Player, Tile, TileRotationDirection,
@@ -114,7 +114,10 @@ impl GameState {
                         .and_then(|t| t.connectors.first())
                         .map(|hc| hc.id);
                     let path = if !at_dead_end || start_id == Some(p.current_position.connector) {
-                        self.board.compute_path_starting_from(&(p.current_position.connector, p.current_position.end))
+                        self.board.compute_path_starting_from(&(
+                            p.current_position.connector,
+                            p.current_position.end,
+                        ))
                     } else {
                         vec![]
                     };
@@ -194,8 +197,7 @@ impl GameState {
                             if let Some(c) = self.board.connectors.iter().find(|x| &x.id == last) {
                                 match &c.kind {
                                     ConnectorKind::DeadEnd(_) => {
-                                        player.current_position =
-                                            PlayerPosition::new(*last, *end);
+                                        player.current_position = PlayerPosition::new(*last, *end);
                                         player.is_active = false;
                                     }
                                     ConnectorKind::HexToHex(_) | ConnectorKind::Outside(_) => {
@@ -209,9 +211,7 @@ impl GameState {
                                         );
                                     }
                                     ConnectorKind::OnHex(_) => {
-                                        panic!(
-                                            "Player ended up on not allowed connector: {c:?}"
-                                        )
+                                        panic!("Player ended up on not allowed connector: {c:?}")
                                     }
                                 }
                             } else {
@@ -294,7 +294,14 @@ fn compute_crash_connector(
     let lv = left_velocity as f64;
     let rv = right_velocity as f64;
 
-    let mut best: Option<(f64, crate::ConnectorId, ConnectorEnd, f32, ConnectorEnd, f32)> = None;
+    let mut best: Option<(
+        f64,
+        crate::ConnectorId,
+        ConnectorEnd,
+        f32,
+        ConnectorEnd,
+        f32,
+    )> = None;
 
     let mut d_a: u32 = 0;
     for (lid, lend, lw) in left {
@@ -404,10 +411,7 @@ mod tests {
             .filter(|es| es != &es_a && es != &es_b)
             .collect();
 
-        let mut inner_connectors = vec![ConnectorEdgeSub {
-            a: es_a,
-            b: es_b,
-        }];
+        let mut inner_connectors = vec![ConnectorEdgeSub { a: es_a, b: es_b }];
         while remaining.len() >= 2 {
             let a = remaining.pop().unwrap();
             let b = remaining.pop().unwrap();

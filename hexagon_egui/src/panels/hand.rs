@@ -359,8 +359,10 @@ pub fn show(
                         let id = player.id;
                         let min_dist = wc.min_distance.get(&id).copied();
                         let min_vel = wc.min_velocity.get(&id).copied();
-                        let target_met =
-                            wc.target.get(&id).map(|&t| player.current_position.connector == t);
+                        let target_met = wc
+                            .target
+                            .get(&id)
+                            .map(|&t| player.current_position.connector == t);
                         if min_dist.is_none() && min_vel.is_none() && target_met.is_none() {
                             continue;
                         }

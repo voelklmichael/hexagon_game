@@ -389,22 +389,14 @@ pub(crate) fn check_winning_condition_for_highscore_v2(
         return None;
     }
     let is_won = players.iter().all(|p| {
-        let vel_ok = wc.min_velocity.get(&p.id).is_none_or(|&v| {
-            stats
-                .max_velocity
-                .get(&p.id)
-                .copied()
-                .unwrap_or(0)
-                >= v
-        });
-        let dist_ok = wc.min_distance.get(&p.id).is_none_or(|&d| {
-            stats
-                .total_path_weight
-                .get(&p.id)
-                .copied()
-                .unwrap_or(0)
-                >= d
-        });
+        let vel_ok = wc
+            .min_velocity
+            .get(&p.id)
+            .is_none_or(|&v| stats.max_velocity.get(&p.id).copied().unwrap_or(0) >= v);
+        let dist_ok = wc
+            .min_distance
+            .get(&p.id)
+            .is_none_or(|&d| stats.total_path_weight.get(&p.id).copied().unwrap_or(0) >= d);
         let target_ok = wc
             .target
             .get(&p.id)
