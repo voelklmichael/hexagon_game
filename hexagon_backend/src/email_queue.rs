@@ -135,7 +135,7 @@ async fn try_send(
         return true;
     };
 
-    let link = format!("{base_url}/user_login/password_reset?token={token}");
+    let link = format!("{base_url}/password-reset.html?token={token}");
     let plain = format!(
         "Hi,
 

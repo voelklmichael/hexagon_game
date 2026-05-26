@@ -8,7 +8,7 @@ pub struct BackendConfig {
     pub resend_api_key: Option<secrecy::SecretString>,
     /// The "From" address used in outgoing emails, e.g. `"Game <noreply@example.com>"`.
     pub email_from: Option<String>,
-    /// Base URL of the app used to build links in emails, e.g. `"https://hexagon-game.no"`.
+    /// Base URL of the frontend used to build links in emails, e.g. `"https://hexagon-game.no"`.
     pub base_url: String,
 }
 
