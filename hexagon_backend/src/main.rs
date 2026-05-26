@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use crate::config::{BackendConfig, ServerConfig};
 use crate::routes::AppState;
+use secrecy::ExposeSecret;
 use tokio_util::sync::CancellationToken;
 
 #[tokio::main]
@@ -17,12 +18,31 @@ async fn main() {
         .extract()
         .unwrap();
     tracing::info!("Config: {config:?}");
-    let BackendConfig { db, server, smtp } = config;
+    let BackendConfig {
+        db,
+        server,
+        resend_api_key,
+        email_from,
+        base_url,
+    } = config;
 
     let db = Arc::new(db.connect().await.unwrap());
 
+    let resend = resend_api_key
+        .as_ref()
+        .map(|key| Arc::new(resend_rs::Resend::new(key.expose_secret())));
+    if resend.is_none() {
+        tracing::info!("No RESEND_API_KEY provided — password reset tokens will be logged only");
+    }
+
     let cancellation_token = CancellationToken::new();
-    email_queue::spawn_email_worker(db.clone(), smtp, cancellation_token.clone());
+    email_queue::spawn_email_worker(
+        db.clone(),
+        resend,
+        email_from,
+        base_url,
+        cancellation_token.clone(),
+    );
 
     let app = routes::router(AppState { db }).await;
 

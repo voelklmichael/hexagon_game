@@ -3,40 +3,29 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use hexagon_db::DB;
-use lettre::message::{MultiPart, SinglePart};
-use lettre::transport::smtp::authentication::Credentials;
-use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
-use secrecy::ExposeSecret;
+use resend_rs::types::CreateEmailBaseOptions;
 use uuid::Uuid;
-
-use crate::config::SmtpConfig;
 
 const MAX_ATTEMPTS: u32 = 10;
 const POLL_INTERVAL: Duration = Duration::from_secs(5);
 
 pub fn spawn_email_worker(
     db: Arc<DB>,
-    smtp: SmtpConfig,
+    resend: Option<Arc<resend_rs::Resend>>,
+    from: Option<String>,
+    base_url: String,
     cancellation_token: tokio_util::sync::CancellationToken,
 ) {
-    tokio::spawn(async move { worker(db, smtp, cancellation_token).await });
+    tokio::spawn(async move { worker(db, resend, from, base_url, cancellation_token).await });
 }
 
 async fn worker(
     db: Arc<DB>,
-    smtp: SmtpConfig,
+    resend: Option<Arc<resend_rs::Resend>>,
+    from: Option<String>,
+    base_url: String,
     cancellation_token: tokio_util::sync::CancellationToken,
 ) {
-    let creds = Credentials::new(
-        smtp.smtp_username.clone(),
-        smtp.smtp_password.expose_secret().to_owned(),
-    );
-    let mailer = AsyncSmtpTransport::<Tokio1Executor>::relay(&smtp.smtp_host)
-        .unwrap()
-        .port(smtp.smtp_port)
-        .credentials(creds)
-        .build();
-
     let mut retry: HashMap<Uuid, (u32, Instant)> = HashMap::new();
 
     'outer: loop {
@@ -82,15 +71,7 @@ async fn worker(
                 attempt + 1
             );
 
-            if try_send(
-                &mailer,
-                &smtp.email_from,
-                &smtp.base_url,
-                &token.email,
-                token.token,
-            )
-            .await
-            {
+            if try_send(&resend, &from, &base_url, &token.email, token.token).await {
                 retry.remove(&token.token);
                 if let Err(e) = db.mark_reset_token_sent(token.token).await {
                     tracing::warn!("mark_reset_token_sent failed for {}: {e}", token.token);
@@ -143,12 +124,17 @@ async fn worker(
 }
 
 async fn try_send(
-    mailer: &AsyncSmtpTransport<Tokio1Executor>,
-    from: &str,
+    resend: &Option<Arc<resend_rs::Resend>>,
+    from: &Option<String>,
     base_url: &str,
     to: &str,
     token: Uuid,
 ) -> bool {
+    let (Some(resend), Some(from)) = (resend, from) else {
+        tracing::info!("No Resend client — reset token for {to}: {token}");
+        return true;
+    };
+
     let link = format!("{base_url}/user_login/password_reset?token={token}");
     let plain = format!(
         "Hi,
@@ -160,7 +146,6 @@ If you triggered this and want to change your password, use this link:
 Best regards,
 the Hexagon team"
     );
-
     let html = format!(
         "<p>Hi,</p>
 <p>a password reset was requested for <em>Hexagon - The Game</em>.<br>
@@ -168,22 +153,12 @@ If you triggered this and want to change your password,
 <a href=\"{link}\">click here</a>.</p>
 <p>Best regards,<br>the Hexagon team</p>"
     );
-    let email = match Message::builder()
-        .from(from.parse().unwrap())
-        .to(to.parse().unwrap())
-        .subject("Password Reset")
-        .multipart(
-            MultiPart::alternative()
-                .singlepart(SinglePart::plain(plain))
-                .singlepart(SinglePart::html(html)),
-        ) {
-        Ok(m) => m,
-        Err(e) => {
-            tracing::warn!("Failed to build email for {to}: {e}");
-            return false;
-        }
-    };
-    match mailer.send(email).await {
+
+    let email = CreateEmailBaseOptions::new(from.as_str(), [to], "Password Reset")
+        .with_text(&plain)
+        .with_html(&html);
+
+    match resend.emails.send(email).await {
         Ok(_) => true,
         Err(e) => {
             tracing::warn!("Sending password-reset email to {to} failed: {e}");
