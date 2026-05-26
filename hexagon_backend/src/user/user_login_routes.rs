@@ -21,7 +21,6 @@ pub fn login_router() -> Router<AppState> {
         )
         .route("/create", post(post::create))
         .route("/me", get(get::me))
-        .route("/password_reset", get(get::password_reset_form))
         .route("/password_reset", post(post::password_reset))
 }
 
@@ -193,44 +192,11 @@ mod post {
 }
 
 mod get {
-    use axum::{Json, extract::Query, response::Html};
+    use axum::Json;
     use axum_login::AuthUser;
     use hexagon_types::MeResponse;
-    use serde::Deserialize;
 
     use super::*;
-
-    #[derive(Deserialize)]
-    pub struct TokenQuery {
-        token: String,
-    }
-
-    pub async fn password_reset_form(Query(q): Query<TokenQuery>) -> Html<String> {
-        let token = html_escape(&q.token);
-        Html(format!(
-            r#"<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="utf-8"><title>Reset Password</title></head>
-<body>
-  <h1>Reset your password</h1>
-  <form method="POST" action="/user_login/password_reset">
-    <input type="hidden" name="token" value="{token}">
-    <label>New password:
-      <input type="password" name="password" required minlength="5">
-    </label>
-    <button type="submit">Set new password</button>
-  </form>
-</body>
-</html>"#
-        ))
-    }
-
-    fn html_escape(s: &str) -> String {
-        s.replace('&', "&amp;")
-            .replace('"', "&quot;")
-            .replace('<', "&lt;")
-            .replace('>', "&gt;")
-    }
 
     pub async fn logout(mut auth_session: AuthSession) -> impl IntoResponse {
         tracing::info!("Logging out");
