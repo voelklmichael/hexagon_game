@@ -231,6 +231,18 @@ fn default_true() -> bool {
 }
 
 impl HexApp {
+    fn show_save_progress_hint(&self, ui: &mut egui::Ui) {
+        if self.user_login.logged_in_as.is_none() && self.missions_won.len() >= 3 {
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::TOP), |ui| {
+                ui.add_space(16.);
+                ui.colored_label(
+                    egui::Color32::RED,
+                    "Please create an account or log in to save your progress ⬇",
+                );
+            });
+        }
+    }
+
     fn start_intro_mission(&mut self) {
         let idx = 0;
         let prev_game = self.game.take();
@@ -600,6 +612,7 @@ impl eframe::App for HexApp {
         // Centre — game board, fills all remaining space
         egui::CentralPanel::default().show_inside(ui, |ui| {
             if !right_open {
+                self.show_save_progress_hint(ui);
                 let avail = ui.available_rect_before_wrap();
                 let ctx = ui.ctx().clone();
                 egui::Area::new(egui::Id::new("right_panel_btn"))
