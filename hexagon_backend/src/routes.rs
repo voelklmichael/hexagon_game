@@ -38,6 +38,7 @@ pub async fn router(state: AppState) -> Router {
     let allow_origin = AllowOrigin::predicate(|origin, _| {
         let b = origin.as_bytes();
         b == b"https://voelklmichael.github.io"
+            || b == b"https://hexagon-game.no"
             || b.starts_with(b"http://localhost:")
             || b.starts_with(b"http://127.0.0.1:")
     });
