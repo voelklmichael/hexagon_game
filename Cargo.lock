@@ -2230,8 +2230,6 @@ dependencies = [
 name = "hexagon_egui"
 version = "0.1.0"
 dependencies = [
- "android-activity",
- "android_logger",
  "eframe",
  "egui",
  "egui-async",
@@ -2252,6 +2250,18 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+]
+
+[[package]]
+name = "hexagon_egui_android"
+version = "0.1.0"
+dependencies = [
+ "android-activity",
+ "android_logger",
+ "eframe",
+ "egui",
+ "hexagon_egui",
+ "log",
 ]
 
 [[package]]

@@ -1,0 +1,28 @@
+[package]
+name = "hexagon_egui_android"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[package.metadata.android]
+package = "com.hexagongame.hexagon"
+label = "Hexagon"
+build_targets = ["aarch64-linux-android", "armv7-linux-androideabi"]
+
+[package.metadata.android.sdk]
+min_sdk_version = 26
+target_sdk_version = 35
+compile_sdk_version = 35
+
+[[package.metadata.android.uses_permission]]
+name = "android.permission.INTERNET"
+
+[dependencies]
+hexagon_egui = { path = "../hexagon_egui" }
+eframe = { version = "0.34.2", features = ["persistence"] }
+egui = "0.34.2"
+android-activity = { version = "0.6", features = ["game-activity"] }
+android_logger = "0.14"
+log = "0.4"
