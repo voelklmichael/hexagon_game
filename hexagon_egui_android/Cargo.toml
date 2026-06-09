@@ -13,8 +13,8 @@ build_targets = ["aarch64-linux-android", "armv7-linux-androideabi"]
 
 [package.metadata.android.sdk]
 min_sdk_version = 26
-target_sdk_version = 35
-compile_sdk_version = 35
+target_sdk_version = 33
+compile_sdk_version = 33
 
 [[package.metadata.android.uses_permission]]
 name = "android.permission.INTERNET"
