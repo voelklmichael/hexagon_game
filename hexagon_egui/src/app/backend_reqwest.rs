@@ -6,9 +6,9 @@ use hexagon_engine::Statistics;
 use hexagon_frontend_reqwest::{ApiClient, ApiError};
 use hexagon_types::{DBHighscorePeak, MeResponse, MissionEntry, PlayerStats};
 
-#[cfg(debug_assertions)]
+#[cfg(all(debug_assertions, not(target_os = "android")))]
 static BASE_URL: &str = "http://localhost:3000";
-#[cfg(not(debug_assertions))]
+#[cfg(any(not(debug_assertions), target_os = "android"))]
 static BASE_URL: &str = "https://hexagon-game-a0w8.onrender.com";
 
 const MAX_RETRIES: u32 = 10;
