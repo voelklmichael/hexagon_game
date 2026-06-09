@@ -8,10 +8,12 @@ crate-type = ["cdylib"]
 
 [package.metadata.android]
 package = "com.hexagongame.hexagon"
-label = "Hexagon"
 build_targets = ["aarch64-linux-android"]
 assets = "../private_assets"
 resources = "res"
+
+[package.metadata.android.application]
+label = "Hexagon"
 icon = "@mipmap/ic_launcher"
 
 [package.metadata.android.sdk]
