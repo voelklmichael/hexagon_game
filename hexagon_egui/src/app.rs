@@ -207,6 +207,9 @@ pub struct HexApp {
     pub replay: Option<ReplayPlayer>,
     #[serde(skip)]
     pub music_player: Option<crate::music::MusicPlayer>,
+    #[serde(skip)]
+    #[cfg(target_os = "android")]
+    pub android_app: Option<android_activity::AndroidApp>,
     pub rng: RandomNumberGenerator,
     pub missions: Vec<MissionEntry>,
     pub missions_won: HashSet<Uuid>,
@@ -286,6 +289,16 @@ impl HexApp {
             app.music.started = true;
         }
 
+        app
+    }
+
+    #[cfg(target_os = "android")]
+    pub fn new_android(
+        cc: &eframe::CreationContext<'_>,
+        android_app: android_activity::AndroidApp,
+    ) -> Self {
+        let mut app = Self::new(cc);
+        app.android_app = Some(android_app);
         app
     }
 }
@@ -414,6 +427,28 @@ impl eframe::App for HexApp {
             ReplayPhase::InitialWait => None,
             ReplayPhase::Animating | ReplayPhase::LoopWait => Some(r.step),
         });
+
+        // Android safe-area insets: reserve space consumed by status bar and navigation bar
+        // so that panels and buttons are never drawn behind system UI.
+        #[cfg(target_os = "android")]
+        if let Some(android_app) = &self.android_app {
+            let content = android_app.content_rect();
+            let ppp = ui.ctx().pixels_per_point();
+            let screen = ui.ctx().screen_rect();
+            let top_pts = (content.top as f32 / ppp).max(0.0);
+            let bottom_pts =
+                ((screen.height() * ppp - content.bottom as f32) / ppp).max(0.0);
+            if top_pts > 1.0 {
+                egui::TopBottomPanel::top("android_status_bar_inset")
+                    .exact_height(top_pts)
+                    .show_inside(ui, |_ui| {});
+            }
+            if bottom_pts > 1.0 {
+                egui::TopBottomPanel::bottom("android_nav_bar_inset")
+                    .exact_height(bottom_pts)
+                    .show_inside(ui, |_ui| {});
+            }
+        }
 
         // Left panel — hidden during introduction
         if !self.show_introduction_screen {

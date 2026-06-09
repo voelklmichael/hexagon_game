@@ -2229,6 +2229,7 @@ dependencies = [
 name = "hexagon_egui"
 version = "0.1.0"
 dependencies = [
+ "android-activity",
  "eframe",
  "egui",
  "egui-async",
@@ -2237,7 +2238,9 @@ dependencies = [
  "hexagon_frontend_reqwest",
  "hexagon_types",
  "indexmap",
+ "jni 0.22.4",
  "log",
+ "ndk-context",
  "rodio",
  "serde",
  "serde_json",

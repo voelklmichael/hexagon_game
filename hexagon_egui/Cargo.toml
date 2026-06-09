@@ -34,6 +34,11 @@ tokio.workspace = true
 [target.'cfg(all(not(target_arch = "wasm32"), not(target_os = "android")))'.dependencies]
 rodio = { version = "0.22", features = ["mp3"] }
 
+# android:
+[target.'cfg(target_os = "android")'.dependencies]
+jni = { version = "0.22", default-features = false }
+ndk-context = "0.1"
+android-activity = { version = "0.6", features = ["native-activity"] }
 
 # web:
 [target.'cfg(target_arch = "wasm32")'.dependencies]
