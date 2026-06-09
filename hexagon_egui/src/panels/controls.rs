@@ -9,7 +9,7 @@ pub fn show(ui: &mut egui::Ui, game: &mut Option<GameState>, history: &mut GameH
     let mut started = false;
     let btn_font_size = egui::TextStyle::Body.resolve(ui.style()).size * 1.4;
 
-    ui.horizontal(|ui| {
+    ui.horizontal_wrapped(|ui| {
         if ui
             .add_enabled(
                 has_game,
